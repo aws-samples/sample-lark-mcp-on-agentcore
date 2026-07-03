@@ -2108,7 +2108,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
       "Properties": {
         "Code": {
           "S3Bucket": "cdk-hnb659fds-assets-123456789012-us-west-2",
-          "S3Key": "8a1cf3b94cf7919cb3b8a99ff76c3c975813f4f31af286e6ae378ababc9afbec.zip",
+          "S3Key": "5ad9cb50dd7085a69d3ea8489eae37961aa24818570161ba204431eabd3bf1c5.zip",
         },
         "Environment": {
           "Variables": {
@@ -2119,6 +2119,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
               "Ref": "OAuthCodesFF09132A",
             },
             "DOMAIN_VERIFICATION": "",
+            "LARKSUITE_CLI_BRAND": "feishu",
             "OAUTH_CLIENT_ID": "lark-mcp-on-agentcore",
             "OAUTH_CLIENT_SECRET": "SET_AFTER_DEPLOY",
             "OPENID_TABLE": {
