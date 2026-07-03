@@ -130,7 +130,13 @@ A: Yes. Set `CUSTOM_DOMAIN=mcp.company.com` or follow the deploy script prompt.
 
 **Q: Lark (international) support?**
 
-A: Yes. Set `LARKSUITE_CLI_BRAND=lark` during deployment.
+A: Yes. `./scripts/deploy.sh` shows an edition picker — choose **Lark
+(international)** and it points both the OAuth flow (`*.larksuite.com`) and
+`lark-cli`'s API gateway at the international cluster. For non-interactive /
+`--yes` deploys, set `LARK_BRAND=lark` (or `LARKSUITE_CLI_BRAND=lark`) in the
+environment. The choice is remembered in `deploy-config`. Default is **Feishu
+(China)** (`*.feishu.cn`). Enter your Lark app credentials from
+`open.larksuite.com` (not `open.feishu.cn`).
 
 **Q: Can one AWS account host multiple Feishu apps?**
 

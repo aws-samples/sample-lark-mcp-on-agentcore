@@ -27,6 +27,8 @@ export interface OAuthStackProps extends cdk.StackProps {
   customDomain?: string;
   webAclArn?: string;
   domainVerification?: string;
+  /** Endpoint cluster for the OAuth flow: "feishu" (China) or "lark" (international). Default "feishu". */
+  larkBrand?: string;
 }
 
 const LOG_RETENTION_MAP: Record<string, logs.RetentionDays> = {
@@ -171,6 +173,10 @@ export class OAuthStack extends cdk.Stack {
         OAUTH_CLIENT_SECRET: "SET_AFTER_DEPLOY",
         ALLOWED_DOMAINS: props.customDomain || "",
         DOMAIN_VERIFICATION: props.domainVerification || "",
+        // Selects the OAuth endpoint cluster (feishu.cn vs larksuite.com). deploy.sh
+        // re-threads this on every deploy (update-function-configuration replaces
+        // the whole env), so this default only applies to a pure `cdk deploy`.
+        LARKSUITE_CLI_BRAND: props.larkBrand || "feishu",
         // CreateSecret stamps this on new user secrets; the refresh loop migrates
         // existing ones onto it. deploy.sh re-threads it on every deploy (it
         // replaces the whole env), reading the UserSecretKmsKeyArn output below.

@@ -8,8 +8,15 @@ import { log, hashUserId } from '../shared/log';
 import { SCOPE_ALLOWLIST } from './scope-allowlist';
 import i18n from '../../config/i18n.json';
 
-const FEISHU_TOKEN_URL = "https://open.feishu.cn/open-apis/authen/v1/oidc/access_token";
-const FEISHU_REFRESH_URL = "https://open.feishu.cn/open-apis/authen/v1/oidc/refresh_access_token";
+// Brand selects the endpoint cluster: `feishu` → *.feishu.cn (China),
+// `lark` → *.larksuite.com (international). Only the host differs; all paths are
+// identical across brands. Set by CDK/deploy.sh; default `feishu` keeps the
+// original China endpoints byte-for-byte. Matches lark-cli's LARKSUITE_CLI_BRAND.
+const BRAND = process.env.LARKSUITE_CLI_BRAND === 'lark' ? 'lark' : 'feishu';
+const OPEN_HOST = BRAND === 'lark' ? 'open.larksuite.com' : 'open.feishu.cn';
+const ACCOUNTS_HOST = BRAND === 'lark' ? 'accounts.larksuite.com' : 'accounts.feishu.cn';
+const FEISHU_TOKEN_URL = `https://${OPEN_HOST}/open-apis/authen/v1/oidc/access_token`;
+const FEISHU_REFRESH_URL = `https://${OPEN_HOST}/open-apis/authen/v1/oidc/refresh_access_token`;
 const CALLBACK_URL_ENV = process.env.CALLBACK_URL || '';
 const SECRET_PREFIX = process.env.SECRET_PREFIX || "lark-mcp-on-agentcore/users";
 const APP_SECRET_ID = process.env.APP_SECRET_ID || "lark-mcp-on-agentcore/feishu-app";
@@ -193,7 +200,7 @@ async function parseJsonSafe<T>(resp: Response, api: string): Promise<T | null> 
 async function getAppAccessToken(): Promise<string> {
   await loadAppCredentials();
   const t0 = Date.now();
-  const resp = await fetch("https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal", {
+  const resp = await fetch(`https://${OPEN_HOST}/open-apis/auth/v3/app_access_token/internal`, {
     method: "POST", headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ app_id: appId, app_secret: appSecret }),
   });
@@ -235,7 +242,7 @@ async function getUserInfo(userAccessToken: string): Promise<string> {
   // /authen/v1/user_info — name is returned by default (no extra scope needed).
   // Failures are non-fatal: success page falls back to userId.
   try {
-    const resp = await fetch("https://open.feishu.cn/open-apis/authen/v1/user_info", {
+    const resp = await fetch(`https://${OPEN_HOST}/open-apis/authen/v1/user_info`, {
       method: "GET",
       headers: { Authorization: `Bearer ${userAccessToken}` },
     });
@@ -727,7 +734,7 @@ async function handle(event: LambdaEvent) {
       const scopeParam = allScopes ? `&scope=${encodeURIComponent(allScopes)}` : '';
       return {
         statusCode: 302,
-        headers: { Location: `https://accounts.feishu.cn/open-apis/authen/v1/authorize?client_id=${appId}&response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&state=${state}${scopeParam}` },
+        headers: { Location: `https://${ACCOUNTS_HOST}/open-apis/authen/v1/authorize?client_id=${appId}&response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&state=${state}${scopeParam}` },
       };
     }
 
@@ -737,7 +744,7 @@ async function handle(event: LambdaEvent) {
     const state = signState(JSON.stringify({ u: userId }));
     const incrScopes = extraScope ? extraScope : FEISHU_SCOPES;
     const scopeParamIncr = incrScopes ? `&scope=${encodeURIComponent(incrScopes)}` : '';
-    return { statusCode: 302, headers: { Location: `https://accounts.feishu.cn/open-apis/authen/v1/authorize?client_id=${appId}&response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&state=${state}${scopeParamIncr}` } };
+    return { statusCode: 302, headers: { Location: `https://${ACCOUNTS_HOST}/open-apis/authen/v1/authorize?client_id=${appId}&response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&state=${state}${scopeParamIncr}` } };
   }
 
   // /callback — Feishu redirects here after user consent

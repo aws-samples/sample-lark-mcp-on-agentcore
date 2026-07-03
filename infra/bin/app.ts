@@ -20,6 +20,8 @@ const names = resolveSlug(slug);
 const runtimeArn = app.node.tryGetContext("runtimeArn") || process.env.RUNTIME_ARN || "";
 const customDomain = process.env.CUSTOM_DOMAIN || "";
 const domainVerification = process.env.DOMAIN_VERIFICATION || "";
+// OAuth endpoint cluster: "lark" (larksuite.com) or "feishu" (feishu.cn, default).
+const larkBrand = process.env.LARKSUITE_CLI_BRAND === "lark" ? "lark" : "feishu";
 
 // CloudFront-scope WAF must live in us-east-1 regardless of deploy region.
 // Set SKIP_WAF=1 to omit the WAF stack (e.g., for region-locked tenants).
@@ -37,6 +39,7 @@ const oauth = new OAuthStack(app, names.oauthStack, {
   runtimeArn,
   customDomain,
   domainVerification,
+  larkBrand,
   webAclArn: waf?.webAclArn,
   crossRegionReferences: !skipWaf,
 });
