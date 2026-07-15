@@ -4,6 +4,15 @@
 
 部署完成后，按以下步骤在 Amazon Quick（Quick Desktop）中添加飞书 MCP 连接。（Kiro / Claude Code / Codex 这类自助注册、无需 Client Secret 的客户端，请改看 [connect-mcp-clients_zh.md](connect-mcp-clients_zh.md)。）
 
+## 前提条件
+
+创建 Connector 之前，请确认部署输出的 **Redirect URL**（`<OAuth 端点>/callback`）已注册到对应的开发者后台：
+
+- **飞书（中国）：** https://open.feishu.cn → 应用安全设置 → 重定向 URL
+- **Lark（国际版）：** https://open.larksuite.com → 应用安全设置 → 重定向 URL
+
+请使用与 `LARKSUITE_CLI_BRAND` 设置对应的控制台。如未注册，授权步骤会报错 **20029**（"重定向 URL 有误"）。
+
 ## 第 1 步：创建 Connector
 
 Quick Desktop 中点击 **Settings → Capabilities → Browse connections**（跳转浏览器），选择 **Create for your team** → **Model Context Protocol**：

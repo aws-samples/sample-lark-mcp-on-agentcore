@@ -306,8 +306,13 @@ CI）。`install.sh` 也会把 `--app`/`--alias` 透传给 `deploy.sh`。
   `…-openid-map-<slug>` 表、Runtime `lark_mcp_on_agentcore_<slug>` 以及独立的
   CloudFront 端点。WAF stack 在所有 App 之间**共享**。
 
-**部署后：** 把输出的 Redirect URL（`<OAuth 端点>/callback`）注册到该 App 的飞书控制台，
+**部署后：** 把输出的 Redirect URL（`<OAuth 端点>/callback`）注册到对应的开发者后台，
 再把输出的 MCP 端点粘贴到你的 MCP 客户端。
+
+- **飞书（中国）：** https://open.feishu.cn → 应用安全设置 → 重定向 URL
+- **Lark（国际版）：** https://open.larksuite.com → 应用安全设置 → 重定向 URL
+
+请使用与 `LARKSUITE_CLI_BRAND` 设置（`feishu` 或 `lark`）对应的控制台。
 
 ### 操作单个 App
 
