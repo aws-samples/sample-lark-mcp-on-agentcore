@@ -315,7 +315,12 @@ passed, or stdin/stdout is not a TTY (e.g. the `curl | bash` install path or CI)
   CloudFront endpoint. The WAF stack is **shared** across all apps.
 
 **After deploy:** register the printed Redirect URL (`<OAuth endpoint>/callback`) in
-that app's Feishu console, then paste the printed MCP endpoint into your MCP client.
+the app's developer console, then paste the printed MCP endpoint into your MCP client.
+
+- **Feishu (China):** https://open.feishu.cn → app Security Settings → Redirect URLs
+- **Lark (International):** https://open.larksuite.com → app Security Settings → Redirect URLs
+
+Use the console that matches your `LARKSUITE_CLI_BRAND` setting (`feishu` or `lark`).
 
 ### Operate one app
 
