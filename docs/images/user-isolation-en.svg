@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 540" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#333" stroke-width="1.5"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="540" fill="#fff"/>
+
+  <text x="980" y="22" text-anchor="end" fill="#aaa" font-size="10">identity = signed MCP Token, never the connection</text>
+
+  <!-- ===== Clients ===== -->
+  <rect x="44" y="78" width="184" height="48" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="136" y="100" text-anchor="middle" font-size="13" font-weight="500">MCP Client · User A</text>
+  <text x="136" y="116" text-anchor="middle" font-size="9" fill="#999">e.g. Quick Desktop</text>
+
+  <rect x="44" y="160" width="184" height="48" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="136" y="182" text-anchor="middle" font-size="13" font-weight="500">MCP Client · User B</text>
+  <text x="136" y="198" text-anchor="middle" font-size="9" fill="#999">another user</text>
+
+  <!-- client -> endpoint arrows -->
+  <line x1="228" y1="102" x2="368" y2="102" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="236" y="96" fill="#666" font-size="10">Bearer: MCP-Token(A)</text>
+  <line x1="228" y1="184" x2="368" y2="184" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="236" y="178" fill="#666" font-size="10">Bearer: MCP-Token(B)</text>
+
+  <!-- ===== MCP Endpoint (shared, identity-less) ===== -->
+  <rect x="370" y="66" width="252" height="152" rx="8" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="496" y="90" text-anchor="middle" font-size="13" font-weight="500">MCP Endpoint · /mcp</text>
+  <text x="496" y="106" text-anchor="middle" font-size="9" fill="#999">shared · holds no per-user state</text>
+  <line x1="386" y1="116" x2="606" y2="116" stroke="#eee" stroke-width="1"/>
+  <text x="390" y="138" font-size="10" fill="#444">1 — verify MCP-Token HMAC signature</text>
+  <text x="390" y="160" font-size="10" fill="#444">2 — extract userId from the token</text>
+  <text x="390" y="182" font-size="10" fill="#444">3 — fetch users/{userId}</text>
+  <text x="390" y="204" font-size="9" fill="#999">identity resolved fresh on every request</text>
+
+  <!-- ===== Secrets Manager ===== -->
+  <rect x="770" y="70" width="192" height="124" rx="4" fill="#fafafa" stroke="#888" stroke-width="1"/>
+  <text x="866" y="92" text-anchor="middle" font-size="11" font-weight="500">Secrets Manager</text>
+  <text x="866" y="113" text-anchor="middle" font-size="9" fill="#666">users/A → Feishu Token A</text>
+  <text x="866" y="129" text-anchor="middle" font-size="9" fill="#666">users/B → Feishu Token B</text>
+  <text x="866" y="151" text-anchor="middle" font-size="9" fill="#999">one secret per user</text>
+  <text x="866" y="167" text-anchor="middle" font-size="9" fill="#999">encrypted · never sent to client</text>
+
+  <!-- endpoint -> secrets -->
+  <line x1="622" y1="132" x2="768" y2="132" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="630" y="125" fill="#666" font-size="10">read only users/{userId}</text>
+
+  <!-- endpoint -> runtime -->
+  <line x1="496" y1="218" x2="496" y2="296" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="504" y="262" fill="#666" font-size="10">per request: identity = token,</text>
+  <text x="504" y="276" fill="#666" font-size="10">not the connection</text>
+
+  <!-- ===== AgentCore Runtime ===== -->
+  <rect x="180" y="298" width="600" height="138" rx="6" fill="#f8f9fa" stroke="#333" stroke-width="1.2"/>
+  <text x="192" y="318" fill="#666" font-size="10">AgentCore Runtime — one microVM per MCP session</text>
+
+  <rect x="212" y="330" width="262" height="92" rx="4" fill="#fff" stroke="#555" stroke-width="1"/>
+  <text x="343" y="352" text-anchor="middle" font-size="12" font-weight="500">session A · microVM</text>
+  <text x="343" y="372" text-anchor="middle" font-size="9" fill="#666">child process: lark-cli</text>
+  <text x="343" y="388" text-anchor="middle" font-size="9" fill="#666">env: Feishu Token A</text>
+  <text x="343" y="406" text-anchor="middle" font-size="9" fill="#999">per-call · never shared</text>
+
+  <rect x="488" y="330" width="262" height="92" rx="4" fill="#fff" stroke="#555" stroke-width="1"/>
+  <text x="619" y="352" text-anchor="middle" font-size="12" font-weight="500">session B · microVM</text>
+  <text x="619" y="372" text-anchor="middle" font-size="9" fill="#666">child process: lark-cli</text>
+  <text x="619" y="388" text-anchor="middle" font-size="9" fill="#666">env: Feishu Token B</text>
+  <text x="619" y="406" text-anchor="middle" font-size="9" fill="#999">per-call · never shared</text>
+
+  <!-- triple-layer isolation note -->
+  <text x="792" y="332" font-size="10" font-weight="500" fill="#555">Triple-layer isolation</text>
+  <text x="792" y="352" font-size="9" fill="#666">1 — microVM boundary</text>
+  <text x="792" y="368" font-size="9" fill="#666">2 — per-call child process</text>
+  <text x="792" y="384" font-size="9" fill="#666">3 — token via env,</text>
+  <text x="804" y="398" font-size="9" fill="#666">never shared/persisted</text>
+
+  <!-- runtime -> Feishu -->
+  <line x1="480" y1="436" x2="480" y2="482" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="488" y="463" fill="#666" font-size="10">user_access_token</text>
+
+  <rect x="400" y="482" width="160" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="480" y="502" text-anchor="middle" font-size="13" font-weight="500">Feishu OpenAPI</text>
+  <text x="480" y="517" text-anchor="middle" font-size="9" fill="#999">OAuth + REST</text>
+</svg>

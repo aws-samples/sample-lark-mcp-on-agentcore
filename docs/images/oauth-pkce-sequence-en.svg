@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 610" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#333" stroke-width="1.5"/>
+    </marker>
+    <marker id="arrg" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#888" stroke-width="1.3"/>
+    </marker>
+    <marker id="arro" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#d97706" stroke-width="1.6"/>
+    </marker>
+  </defs>
+  <rect width="1080" height="610" fill="#fff"/>
+
+  <text x="1060" y="22" text-anchor="end" fill="#aaa" font-size="10">OAuth 2.0 Authorization Code + PKCE — exchanging a code for an MCP token</text>
+
+  <!-- ===== Actors + lifelines ===== -->
+  <g>
+    <rect x="35" y="38" width="150" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+    <text x="110" y="60" text-anchor="middle" font-size="12" font-weight="500">MCP Client</text>
+    <text x="110" y="75" text-anchor="middle" font-size="9" fill="#999">Quick Desktop</text>
+    <line x1="110" y1="82" x2="110" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+  <g>
+    <rect x="305" y="38" width="150" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+    <text x="380" y="58" text-anchor="middle" font-size="12" font-weight="500">OAuth Lambda</text>
+    <text x="380" y="73" text-anchor="middle" font-size="9" fill="#999">/authorize /callback /token</text>
+    <line x1="380" y1="82" x2="380" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+  <g>
+    <rect x="575" y="38" width="150" height="44" rx="6" fill="#fafafa" stroke="#888" stroke-width="1"/>
+    <text x="650" y="58" text-anchor="middle" font-size="12" font-weight="500">DynamoDB</text>
+    <text x="650" y="73" text-anchor="middle" font-size="9" fill="#999">oauth-codes · single-use</text>
+    <line x1="650" y1="82" x2="650" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+  <g>
+    <rect x="845" y="38" width="150" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+    <text x="920" y="58" text-anchor="middle" font-size="12" font-weight="500">Feishu Auth</text>
+    <text x="920" y="73" text-anchor="middle" font-size="9" fill="#999">OAuth consent page</text>
+    <line x1="920" y1="82" x2="920" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+
+  <!-- ===== Messages ===== -->
+  <!-- 1. client self: gen verifier/challenge -->
+  <path d="M110 100 h60 v22 h-60" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="178" y="108" fill="#444" font-size="10">① generate code_verifier</text>
+  <text x="178" y="121" fill="#444" font-size="10">code_challenge = SHA256(code_verifier)</text>
+
+  <!-- 2. client -> lambda /authorize -->
+  <line x1="110" y1="152" x2="380" y2="152" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="120" y="146" fill="#444" font-size="10">② GET /authorize · code_challenge (S256, required)</text>
+
+  <!-- 3. lambda self: sign state -->
+  <path d="M380 168 h60 v22 h-60" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="448" y="183" fill="#444" font-size="10">③ code_challenge encoded into HMAC-signed state</text>
+
+  <!-- 4. lambda -> feishu -->
+  <line x1="380" y1="216" x2="920" y2="216" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="390" y="210" fill="#444" font-size="10">④ 302 to Feishu consent page (state carried along)</text>
+
+  <!-- 5. feishu -> lambda /callback -->
+  <line x1="920" y1="246" x2="380" y2="246" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="390" y="240" fill="#444" font-size="10">⑤ user consents → GET /callback · Feishu auth code</text>
+
+  <!-- 6. lambda -> dynamo store code -->
+  <line x1="380" y1="276" x2="650" y2="276" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="390" y="270" fill="#444" font-size="10">⑥ store one-time code + code_challenge (TTL 120s)</text>
+
+  <!-- 7. lambda -> client redirect -->
+  <line x1="380" y1="306" x2="110" y2="306" stroke="#888" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#arrg)"/>
+  <text x="120" y="300" fill="#888" font-size="10">⑦ 302 back to client · one-time auth code</text>
+
+  <!-- 8. client -> lambda /token (highlight) -->
+  <line x1="110" y1="346" x2="380" y2="346" stroke="#d97706" stroke-width="2" marker-end="url(#arro)"/>
+  <text x="120" y="340" fill="#b45309" font-size="10" font-weight="600">⑧ POST /token · auth code + code_verifier (+ client_secret for Amazon Quick)</text>
+
+  <!-- 9. lambda self: token checks (highlight box) -->
+  <rect x="380" y="362" width="392" height="116" rx="6" fill="#fffbeb" stroke="#d97706" stroke-width="1.2"/>
+  <text x="392" y="380" fill="#b45309" font-size="10" font-weight="600">⑨ /token checks (any failure → 401/400)</text>
+  <text x="392" y="399" fill="#444" font-size="10">• client auth: signed client_id (DCR, no secret) OR client_secret (Amazon Quick)</text>
+  <text x="392" y="416" fill="#444" font-size="10">• one-time auth code valid &amp; not expired (DynamoDB, burn-on-use)</text>
+  <text x="392" y="433" fill="#444" font-size="10">• redirect_uri matches the one used at /authorize</text>
+  <text x="392" y="452" fill="#0a7d2c" font-size="10" font-weight="600">• SHA256(code_verifier) == code_challenge ← the identity-binding check</text>
+  <text x="392" y="469" fill="#999" font-size="9">code_verifier never leaves the client that started the flow</text>
+
+  <!-- 10. lambda -> client mcp token -->
+  <line x1="380" y1="506" x2="110" y2="506" stroke="#888" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#arrg)"/>
+  <text x="120" y="500" fill="#888" font-size="10">⑩ 200 · MCP token (userId-signed, 30-day validity)</text>
+
+  <!-- footnote band -->
+  <line x1="35" y1="532" x2="1045" y2="532" stroke="#eee" stroke-width="1"/>
+  <text x="35" y="554" fill="#666" font-size="10">Self-registering clients (Kiro, Claude Code, Codex) present a signed client_id and no secret; Amazon Quick presents a shared client_secret. Either way the secret is not an identity credential.</text>
+  <text x="35" y="572" fill="#666" font-size="10">The PKCE code_verifier (steps ①/⑨) is what binds identity and blocks redemption of a stolen auth code: without it, even with a client_secret and a one-time code you cannot mint an MCP token.</text>
+  <text x="35" y="590" fill="#999" font-size="9">What can forge any user's MCP token is the state-secret root key in SSM (see "Credential leak impact"), not the client_secret.</text>
+</svg>

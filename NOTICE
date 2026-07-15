@@ -1,0 +1,21 @@
+lark-mcp-on-agentcore
+Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+This product includes software developed by third parties. See the
+THIRD-PARTY-LICENSES file for full license texts and attributions.
+
+This product includes or derives from:
+
+lark-cli (@larksuite/cli)
+Copyright (c) 2026 Lark Technologies Pte. Ltd.
+Licensed under the MIT License.
+https://github.com/larksuite/cli
+The Skill content under docker/skills/** is adapted from lark-cli's
+official Skills.
+
+IconPark
+Copyright 2019-present Bytedance Inc.
+Licensed under the Apache License, Version 2.0.
+https://github.com/bytedance/IconPark
+docker/skills/lark-slides/references/iconpark-index.json is generated
+from IconPark icon metadata.

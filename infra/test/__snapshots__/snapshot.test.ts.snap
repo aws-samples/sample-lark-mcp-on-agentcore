@@ -1,0 +1,3000 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
+{
+  "Outputs": {
+    "AlarmTopicArn": {
+      "Value": {
+        "Ref": "AlarmTopicD01E77F9",
+      },
+    },
+    "DashboardUrl": {
+      "Description": "CloudWatch observability dashboard",
+      "Value": "https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#dashboards/dashboard/lark-mcp-on-agentcore",
+    },
+    "FeishuRedirectUrl": {
+      "Description": "Add this to Feishu app redirect URLs",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Fn::GetAtt": [
+                "OAuthCFFF1C4D27",
+                "DomainName",
+              ],
+            },
+            "/callback",
+          ],
+        ],
+      },
+    },
+    "McpEndpoint": {
+      "Description": "MCP Streamable HTTP endpoint (same domain as OAuth)",
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Fn::GetAtt": [
+                "OAuthCFFF1C4D27",
+                "DomainName",
+              ],
+            },
+            "/mcp",
+          ],
+        ],
+      },
+    },
+    "MiddlewareFunctionName": {
+      "Value": {
+        "Ref": "MiddlewareFunction32153138",
+      },
+    },
+    "OAuthApiEndpointA2953D04": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Ref": "OAuthApi8AB10ACC",
+            },
+            ".execute-api.us-west-2.",
+            {
+              "Ref": "AWS::URLSuffix",
+            },
+            "/",
+            {
+              "Ref": "OAuthApiDeploymentStageprod294A63BE",
+            },
+            "/",
+          ],
+        ],
+      },
+    },
+    "OAuthClientId": {
+      "Description": "OAuth Client ID for Quick Desktop connector",
+      "Value": "lark-mcp-on-agentcore",
+    },
+    "OAuthEndpoint": {
+      "Value": {
+        "Fn::Join": [
+          "",
+          [
+            "https://",
+            {
+              "Fn::GetAtt": [
+                "OAuthCFFF1C4D27",
+                "DomainName",
+              ],
+            },
+          ],
+        ],
+      },
+    },
+    "OAuthFunctionName": {
+      "Value": {
+        "Ref": "OAuthFunction814F9D6D",
+      },
+    },
+    "UserSecretKmsKeyArn": {
+      "Description": "CMK encrypting user token secrets; deploy.sh re-threads it into the OAuth Lambda env",
+      "Value": {
+        "Fn::GetAtt": [
+          "UserSecretKeyC2EEB9AF",
+          "Arn",
+        ],
+      },
+    },
+  },
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "ActiveUsersFilter2A40EF46": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "refresh_cycle" }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "ActiveUsers",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "$.total",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "AgentCore5xxAlarmF45FDD3B": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "AgentCore 上游 5xx",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": 1,
+        "MetricName": "AgentCore5xx",
+        "Namespace": "LarkMcpOnAgentCore",
+        "Period": 300,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 3,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "AgentCore5xxFilter28574BE7": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "agentcore_5xx" }",
+        "LogGroupName": {
+          "Ref": "MiddlewareLogGroup77AF1D29",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "AgentCore5xx",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "AgentCoreSlowFilterF53D476C": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "agentcore_slow" }",
+        "LogGroupName": {
+          "Ref": "MiddlewareLogGroup77AF1D29",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "AgentCoreSlow",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "AlarmTopicD01E77F9": {
+      "Properties": {
+        "DisplayName": "Lark MCP on AgentCore alarms",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "TopicName": "lark-mcp-on-agentcore-alarms",
+      },
+      "Type": "AWS::SNS::Topic",
+    },
+    "ApiGateway5xxAlarm4F808175": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "API Gateway 5xx",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "Dimensions": [
+          {
+            "Name": "ApiName",
+            "Value": "lark-mcp-on-agentcore-oauth",
+          },
+        ],
+        "EvaluationPeriods": 2,
+        "MetricName": "5XXError",
+        "Namespace": "AWS/ApiGateway",
+        "Period": 300,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 5,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "AuthFailFilter99B2630C": {
+      "Properties": {
+        "FilterPattern": "?"token_verify_failed" ?"auth_missing_or_invalid"",
+        "LogGroupName": {
+          "Ref": "MiddlewareLogGroup77AF1D29",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "AuthFail",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "CmkStragglersAlarm50FAF29F": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "用户密钥未迁移到 CMK",
+        "ComparisonOperator": "GreaterThanThreshold",
+        "EvaluationPeriods": 4,
+        "MetricName": "CmkStragglers",
+        "Namespace": "LarkMcpOnAgentCore",
+        "Period": 1800,
+        "Statistic": "Maximum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 0,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "CmkStragglersFilterB30D2023": {
+      "Properties": {
+        "FilterPattern": "{ ($.event = "refresh_cycle") && ($.stragglers = "*") }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "CmkStragglers",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "$.stragglers",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "FeishuNotAuthAlarm074D66D7": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "飞书未授权突增",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": 2,
+        "MetricName": "FeishuNotAuthorized",
+        "Namespace": "LarkMcpOnAgentCore",
+        "Period": 300,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 10,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "FeishuNotAuthorizedFilterF0BCEC8F": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "feishu_not_authorized" }",
+        "LogGroupName": {
+          "Ref": "MiddlewareLogGroup77AF1D29",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "FeishuNotAuthorized",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "FeishuSlowFilter4553D081": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "feishu_slow" }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "FeishuSlow",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "FeishuSlowLatencyFilter9DC53A55": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "feishu_slow" }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "FeishuSlowLatencyMs",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "$.durationMs",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "McpLatencyAlarm256CD734": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "MCP 延迟 P95 >10s",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": 3,
+        "ExtendedStatistic": "p95",
+        "MetricName": "McpLatencyMs",
+        "Namespace": "LarkMcpOnAgentCore",
+        "Period": 300,
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 10000,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "McpLatencyFilter9C4954B4": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "mcp_request_ok" }",
+        "LogGroupName": {
+          "Ref": "MiddlewareLogGroup77AF1D29",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "McpLatencyMs",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "$.durationMs",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "McpRequestOkFilter546FB180": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "mcp_request_ok" }",
+        "LogGroupName": {
+          "Ref": "MiddlewareLogGroup77AF1D29",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "McpRequestOk",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "MiddlewareConcurrencyAlarmEFE2C1CE": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "Lambda 并发过高 (%)",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": {
+              "Ref": "MiddlewareFunction32153138",
+            },
+          },
+        ],
+        "EvaluationPeriods": 3,
+        "MetricName": "ConcurrentExecutions",
+        "Namespace": "AWS/Lambda",
+        "Period": 60,
+        "Statistic": "Maximum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 800,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "MiddlewareErrorAlarmFB29B09C": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "Middleware Lambda 错误",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": {
+              "Ref": "MiddlewareFunction32153138",
+            },
+          },
+        ],
+        "EvaluationPeriods": 2,
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda",
+        "Period": 300,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 5,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "MiddlewareFunction32153138": {
+      "DependsOn": [
+        "MiddlewareFunctionServiceRoleDefaultPolicy28D7D688",
+        "MiddlewareFunctionServiceRole1ED1018C",
+      ],
+      "Properties": {
+        "Code": {
+          "S3Bucket": "cdk-hnb659fds-assets-123456789012-us-west-2",
+          "S3Key": "e71770f076e6f33f0d2aa828faef9dd2e039bcb8cd439bec11e48f1940c7cd01.zip",
+        },
+        "Environment": {
+          "Variables": {
+            "AUTHORIZE_BASE": "SET_AFTER_DEPLOY",
+            "DEPLOY_REGION": "us-west-2",
+            "RUNTIME_ARN": "arn:aws:bedrock-agentcore:us-west-2:123456789012:runtime/test-runtime",
+            "SECRET_PREFIX": "lark-mcp-on-agentcore/users",
+            "STATE_SECRET_PARAM": "/lark-mcp-on-agentcore/state-secret",
+          },
+        },
+        "FunctionName": "TestOAuthStack-middleware",
+        "Handler": "index.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "MiddlewareLogGroup77AF1D29",
+          },
+        },
+        "MemorySize": 512,
+        "ReservedConcurrentExecutions": 50,
+        "Role": {
+          "Fn::GetAtt": [
+            "MiddlewareFunctionServiceRole1ED1018C",
+            "Arn",
+          ],
+        },
+        "Runtime": "nodejs20.x",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Timeout": 60,
+      },
+      "Type": "AWS::Lambda::Function",
+    },
+    "MiddlewareFunctionServiceRole1ED1018C": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+              ],
+            ],
+          },
+        ],
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "MiddlewareFunctionServiceRoleDefaultPolicy28D7D688": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "secretsmanager:GetSecretValue",
+              "Effect": "Allow",
+              "Resource": "arn:aws:secretsmanager:us-west-2:123456789012:secret:lark-mcp-on-agentcore/users/*",
+            },
+            {
+              "Action": "secretsmanager:*",
+              "Effect": "Deny",
+              "Resource": "arn:aws:secretsmanager:us-west-2:123456789012:secret:lark-mcp-on-agentcore/users/*/*",
+            },
+            {
+              "Action": [
+                "kms:Decrypt",
+                "kms:DescribeKey",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "UserSecretKeyC2EEB9AF",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": "ssm:GetParameter",
+              "Effect": "Allow",
+              "Resource": "arn:aws:ssm:us-west-2:123456789012:parameter/lark-mcp-on-agentcore/state-secret",
+            },
+            {
+              "Action": "bedrock-agentcore:InvokeAgentRuntime",
+              "Effect": "Allow",
+              "Resource": "arn:aws:bedrock-agentcore:us-west-2:123456789012:runtime/*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "MiddlewareFunctionServiceRoleDefaultPolicy28D7D688",
+        "Roles": [
+          {
+            "Ref": "MiddlewareFunctionServiceRole1ED1018C",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "MiddlewareLogGroup77AF1D29": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/TestOAuthStack-middleware",
+        "RetentionInDays": 90,
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "NewUserFilter8CC6FB64": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "new_user_authorized" }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "NewUserAuthorized",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "OAuthApi8AB10ACC": {
+      "Properties": {
+        "Name": "lark-mcp-on-agentcore-oauth",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::ApiGateway::RestApi",
+    },
+    "OAuthApiAccount8DD6D9E2": {
+      "DeletionPolicy": "Retain",
+      "DependsOn": [
+        "OAuthApi8AB10ACC",
+      ],
+      "Properties": {
+        "CloudWatchRoleArn": {
+          "Fn::GetAtt": [
+            "OAuthApiCloudWatchRole74995C53",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::ApiGateway::Account",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "OAuthApiCloudWatchRole74995C53": {
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "apigateway.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AmazonAPIGatewayPushToCloudWatchLogs",
+              ],
+            ],
+          },
+        ],
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "OAuthApiDeploymentAC5F88DB081a7e18507e68c285817320a67341d2": {
+      "DependsOn": [
+        "OAuthApiwellknownaws86AFF11A",
+        "OAuthApiwellknownawssecurityagentdomainverificationjsonGET87B0E62F",
+        "OAuthApiwellknownawssecurityagentdomainverificationjson25189DF3",
+        "OAuthApiwellknownoauthauthorizationserverGET561B1766",
+        "OAuthApiwellknownoauthauthorizationserverA70044CC",
+        "OAuthApiwellknownoauthprotectedresourceGET8CD280AB",
+        "OAuthApiwellknownoauthprotectedresource933426A9",
+        "OAuthApiwellknown5E60497E",
+        "OAuthApiauthorizeGETF3EB57B3",
+        "OAuthApiauthorizeFBF5971C",
+        "OAuthApicallbackGETF19BC972",
+        "OAuthApicallback8EC01216",
+        "OAuthApimcpDELETE4CDC386D",
+        "OAuthApimcpGET8E5020FE",
+        "OAuthApimcpPOSTBA61C876",
+        "OAuthApimcpA390DE01",
+        "OAuthApiregisterPOST2DCCD304",
+        "OAuthApiregister92C5F605",
+        "OAuthApitokenPOSTD049E145",
+        "OAuthApitoken7101D36F",
+      ],
+      "Metadata": {
+        "aws:cdk:do-not-refactor": true,
+      },
+      "Properties": {
+        "Description": "Automatically created by the RestApi construct",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Deployment",
+    },
+    "OAuthApiDeploymentStageprod294A63BE": {
+      "DependsOn": [
+        "OAuthApiAccount8DD6D9E2",
+      ],
+      "Properties": {
+        "DeploymentId": {
+          "Ref": "OAuthApiDeploymentAC5F88DB081a7e18507e68c285817320a67341d2",
+        },
+        "MethodSettings": [
+          {
+            "HttpMethod": "*",
+            "ResourcePath": "/*",
+            "ThrottlingBurstLimit": 100,
+            "ThrottlingRateLimit": 50,
+          },
+          {
+            "HttpMethod": "POST",
+            "ResourcePath": "/register",
+            "ThrottlingBurstLimit": 10,
+            "ThrottlingRateLimit": 5,
+          },
+        ],
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+        "StageName": "prod",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::ApiGateway::Stage",
+    },
+    "OAuthApiauthorizeFBF5971C": {
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "OAuthApi8AB10ACC",
+            "RootResourceId",
+          ],
+        },
+        "PathPart": "authorize",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApiauthorizeGETApiPermissionTestOAuthStackOAuthApiCAFFC54FGETauthorize08172EC7": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/GET/authorize",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiauthorizeGETApiPermissionTestTestOAuthStackOAuthApiCAFFC54FGETauthorizeC8993419": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/GET/authorize",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiauthorizeGETF3EB57B3": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "GET",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "OAuthFunction814F9D6D",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApiauthorizeFBF5971C",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApicallback8EC01216": {
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "OAuthApi8AB10ACC",
+            "RootResourceId",
+          ],
+        },
+        "PathPart": "callback",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApicallbackGETApiPermissionTestOAuthStackOAuthApiCAFFC54FGETcallback05D2BDC5": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/GET/callback",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApicallbackGETApiPermissionTestTestOAuthStackOAuthApiCAFFC54FGETcallback970D3EBC": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/GET/callback",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApicallbackGETF19BC972": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "GET",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "OAuthFunction814F9D6D",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApicallback8EC01216",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApimcpA390DE01": {
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "OAuthApi8AB10ACC",
+            "RootResourceId",
+          ],
+        },
+        "PathPart": "mcp",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApimcpDELETE4CDC386D": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "DELETE",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "MiddlewareFunction32153138",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApimcpA390DE01",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApimcpDELETEApiPermissionTestOAuthStackOAuthApiCAFFC54FDELETEmcp7D035FB8": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "MiddlewareFunction32153138",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/DELETE/mcp",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApimcpDELETEApiPermissionTestTestOAuthStackOAuthApiCAFFC54FDELETEmcpDEBE57D8": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "MiddlewareFunction32153138",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/DELETE/mcp",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApimcpGET8E5020FE": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "GET",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "MiddlewareFunction32153138",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApimcpA390DE01",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApimcpGETApiPermissionTestOAuthStackOAuthApiCAFFC54FGETmcp4A0C7330": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "MiddlewareFunction32153138",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/GET/mcp",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApimcpGETApiPermissionTestTestOAuthStackOAuthApiCAFFC54FGETmcp466F4A4E": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "MiddlewareFunction32153138",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/GET/mcp",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApimcpPOSTApiPermissionTestOAuthStackOAuthApiCAFFC54FPOSTmcpBDFC495A": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "MiddlewareFunction32153138",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/POST/mcp",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApimcpPOSTApiPermissionTestTestOAuthStackOAuthApiCAFFC54FPOSTmcp2D29C9BD": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "MiddlewareFunction32153138",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/POST/mcp",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApimcpPOSTBA61C876": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "POST",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "MiddlewareFunction32153138",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApimcpA390DE01",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApiregister92C5F605": {
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "OAuthApi8AB10ACC",
+            "RootResourceId",
+          ],
+        },
+        "PathPart": "register",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApiregisterPOST2DCCD304": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "POST",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "OAuthFunction814F9D6D",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApiregister92C5F605",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApiregisterPOSTApiPermissionTestOAuthStackOAuthApiCAFFC54FPOSTregisterE16B339E": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/POST/register",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiregisterPOSTApiPermissionTestTestOAuthStackOAuthApiCAFFC54FPOSTregister9F64B522": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/POST/register",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApitoken7101D36F": {
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "OAuthApi8AB10ACC",
+            "RootResourceId",
+          ],
+        },
+        "PathPart": "token",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApitokenPOSTApiPermissionTestOAuthStackOAuthApiCAFFC54FPOSTtokenF6941B08": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/POST/token",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApitokenPOSTApiPermissionTestTestOAuthStackOAuthApiCAFFC54FPOSTtoken86503CBC": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/POST/token",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApitokenPOSTD049E145": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "POST",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "OAuthFunction814F9D6D",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApitoken7101D36F",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApiwellknown5E60497E": {
+      "Properties": {
+        "ParentId": {
+          "Fn::GetAtt": [
+            "OAuthApi8AB10ACC",
+            "RootResourceId",
+          ],
+        },
+        "PathPart": ".well-known",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApiwellknownaws86AFF11A": {
+      "Properties": {
+        "ParentId": {
+          "Ref": "OAuthApiwellknown5E60497E",
+        },
+        "PathPart": "aws",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApiwellknownawssecurityagentdomainverificationjson25189DF3": {
+      "Properties": {
+        "ParentId": {
+          "Ref": "OAuthApiwellknownaws86AFF11A",
+        },
+        "PathPart": "securityagent-domain-verification.json",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApiwellknownawssecurityagentdomainverificationjsonGET87B0E62F": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "GET",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "OAuthFunction814F9D6D",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApiwellknownawssecurityagentdomainverificationjson25189DF3",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApiwellknownawssecurityagentdomainverificationjsonGETApiPermissionTestOAuthStackOAuthApiCAFFC54FGETwellknownawssecurityagentdomainverificationjson3DE21554": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/GET/.well-known/aws/securityagent-domain-verification.json",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiwellknownawssecurityagentdomainverificationjsonGETApiPermissionTestTestOAuthStackOAuthApiCAFFC54FGETwellknownawssecurityagentdomainverificationjsonBEECE689": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/GET/.well-known/aws/securityagent-domain-verification.json",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiwellknownoauthauthorizationserverA70044CC": {
+      "Properties": {
+        "ParentId": {
+          "Ref": "OAuthApiwellknown5E60497E",
+        },
+        "PathPart": "oauth-authorization-server",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApiwellknownoauthauthorizationserverGET561B1766": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "GET",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "OAuthFunction814F9D6D",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApiwellknownoauthauthorizationserverA70044CC",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApiwellknownoauthauthorizationserverGETApiPermissionTestOAuthStackOAuthApiCAFFC54FGETwellknownoauthauthorizationserver426705AD": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/GET/.well-known/oauth-authorization-server",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiwellknownoauthauthorizationserverGETApiPermissionTestTestOAuthStackOAuthApiCAFFC54FGETwellknownoauthauthorizationserverE0FC6A25": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/GET/.well-known/oauth-authorization-server",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiwellknownoauthprotectedresource933426A9": {
+      "Properties": {
+        "ParentId": {
+          "Ref": "OAuthApiwellknown5E60497E",
+        },
+        "PathPart": "oauth-protected-resource",
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Resource",
+    },
+    "OAuthApiwellknownoauthprotectedresourceGET8CD280AB": {
+      "Properties": {
+        "AuthorizationType": "NONE",
+        "HttpMethod": "GET",
+        "Integration": {
+          "IntegrationHttpMethod": "POST",
+          "Type": "AWS_PROXY",
+          "Uri": {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":apigateway:us-west-2:lambda:path/2015-03-31/functions/",
+                {
+                  "Fn::GetAtt": [
+                    "OAuthFunction814F9D6D",
+                    "Arn",
+                  ],
+                },
+                "/invocations",
+              ],
+            ],
+          },
+        },
+        "ResourceId": {
+          "Ref": "OAuthApiwellknownoauthprotectedresource933426A9",
+        },
+        "RestApiId": {
+          "Ref": "OAuthApi8AB10ACC",
+        },
+      },
+      "Type": "AWS::ApiGateway::Method",
+    },
+    "OAuthApiwellknownoauthprotectedresourceGETApiPermissionTestOAuthStackOAuthApiCAFFC54FGETwellknownoauthprotectedresourceA5072BC1": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/",
+              {
+                "Ref": "OAuthApiDeploymentStageprod294A63BE",
+              },
+              "/GET/.well-known/oauth-protected-resource",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthApiwellknownoauthprotectedresourceGETApiPermissionTestTestOAuthStackOAuthApiCAFFC54FGETwellknownoauthprotectedresource0E6E4CBD": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:",
+              {
+                "Ref": "AWS::Partition",
+              },
+              ":execute-api:us-west-2:123456789012:",
+              {
+                "Ref": "OAuthApi8AB10ACC",
+              },
+              "/test-invoke-stage/GET/.well-known/oauth-protected-resource",
+            ],
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "OAuthCFFF1C4D27": {
+      "Properties": {
+        "DistributionConfig": {
+          "DefaultCacheBehavior": {
+            "AllowedMethods": [
+              "GET",
+              "HEAD",
+              "OPTIONS",
+              "PUT",
+              "PATCH",
+              "POST",
+              "DELETE",
+            ],
+            "CachePolicyId": "4135ea2d-6df8-44a3-9df3-4b5a84be39ad",
+            "Compress": true,
+            "OriginRequestPolicyId": "b689b0a8-53d0-40ab-baf2-68738e2966ac",
+            "TargetOriginId": "TestOAuthStackOAuthCFOrigin1072641B6",
+            "ViewerProtocolPolicy": "https-only",
+          },
+          "Enabled": true,
+          "HttpVersion": "http2",
+          "IPV6Enabled": true,
+          "Origins": [
+            {
+              "CustomOriginConfig": {
+                "OriginProtocolPolicy": "https-only",
+                "OriginSSLProtocols": [
+                  "TLSv1.2",
+                ],
+              },
+              "DomainName": {
+                "Fn::Select": [
+                  2,
+                  {
+                    "Fn::Split": [
+                      "/",
+                      {
+                        "Fn::Join": [
+                          "",
+                          [
+                            "https://",
+                            {
+                              "Ref": "OAuthApi8AB10ACC",
+                            },
+                            ".execute-api.us-west-2.",
+                            {
+                              "Ref": "AWS::URLSuffix",
+                            },
+                            "/",
+                            {
+                              "Ref": "OAuthApiDeploymentStageprod294A63BE",
+                            },
+                            "/",
+                          ],
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+              "Id": "TestOAuthStackOAuthCFOrigin1072641B6",
+              "OriginPath": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "/",
+                    {
+                      "Fn::Select": [
+                        3,
+                        {
+                          "Fn::Split": [
+                            "/",
+                            {
+                              "Fn::Join": [
+                                "",
+                                [
+                                  "https://",
+                                  {
+                                    "Ref": "OAuthApi8AB10ACC",
+                                  },
+                                  ".execute-api.us-west-2.",
+                                  {
+                                    "Ref": "AWS::URLSuffix",
+                                  },
+                                  "/",
+                                  {
+                                    "Ref": "OAuthApiDeploymentStageprod294A63BE",
+                                  },
+                                  "/",
+                                ],
+                              ],
+                            },
+                          ],
+                        },
+                      ],
+                    },
+                  ],
+                ],
+              },
+            },
+          ],
+          "PriceClass": "PriceClass_200",
+          "WebACLId": "arn:aws:wafv2:us-east-1:123456789012:global/webacl/test-acl/abc123",
+        },
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::CloudFront::Distribution",
+    },
+    "OAuthCallbackOkFilter19C8FD8D": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "oauth_callback_success" }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "OAuthCallbackSuccess",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "OAuthCodesFF09132A": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "code",
+            "AttributeType": "S",
+          },
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "KeySchema": [
+          {
+            "AttributeName": "code",
+            "KeyType": "HASH",
+          },
+        ],
+        "SSESpecification": {
+          "SSEEnabled": true,
+        },
+        "TableName": "lark-mcp-on-agentcore-oauth-codes",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "TimeToLiveSpecification": {
+          "AttributeName": "ttl",
+          "Enabled": true,
+        },
+      },
+      "Type": "AWS::DynamoDB::Table",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "OAuthErrorAlarmC8D75714": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "OAuth Lambda 错误",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": {
+              "Ref": "OAuthFunction814F9D6D",
+            },
+          },
+        ],
+        "EvaluationPeriods": 2,
+        "MetricName": "Errors",
+        "Namespace": "AWS/Lambda",
+        "Period": 300,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 5,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "OAuthFunction814F9D6D": {
+      "DependsOn": [
+        "OAuthFunctionServiceRoleDefaultPolicy0A400EBA",
+        "OAuthFunctionServiceRole6ABBFC33",
+      ],
+      "Properties": {
+        "Code": {
+          "S3Bucket": "cdk-hnb659fds-assets-123456789012-us-west-2",
+          "S3Key": "ec5ec7b1362e4e60e125726ec3d2d00a781338ae52d132150ba58a83524d2fd9.zip",
+        },
+        "Environment": {
+          "Variables": {
+            "ALLOWED_DOMAINS": "mcp.example.com",
+            "APP_SECRET_ID": "lark-mcp-on-agentcore/feishu-app",
+            "CALLBACK_URL": "SET_AFTER_DEPLOY",
+            "CODE_TABLE": {
+              "Ref": "OAuthCodesFF09132A",
+            },
+            "DOMAIN_VERIFICATION": "",
+            "OAUTH_CLIENT_ID": "lark-mcp-on-agentcore",
+            "OAUTH_CLIENT_SECRET": "SET_AFTER_DEPLOY",
+            "OPENID_TABLE": {
+              "Ref": "OpenIdMapA93FD804",
+            },
+            "SECRET_PREFIX": "lark-mcp-on-agentcore/users",
+            "STATE_SECRET_PARAM": "/lark-mcp-on-agentcore/state-secret",
+            "USER_SECRET_KMS_KEY_ARN": {
+              "Fn::GetAtt": [
+                "UserSecretKeyC2EEB9AF",
+                "Arn",
+              ],
+            },
+          },
+        },
+        "FunctionName": "TestOAuthStack-oauth",
+        "Handler": "index.handler",
+        "LoggingConfig": {
+          "LogGroup": {
+            "Ref": "OAuthLogGroupF9A7E869",
+          },
+        },
+        "MemorySize": 256,
+        "ReservedConcurrentExecutions": 20,
+        "Role": {
+          "Fn::GetAtt": [
+            "OAuthFunctionServiceRole6ABBFC33",
+            "Arn",
+          ],
+        },
+        "Runtime": "nodejs20.x",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Timeout": 120,
+      },
+      "Type": "AWS::Lambda::Function",
+    },
+    "OAuthFunctionServiceRole6ABBFC33": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/service-role/AWSLambdaBasicExecutionRole",
+              ],
+            ],
+          },
+        ],
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
+    },
+    "OAuthFunctionServiceRoleDefaultPolicy0A400EBA": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:DescribeSecret",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":secretsmanager:us-west-2:123456789012:secret:lark-mcp-on-agentcore/feishu-app-??????",
+                  ],
+                ],
+              },
+            },
+            {
+              "Action": "ssm:GetParameter",
+              "Effect": "Allow",
+              "Resource": "arn:aws:ssm:us-west-2:123456789012:parameter/lark-mcp-on-agentcore/state-secret",
+            },
+            {
+              "Action": [
+                "secretsmanager:GetSecretValue",
+                "secretsmanager:PutSecretValue",
+                "secretsmanager:CreateSecret",
+                "secretsmanager:DeleteSecret",
+                "secretsmanager:RestoreSecret",
+                "secretsmanager:TagResource",
+                "secretsmanager:DescribeSecret",
+                "secretsmanager:UpdateSecret",
+              ],
+              "Effect": "Allow",
+              "Resource": "arn:aws:secretsmanager:us-west-2:123456789012:secret:lark-mcp-on-agentcore/users/*",
+            },
+            {
+              "Action": "secretsmanager:*",
+              "Effect": "Deny",
+              "Resource": "arn:aws:secretsmanager:us-west-2:123456789012:secret:lark-mcp-on-agentcore/users/*/*",
+            },
+            {
+              "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:GenerateDataKey",
+                "kms:DescribeKey",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::GetAtt": [
+                  "UserSecretKeyC2EEB9AF",
+                  "Arn",
+                ],
+              },
+            },
+            {
+              "Action": "secretsmanager:ListSecrets",
+              "Effect": "Allow",
+              "Resource": "*",
+            },
+            {
+              "Action": [
+                "dynamodb:BatchGetItem",
+                "dynamodb:Query",
+                "dynamodb:GetItem",
+                "dynamodb:Scan",
+                "dynamodb:ConditionCheckItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:DescribeTable",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "OAuthCodesFF09132A",
+                    "Arn",
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "dynamodb:GetRecords",
+                "dynamodb:GetShardIterator",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "OAuthCodesFF09132A",
+                    "Arn",
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "dynamodb:BatchGetItem",
+                "dynamodb:Query",
+                "dynamodb:GetItem",
+                "dynamodb:Scan",
+                "dynamodb:ConditionCheckItem",
+                "dynamodb:BatchWriteItem",
+                "dynamodb:PutItem",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem",
+                "dynamodb:DescribeTable",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "OpenIdMapA93FD804",
+                    "Arn",
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": [
+                "dynamodb:GetRecords",
+                "dynamodb:GetShardIterator",
+              ],
+              "Effect": "Allow",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "OpenIdMapA93FD804",
+                    "Arn",
+                  ],
+                },
+              ],
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "OAuthFunctionServiceRoleDefaultPolicy0A400EBA",
+        "Roles": [
+          {
+            "Ref": "OAuthFunctionServiceRole6ABBFC33",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "OAuthLogGroupF9A7E869": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "LogGroupName": "/aws/lambda/TestOAuthStack-oauth",
+        "RetentionInDays": 90,
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::LogGroup",
+      "UpdateReplacePolicy": "Delete",
+    },
+    "OAuthStartFilter03F29B92": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "oauth_authorize_start" }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "OAuthAuthorizeStart",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "ObservabilityDashboard136CA6C4": {
+      "Properties": {
+        "DashboardBody": {
+          "Fn::Join": [
+            "",
+            [
+              "{"widgets":[{"type":"text","width":24,"height":1,"x":0,"y":0,"properties":{"markdown":"## 告警状态"}},{"type":"alarm","width":24,"height":3,"x":0,"y":1,"properties":{"title":"告警状态","alarms":["arn:aws:cloudwatch:us-west-2:123456789012:alarm:Token 丢失 (刷新已消耗但未存储)","arn:aws:cloudwatch:us-west-2:123456789012:alarm:Token 刷新失败","arn:aws:cloudwatch:us-west-2:123456789012:alarm:AgentCore 上游 5xx","arn:aws:cloudwatch:us-west-2:123456789012:alarm:MCP 延迟 P95 >10s","arn:aws:cloudwatch:us-west-2:123456789012:alarm:飞书未授权突增","arn:aws:cloudwatch:us-west-2:123456789012:alarm:Lambda 并发过高 (%)","arn:aws:cloudwatch:us-west-2:123456789012:alarm:Lambda 被限流","arn:aws:cloudwatch:us-west-2:123456789012:alarm:API Gateway 5xx","arn:aws:cloudwatch:us-west-2:123456789012:alarm:OAuth Lambda 错误","arn:aws:cloudwatch:us-west-2:123456789012:alarm:Middleware Lambda 错误","arn:aws:cloudwatch:us-west-2:123456789012:alarm:用户密钥未迁移到 CMK"]}},{"type":"text","width":24,"height":1,"x":0,"y":4,"properties":{"markdown":"## MCP 请求量"}},{"type":"metric","width":8,"height":6,"x":0,"y":5,"properties":{"view":"timeSeries","title":"MCP 请求量","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["LarkMcpOnAgentCore","McpRequestOk",{"label":"McpRequestOk","stat":"Sum"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":8,"y":5,"properties":{"view":"timeSeries","title":"MCP 延迟 (ms)","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["LarkMcpOnAgentCore","McpLatencyMs",{"label":"McpLatencyMs (Average)"}],["LarkMcpOnAgentCore","McpLatencyMs",{"label":"McpLatencyMs (p95)","stat":"p95"}],["LarkMcpOnAgentCore","McpLatencyMs",{"label":"McpLatencyMs (p99)","stat":"p99"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":16,"y":5,"properties":{"view":"timeSeries","title":"错误与慢调用","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["LarkMcpOnAgentCore","AgentCore5xx",{"label":"AgentCore5xx","stat":"Sum"}],["LarkMcpOnAgentCore","AgentCoreSlow",{"label":"AgentCoreSlow","stat":"Sum"}],["LarkMcpOnAgentCore","FeishuSlow",{"label":"FeishuSlow","stat":"Sum"}]],"yAxis":{}}},{"type":"text","width":24,"height":1,"x":0,"y":11,"properties":{"markdown":"## Lambda 调用量"}},{"type":"metric","width":8,"height":6,"x":0,"y":12,"properties":{"view":"timeSeries","title":"Lambda 调用量","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["AWS/Lambda","Invocations","FunctionName","",
+              {
+                "Ref": "OAuthFunction814F9D6D",
+              },
+              "",{"label":"OAuth","stat":"Sum"}],["AWS/Lambda","Invocations","FunctionName","",
+              {
+                "Ref": "MiddlewareFunction32153138",
+              },
+              "",{"label":"Middleware","stat":"Sum"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":8,"y":12,"properties":{"view":"timeSeries","title":"Lambda 执行时长 (ms)","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["AWS/Lambda","Duration","FunctionName","",
+              {
+                "Ref": "OAuthFunction814F9D6D",
+              },
+              "",{"label":"OAuth (avg)"}],["AWS/Lambda","Duration","FunctionName","",
+              {
+                "Ref": "OAuthFunction814F9D6D",
+              },
+              "",{"label":"OAuth (p95)","stat":"p95"}],["AWS/Lambda","Duration","FunctionName","",
+              {
+                "Ref": "MiddlewareFunction32153138",
+              },
+              "",{"label":"Middleware (avg)"}],["AWS/Lambda","Duration","FunctionName","",
+              {
+                "Ref": "MiddlewareFunction32153138",
+              },
+              "",{"label":"Middleware (p95)","stat":"p95"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":16,"y":12,"properties":{"view":"timeSeries","title":"Lambda 错误","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["AWS/Lambda","Errors","FunctionName","",
+              {
+                "Ref": "OAuthFunction814F9D6D",
+              },
+              "",{"label":"OAuth Errors","stat":"Sum"}],["AWS/Lambda","Errors","FunctionName","",
+              {
+                "Ref": "MiddlewareFunction32153138",
+              },
+              "",{"label":"Middleware Errors","stat":"Sum"}],["AWS/Lambda","Throttles","FunctionName","",
+              {
+                "Ref": "OAuthFunction814F9D6D",
+              },
+              "",{"label":"OAuth Throttles","stat":"Sum","yAxis":"right"}],["AWS/Lambda","Throttles","FunctionName","",
+              {
+                "Ref": "MiddlewareFunction32153138",
+              },
+              "",{"label":"Middleware Throttles","stat":"Sum","yAxis":"right"}]],"yAxis":{"right":{"label":"Lambda 限流"}}}},{"type":"text","width":24,"height":1,"x":0,"y":18,"properties":{"markdown":"## OAuth 授权漏斗"}},{"type":"metric","width":8,"height":6,"x":0,"y":19,"properties":{"view":"timeSeries","title":"OAuth 授权漏斗","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["LarkMcpOnAgentCore","OAuthAuthorizeStart",{"label":"OAuthAuthorizeStart","period":3600,"stat":"Sum"}],["LarkMcpOnAgentCore","OAuthCallbackSuccess",{"label":"OAuthCallbackSuccess","period":3600,"stat":"Sum"}],["LarkMcpOnAgentCore","NewUserAuthorized",{"label":"NewUserAuthorized","period":3600,"stat":"Sum"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":8,"y":19,"properties":{"view":"timeSeries","title":"Token 刷新","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["LarkMcpOnAgentCore","RefreshFailed",{"label":"RefreshFailed","period":3600,"stat":"Sum"}],["LarkMcpOnAgentCore","TokenLost",{"label":"TokenLost","period":3600,"stat":"Sum"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":16,"y":19,"properties":{"view":"timeSeries","title":"活跃用户与鉴权失败","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["LarkMcpOnAgentCore","ActiveUsers",{"label":"ActiveUsers (Maximum)","period":3600,"stat":"Maximum"}],["LarkMcpOnAgentCore","AuthFail",{"label":"AuthFail","stat":"Sum","yAxis":"right"}]],"yAxis":{}}},{"type":"text","width":24,"height":1,"x":0,"y":25,"properties":{"markdown":"## API Gateway 4xx / 5xx"}},{"type":"metric","width":8,"height":6,"x":0,"y":26,"properties":{"view":"timeSeries","title":"API Gateway 4xx / 5xx","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["AWS/ApiGateway","4XXError","ApiName","lark-mcp-on-agentcore-oauth",{"label":"4xx","stat":"Sum"}],["AWS/ApiGateway","5XXError","ApiName","lark-mcp-on-agentcore-oauth",{"label":"5xx","stat":"Sum"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":8,"y":26,"properties":{"view":"timeSeries","title":"Lambda 并发","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["AWS/Lambda","ConcurrentExecutions","FunctionName","",
+              {
+                "Ref": "OAuthFunction814F9D6D",
+              },
+              "",{"label":"OAuth","stat":"Maximum"}],["AWS/Lambda","ConcurrentExecutions","FunctionName","",
+              {
+                "Ref": "MiddlewareFunction32153138",
+              },
+              "",{"label":"Middleware","stat":"Maximum"}]],"yAxis":{}}},{"type":"metric","width":8,"height":6,"x":16,"y":26,"properties":{"view":"timeSeries","title":"飞书未授权请求","region":"",
+              {
+                "Ref": "AWS::Region",
+              },
+              "","metrics":[["LarkMcpOnAgentCore","FeishuNotAuthorized",{"label":"FeishuNotAuthorized","stat":"Sum"}],["LarkMcpOnAgentCore","FeishuSlowLatencyMs",{"label":"FeishuSlowLatencyMs (Average)","yAxis":"right"}],["LarkMcpOnAgentCore","FeishuSlowLatencyMs",{"label":"FeishuSlowLatencyMs (p95)","stat":"p95","yAxis":"right"}]],"yAxis":{"right":{"label":"飞书 API 延迟 (ms)"}}}}]}",
+            ],
+          ],
+        },
+        "DashboardName": "lark-mcp-on-agentcore",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::CloudWatch::Dashboard",
+    },
+    "OpenIdMapA93FD804": {
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "openId",
+            "AttributeType": "S",
+          },
+        ],
+        "BillingMode": "PAY_PER_REQUEST",
+        "KeySchema": [
+          {
+            "AttributeName": "openId",
+            "KeyType": "HASH",
+          },
+        ],
+        "PointInTimeRecoverySpecification": {
+          "PointInTimeRecoveryEnabled": true,
+        },
+        "SSESpecification": {
+          "SSEEnabled": true,
+        },
+        "TableName": "lark-mcp-on-agentcore-openid-map",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::DynamoDB::Table",
+      "UpdateReplacePolicy": "Retain",
+    },
+    "RefreshFailedAlarmB973F059": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "Token 刷新失败",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": 1,
+        "MetricName": "RefreshFailed",
+        "Namespace": "LarkMcpOnAgentCore",
+        "Period": 300,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 3,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "RefreshFailedFilter2963045F": {
+      "Properties": {
+        "FilterPattern": "{ ($.event = "refresh_cycle") && ($.failed = "*") }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "RefreshFailed",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "$.failed",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "ThrottleAlarm26FC7A69": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "Lambda 被限流",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "Dimensions": [
+          {
+            "Name": "FunctionName",
+            "Value": {
+              "Ref": "MiddlewareFunction32153138",
+            },
+          },
+        ],
+        "EvaluationPeriods": 1,
+        "MetricName": "Throttles",
+        "Namespace": "AWS/Lambda",
+        "Period": 300,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 1,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "TokenLossAlarm4342D89C": {
+      "Properties": {
+        "AlarmActions": [
+          {
+            "Ref": "AlarmTopicD01E77F9",
+          },
+        ],
+        "AlarmName": "Token 丢失 (刷新已消耗但未存储)",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "EvaluationPeriods": 1,
+        "MetricName": "TokenLost",
+        "Namespace": "LarkMcpOnAgentCore",
+        "Period": 60,
+        "Statistic": "Sum",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Threshold": 1,
+        "TreatMissingData": "notBreaching",
+      },
+      "Type": "AWS::CloudWatch::Alarm",
+    },
+    "TokenLossFilterC8F63ADE": {
+      "Properties": {
+        "FilterPattern": "{ $.event = "store_token_lost" }",
+        "LogGroupName": {
+          "Ref": "OAuthLogGroupF9A7E869",
+        },
+        "MetricTransformations": [
+          {
+            "MetricName": "TokenLost",
+            "MetricNamespace": "LarkMcpOnAgentCore",
+            "MetricValue": "1",
+          },
+        ],
+      },
+      "Type": "AWS::Logs::MetricFilter",
+    },
+    "TokenRefreshRule33B5CF67": {
+      "Properties": {
+        "ScheduleExpression": "rate(30 minutes)",
+        "State": "ENABLED",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "Targets": [
+          {
+            "Arn": {
+              "Fn::GetAtt": [
+                "OAuthFunction814F9D6D",
+                "Arn",
+              ],
+            },
+            "Id": "Target0",
+          },
+        ],
+      },
+      "Type": "AWS::Events::Rule",
+    },
+    "TokenRefreshRuleAllowEventRuleTestOAuthStackOAuthFunction488AD72B1AE3D27E": {
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {
+          "Fn::GetAtt": [
+            "OAuthFunction814F9D6D",
+            "Arn",
+          ],
+        },
+        "Principal": "events.amazonaws.com",
+        "SourceArn": {
+          "Fn::GetAtt": [
+            "TokenRefreshRule33B5CF67",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::Lambda::Permission",
+    },
+    "UserSecretKeyC2EEB9AF": {
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "Description": "lark-mcp-on-agentcore user token secret encryption (default)",
+        "EnableKeyRotation": true,
+        "KeyPolicy": {
+          "Statement": [
+            {
+              "Action": "kms:*",
+              "Effect": "Allow",
+              "Principal": {
+                "AWS": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition",
+                      },
+                      ":iam::123456789012:root",
+                    ],
+                  ],
+                },
+              },
+              "Resource": "*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::KMS::Key",
+      "UpdateReplacePolicy": "Retain",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
+
+exports[`CDK Snapshot Tests > RuntimeStack matches snapshot 1`] = `
+{
+  "Outputs": {
+    "ImageUri": {
+      "Value": {
+        "Fn::Sub": "123456789012.dkr.ecr.us-west-2.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-ACCOUNT-REGION:ASSET_HASH",
+      },
+    },
+    "RuntimeRoleArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "RuntimeRoleFD8790A4",
+          "Arn",
+        ],
+      },
+    },
+  },
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "RuntimeRoleDefaultPolicy31263C89": {
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": "secretsmanager:GetSecretValue",
+              "Effect": "Allow",
+              "Resource": "arn:aws:secretsmanager:us-west-2:123456789012:secret:lark-mcp-on-agentcore/feishu-app-*",
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "RuntimeRoleDefaultPolicy31263C89",
+        "Roles": [
+          {
+            "Ref": "RuntimeRoleFD8790A4",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "RuntimeRoleFD8790A4": {
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "bedrock-agentcore.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "ManagedPolicyArns": [
+          {
+            "Fn::Join": [
+              "",
+              [
+                "arn:",
+                {
+                  "Ref": "AWS::Partition",
+                },
+                ":iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+              ],
+            ],
+          },
+        ],
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;
+
+exports[`CDK Snapshot Tests > WafStack matches snapshot 1`] = `
+{
+  "Outputs": {
+    "WebAclArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "WebAcl",
+          "Arn",
+        ],
+      },
+    },
+  },
+  "Parameters": {
+    "BootstrapVersion": {
+      "Default": "/cdk-bootstrap/hnb659fds/version",
+      "Description": "Version of the CDK Bootstrap resources in this environment, automatically retrieved from SSM Parameter Store. [cdk:skip]",
+      "Type": "AWS::SSM::Parameter::Value<String>",
+    },
+  },
+  "Resources": {
+    "WebAcl": {
+      "Properties": {
+        "DefaultAction": {
+          "Allow": {},
+        },
+        "Name": "lark-mcp-on-agentcore-waf",
+        "Rules": [
+          {
+            "Action": {
+              "Block": {},
+            },
+            "Name": "rate-limit-authorize",
+            "Priority": 1,
+            "Statement": {
+              "RateBasedStatement": {
+                "AggregateKeyType": "IP",
+                "Limit": 100,
+                "ScopeDownStatement": {
+                  "ByteMatchStatement": {
+                    "FieldToMatch": {
+                      "UriPath": {},
+                    },
+                    "PositionalConstraint": "CONTAINS",
+                    "SearchString": "/authorize",
+                    "TextTransformations": [
+                      {
+                        "Priority": 0,
+                        "Type": "NONE",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+            "VisibilityConfig": {
+              "CloudWatchMetricsEnabled": true,
+              "MetricName": "rate-limit-authorize",
+              "SampledRequestsEnabled": true,
+            },
+          },
+          {
+            "Action": {
+              "Block": {},
+            },
+            "Name": "rate-limit-global",
+            "Priority": 2,
+            "Statement": {
+              "RateBasedStatement": {
+                "AggregateKeyType": "IP",
+                "Limit": 2000,
+              },
+            },
+            "VisibilityConfig": {
+              "CloudWatchMetricsEnabled": true,
+              "MetricName": "rate-limit-global",
+              "SampledRequestsEnabled": true,
+            },
+          },
+        ],
+        "Scope": "CLOUDFRONT",
+        "Tags": [
+          {
+            "Key": "project",
+            "Value": "lark-mcp-on-agentcore",
+          },
+        ],
+        "VisibilityConfig": {
+          "CloudWatchMetricsEnabled": true,
+          "MetricName": "lark-mcp-on-agentcore-waf",
+          "SampledRequestsEnabled": true,
+        },
+      },
+      "Type": "AWS::WAFv2::WebACL",
+    },
+  },
+  "Rules": {
+    "CheckBootstrapVersion": {
+      "Assertions": [
+        {
+          "Assert": {
+            "Fn::Not": [
+              {
+                "Fn::Contains": [
+                  [
+                    "1",
+                    "2",
+                    "3",
+                    "4",
+                    "5",
+                  ],
+                  {
+                    "Ref": "BootstrapVersion",
+                  },
+                ],
+              },
+            ],
+          },
+          "AssertDescription": "CDK bootstrap stack version 6 required. Please run 'cdk bootstrap' with a recent version of the CDK CLI.",
+        },
+      ],
+    },
+  },
+}
+`;

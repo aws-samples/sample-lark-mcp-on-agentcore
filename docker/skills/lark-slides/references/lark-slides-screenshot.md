@@ -1,0 +1,83 @@
+# slides +screenshot
+
+## 用途
+
+获取幻灯片页面截图并保存为本地图片文件。默认用于已存在 PPT 页面截图；传入 `content` 时用于直接渲染单个 `<slide>` XML 片段预览。该操作会在服务端解码并写入文件，返回文件路径、大小、页面 ID 等元信息，避免把图片 Base64 输出给模型。
+
+注意：该截图能力受应用白名单限制，绝大多数应用不可用。截图失败时不要引导用户申请 `slides:presentation:screenshot` 权限；记录错误后降级到 XML 读回、结构 lint、文本重叠检查等非截图检查路径。
+
+## 命令
+
+```
+lark_slides_screenshot(presentation="<xml_presentation_id 或 slides/wiki URL>", slide_number="1")
+```
+
+渲染本地 XML 内容：
+
+```
+lark_slides_screenshot(content="<slide> XML 片段")
+```
+
+## 参数
+
+| 参数 | 必需 | 说明 |
+|------|------|------|
+| `presentation` | list 模式必需 | `xml_presentation_id`、`/slides/` URL，或解析后为 slides 的 `/wiki/` URL。传 `content` 时不能使用 |
+| `slide_id` | list 模式至少提供 `slide_id` / `slide_number` 之一 | 页面 short ID；多页截图时用逗号分隔多个值 |
+| `slide_number` | list 模式至少提供 `slide_id` / `slide_number` 之一 | 页面页号；多页截图时用逗号分隔多个值 |
+| `content` | render 模式必需 | 要直接渲染的 `<slide>` XML 片段。传入后不能同时传 `slide_id` / `slide_number` |
+| `output_dir` | 否 | 输出目录，默认 `.lark-slides/screenshots`；必须是当前目录内的相对路径 |
+| `output_name` | 否 | render 模式的输出文件名 stem；未指定时优先用返回的 `slide_id`，否则用 `rendered-slide`。若目标文件已存在，会自动追加递增后缀避免覆盖 |
+
+## 示例
+
+### 单页截图
+
+```
+lark_slides_screenshot(presentation="slides_example_presentation_id", slide_number="1")
+```
+
+### 多页截图
+
+```
+lark_slides_screenshot(presentation="slides_example_presentation_id", slide_number="1,2", output_dir=".lark-slides/screenshots/demo")
+```
+
+### 渲染 XML 预览
+
+```
+lark_slides_screenshot(content="<slide>...</slide>", output_name="preview")
+```
+
+## 返回值
+
+返回 JSON 不包含 Base64 图片内容：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "xml_presentation_id": "slides_example_presentation_id",
+    "output_dir": ".lark-slides/screenshots",
+    "screenshots": [
+      {
+        "slide_id": "slide_example_id",
+        "slide_number": 1,
+        "format": "png",
+        "path": "/abs/path/.lark-slides/screenshots/slides_example_presentation_id_p001_slide_example_id.png",
+        "size": 12345
+      }
+    ]
+  },
+  "msg": "success"
+}
+```
+
+## 注意事项
+
+1. 优先使用 `lark_slides_screenshot` 保存本地图片，不要把图片 Base64 打到输出。
+2. 已存在 PPT 页面截图时，不传 `content`，用 `presentation` + `slide_id` 或 `slide_number`。
+3. 本地 XML 预览时，传 `content`，内容应为单个 `<slide>` XML 片段；此时不要传 `presentation` / `slide_id` / `slide_number`。
+4. `slide_id` 是页面 short ID，页码请用 `slide_number`。
+5. list 模式默认文件名包含 presentation ID、页码和/或 slide ID；文件已存在时自动追加 `_2`、`_3` 等后缀，避免覆盖旧截图。
+6. 截图来自服务端渲染结果，适合创建/替换后验证页面是否为空白、破图或布局明显异常。

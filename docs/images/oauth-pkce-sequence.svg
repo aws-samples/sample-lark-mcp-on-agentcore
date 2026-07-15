@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 610" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#333" stroke-width="1.5"/>
+    </marker>
+    <marker id="arrg" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#888" stroke-width="1.3"/>
+    </marker>
+    <marker id="arro" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#d97706" stroke-width="1.6"/>
+    </marker>
+  </defs>
+  <rect width="1080" height="610" fill="#fff"/>
+
+  <text x="1060" y="22" text-anchor="end" fill="#aaa" font-size="10">OAuth 2.0 授权码 + PKCE —— 用 code 兑换 MCP Token</text>
+
+  <!-- ===== Actors + lifelines ===== -->
+  <g>
+    <rect x="35" y="38" width="150" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+    <text x="110" y="60" text-anchor="middle" font-size="12" font-weight="500">MCP 客户端</text>
+    <text x="110" y="75" text-anchor="middle" font-size="9" fill="#999">Quick Desktop</text>
+    <line x1="110" y1="82" x2="110" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+  <g>
+    <rect x="305" y="38" width="150" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+    <text x="380" y="58" text-anchor="middle" font-size="12" font-weight="500">OAuth Lambda</text>
+    <text x="380" y="73" text-anchor="middle" font-size="9" fill="#999">/authorize /callback /token</text>
+    <line x1="380" y1="82" x2="380" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+  <g>
+    <rect x="575" y="38" width="150" height="44" rx="6" fill="#fafafa" stroke="#888" stroke-width="1"/>
+    <text x="650" y="58" text-anchor="middle" font-size="12" font-weight="500">DynamoDB</text>
+    <text x="650" y="73" text-anchor="middle" font-size="9" fill="#999">oauth-codes · 用后即焚</text>
+    <line x1="650" y1="82" x2="650" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+  <g>
+    <rect x="845" y="38" width="150" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+    <text x="920" y="58" text-anchor="middle" font-size="12" font-weight="500">飞书授权服务</text>
+    <text x="920" y="73" text-anchor="middle" font-size="9" fill="#999">OAuth 同意页</text>
+    <line x1="920" y1="82" x2="920" y2="540" stroke="#bbb" stroke-width="1" stroke-dasharray="4,3"/>
+  </g>
+
+  <!-- ===== Messages ===== -->
+  <!-- 1. client self: gen verifier/challenge -->
+  <path d="M110 100 h60 v22 h-60" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="178" y="108" fill="#444" font-size="10">① 生成 code_verifier</text>
+  <text x="178" y="121" fill="#444" font-size="10">code_challenge = SHA256(code_verifier)</text>
+
+  <!-- 2. client -> lambda /authorize -->
+  <line x1="110" y1="152" x2="380" y2="152" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="120" y="146" fill="#444" font-size="10">② GET /authorize · code_challenge（S256，必填）</text>
+
+  <!-- 3. lambda self: sign state -->
+  <path d="M380 168 h60 v22 h-60" fill="none" stroke="#333" stroke-width="1.3" marker-end="url(#arr)"/>
+  <text x="448" y="183" fill="#444" font-size="10">③ code_challenge 编入 HMAC 签名的 state</text>
+
+  <!-- 4. lambda -> feishu -->
+  <line x1="380" y1="216" x2="920" y2="216" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="390" y="210" fill="#444" font-size="10">④ 302 跳转飞书授权页（state 随行）</text>
+
+  <!-- 5. feishu -> lambda /callback -->
+  <line x1="920" y1="246" x2="380" y2="246" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="390" y="240" fill="#444" font-size="10">⑤ 用户同意 → GET /callback · 飞书授权码</text>
+
+  <!-- 6. lambda -> dynamo store code -->
+  <line x1="380" y1="276" x2="650" y2="276" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="390" y="270" fill="#444" font-size="10">⑥ 存一次性 code + code_challenge（TTL 120s）</text>
+
+  <!-- 7. lambda -> client redirect -->
+  <line x1="380" y1="306" x2="110" y2="306" stroke="#888" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#arrg)"/>
+  <text x="120" y="300" fill="#888" font-size="10">⑦ 302 回跳客户端 · 一次性 auth code</text>
+
+  <!-- 8. client -> lambda /token (highlight) -->
+  <line x1="110" y1="346" x2="380" y2="346" stroke="#d97706" stroke-width="2" marker-end="url(#arro)"/>
+  <text x="120" y="340" fill="#b45309" font-size="10" font-weight="600">⑧ POST /token · auth code + code_verifier（Amazon Quick 另带 client_secret）</text>
+
+  <!-- 9. lambda self: token checks (highlight box) -->
+  <rect x="380" y="362" width="368" height="116" rx="6" fill="#fffbeb" stroke="#d97706" stroke-width="1.2"/>
+  <text x="392" y="380" fill="#b45309" font-size="10" font-weight="600">⑨ /token 校验（任一不过 → 401/400）</text>
+  <text x="392" y="399" fill="#444" font-size="10">• 客户端认证：签名 client_id（DCR，无 secret）或 client_secret（Amazon Quick）</text>
+  <text x="392" y="416" fill="#444" font-size="10">• 一次性 auth code 有效且未过期（DynamoDB，用后即焚）</text>
+  <text x="392" y="433" fill="#444" font-size="10">• redirect_uri 与发起时一致</text>
+  <text x="392" y="452" fill="#0a7d2c" font-size="10" font-weight="600">• SHA256(code_verifier) == code_challenge ← 绑定身份的关键</text>
+  <text x="392" y="469" fill="#999" font-size="9">code_verifier 从不离开发起流程的那个客户端</text>
+
+  <!-- 10. lambda -> client mcp token -->
+  <line x1="380" y1="506" x2="110" y2="506" stroke="#888" stroke-width="1.3" stroke-dasharray="5,3" marker-end="url(#arrg)"/>
+  <text x="120" y="500" fill="#888" font-size="10">⑩ 200 · MCP Token（userId 签名，30 天有效）</text>
+
+  <!-- footnote band -->
+  <line x1="35" y1="532" x2="1045" y2="532" stroke="#eee" stroke-width="1"/>
+  <text x="35" y="554" fill="#666" font-size="10">自助注册客户端（Kiro、Claude Code、Codex）出示签名 client_id、无 secret；Amazon Quick 出示共享 client_secret。无论哪种，secret 都不是身份凭据。</text>
+  <text x="35" y="572" fill="#666" font-size="10">真正绑定身份、阻断被盗授权码兑换的是 PKCE 的 code_verifier（步骤 ①/⑨）：没有它，即便拿到 client_secret 与一次性 code 也换不出 MCP Token。</text>
+  <text x="35" y="590" fill="#999" font-size="9">能伪造任意用户 MCP Token 的是 SSM 中的 state-secret 根密钥（见“凭据泄露影响对比”），而非 client_secret。</text>
+</svg>

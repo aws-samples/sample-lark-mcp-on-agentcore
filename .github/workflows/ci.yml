@@ -1,0 +1,146 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  workflow-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+
+      - name: Install shellcheck + actionlint
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+
+      - name: ShellCheck
+        run: shellcheck -S warning scripts/*.sh
+
+      - name: Actionlint
+        run: |
+          "$HOME/go/bin/actionlint" -color
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps
+        run: |
+          npm ci
+          cd infra && npm ci
+
+      - name: Lint (ESLint)
+        run: npm run lint
+
+      - name: Hadolint (Dockerfile)
+        uses: hadolint/hadolint-action@v3.1.0
+        with:
+          dockerfile: docker/Dockerfile
+          ignore: DL3008,DL3003
+
+      - name: Typecheck (lambda)
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Typecheck (infra)
+        run: cd infra && npx tsc --noEmit
+
+      - name: Unit tests + coverage
+        run: npx vitest run --coverage
+
+      - name: Coverage gate (statements >= 95%)
+        run: |
+          STMTS=$(node -e "
+            const cov = require('./coverage/coverage-final.json');
+            let total = 0, covered = 0;
+            for (const f of Object.values(cov)) {
+              for (const [k,v] of Object.entries(f.s)) { total++; if (v > 0) covered++; }
+            }
+            console.log(((covered/total)*100).toFixed(1));
+          ")
+          echo "Statement coverage: ${STMTS}%"
+          node -e "if (parseFloat('${STMTS}') < 95) { console.error('Coverage below 95%'); process.exit(1); }"
+
+      - name: Knip (unused exports/deps)
+        run: npx knip
+        continue-on-error: true
+
+      - name: CDK snapshot diff
+        if: github.event_name == 'pull_request'
+        run: |
+          npx vitest run infra/test/snapshot.test.ts 2>&1 || true
+          if git diff --name-only | grep -q snapshot; then
+            echo "::warning::CDK snapshot changed — review infrastructure diff"
+          fi
+
+  docker-smoke:
+    # End-to-end container boot: builds the image and verifies the container
+    # actually starts and answers MCP initialize / tools/list. Catches the class
+    # of bug that unit tests cannot — e.g. a new server.js require() whose file
+    # was never COPYed into the image (MODULE_NOT_FOUND at startup). ubuntu
+    # runners have Docker preinstalled; no AWS credentials needed.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Container smoke test (build + boot + MCP protocol)
+        run: bash scripts/test-smoke-docker.sh
+
+  semgrep:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: returntocorp/semgrep-action@v1
+        with:
+          config: p/javascript p/typescript p/nodejs
+
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependency Review
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+      - name: Gitleaks (secret detection)
+        uses: gitleaks/gitleaks-action@v2
+        continue-on-error: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_ENABLE_UPLOAD_ARTIFACT: "false"
+
+      - name: Trivy (deps + IaC + secrets)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          severity: HIGH,CRITICAL
+          exit-code: "1"

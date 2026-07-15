@@ -1,0 +1,34 @@
+# AI dev tools
+.claude/
+.cursor/
+.windsurf/
+.aider/
+.copilot/
+
+# Node
+node_modules/
+dist/
+cdk.out/
+coverage/
+.stryker-tmp/
+reports/
+
+# Secrets & credentials
+.env
+.env.*
+*.pem
+*.key
+cdk.context.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local deploy state (account-specific, not committed)
+.local/

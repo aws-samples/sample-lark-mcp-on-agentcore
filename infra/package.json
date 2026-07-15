@@ -1,0 +1,32 @@
+{
+  "name": "lark-mcp-on-agentcore-infra",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "tsc",
+    "cdk": "cdk",
+    "deploy": "cdk deploy --all",
+    "synth": "cdk synth",
+    "diff": "cdk diff",
+    "test": "vitest run",
+    "test:update": "vitest run --update"
+  },
+  "dependencies": {
+    "aws-cdk-lib": "^2.257.0",
+    "constructs": "^10.4.0"
+  },
+  "devDependencies": {
+    "@types/node": "^25.9.1",
+    "aws-cdk": "^2.1125.0",
+    "cdk-nag": "^2.38.2",
+    "esbuild": "^0.28.1",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.7.0",
+    "vitest": "^3.2.6"
+  },
+  "comment:overrides": "Pin transitive dev-only deps to patched versions to clear advisories without a vitest major bump. CDK build/test-time only; never enters the production container. NOTE: brace-expansion (GHSA-jxxr-4gwj-5jf2, moderate) is bundled inside aws-cdk-lib (inBundle:true via minimatch) and CANNOT be overridden — it clears only when aws-cdk-lib ships a rebuilt bundle. Risk is build-time glob over our own files, not untrusted input.",
+  "overrides": {
+    "esbuild": "^0.28.1",
+    "vite": "^6.4.2"
+  }
+}
