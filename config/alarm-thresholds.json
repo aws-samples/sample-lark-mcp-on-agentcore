@@ -1,0 +1,13 @@
+{
+  "token_lost": { "threshold": 1, "period": 60, "evaluationPeriods": 1, "unit": "次", "unit_en": "count", "range": "1-5" },
+  "refresh_failed": { "threshold": 3, "period": 300, "evaluationPeriods": 1, "unit": "次", "unit_en": "count", "range": "1-10" },
+  "oauth_errors": { "threshold": 5, "period": 300, "evaluationPeriods": 2, "unit": "次", "unit_en": "count", "range": "1-20" },
+  "middleware_errors": { "threshold": 5, "period": 300, "evaluationPeriods": 2, "unit": "次", "unit_en": "count", "range": "1-20" },
+  "mcp_latency": { "threshold": 10000, "period": 300, "evaluationPeriods": 3, "unit": "ms", "unit_en": "ms", "range": "3000-30000" },
+  "feishu_not_auth": { "threshold": 10, "period": 300, "evaluationPeriods": 2, "unit": "次", "unit_en": "count", "range": "5-50" },
+  "concurrency_pct": { "threshold": 80, "period": 60, "evaluationPeriods": 3, "unit": "%", "unit_en": "%", "range": "50-95" },
+  "throttles": { "threshold": 1, "period": 300, "evaluationPeriods": 1, "unit": "次", "unit_en": "count", "range": "1-10" },
+  "apigw_5xx": { "threshold": 5, "period": 300, "evaluationPeriods": 2, "unit": "次", "unit_en": "count", "range": "1-20" },
+  "upstream_5xx": { "threshold": 3, "period": 300, "evaluationPeriods": 1, "unit": "次", "unit_en": "count", "range": "1-10" },
+  "cmk_stragglers": { "threshold": 0, "period": 1800, "evaluationPeriods": 4, "unit": "个", "unit_en": "count", "range": "0-50" }
+}

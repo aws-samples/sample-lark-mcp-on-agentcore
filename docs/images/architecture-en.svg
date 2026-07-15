@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 580" font-family="-apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Segoe UI', Arial, sans-serif" font-size="12">
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="none" stroke="#333" stroke-width="1.5"/>
+    </marker>
+  </defs>
+  <rect width="1000" height="580" fill="#fff"/>
+
+  <text x="980" y="22" text-anchor="end" fill="#aaa" font-size="10">tag: project=lark-mcp-on-agentcore</text>
+
+  <!-- Layer labels (vertically aligned with each layer's content) -->
+  <text x="22" y="64" fill="#aaa" font-size="11">Client</text>
+  <text x="22" y="148" fill="#aaa" font-size="11">Edge</text>
+  <text x="22" y="274" fill="#aaa" font-size="11">Compute</text>
+  <text x="22" y="424" fill="#aaa" font-size="11">Runtime</text>
+  <text x="22" y="536" fill="#aaa" font-size="11">External</text>
+
+  <!-- ===== Right sidebar: Data plane ===== -->
+  <rect x="800" y="38" width="180" height="400" rx="8" fill="#fafafa" stroke="#bbb" stroke-width="1.2"/>
+  <text x="890" y="58" text-anchor="middle" font-size="11" font-weight="500" fill="#555">Data plane</text>
+
+  <rect x="816" y="70" width="148" height="86" rx="4" fill="#fff" stroke="#888" stroke-width="0.8"/>
+  <text x="890" y="88" text-anchor="middle" font-size="11" font-weight="500">Secrets Manager</text>
+  <text x="890" y="106" text-anchor="middle" font-size="9" fill="#666">feishu-app</text>
+  <text x="890" y="120" text-anchor="middle" font-size="9" fill="#666">users/{userId}</text>
+  <text x="890" y="134" text-anchor="middle" font-size="9" fill="#666">openid-map/{openId}</text>
+
+  <rect x="816" y="168" width="148" height="60" rx="4" fill="#fff" stroke="#888" stroke-width="0.8"/>
+  <text x="890" y="186" text-anchor="middle" font-size="11" font-weight="500">DynamoDB</text>
+  <text x="890" y="204" text-anchor="middle" font-size="9" fill="#666">oauth-codes</text>
+  <text x="890" y="218" text-anchor="middle" font-size="9" fill="#666">TTL · single-use</text>
+
+  <rect x="816" y="240" width="148" height="60" rx="4" fill="#fff" stroke="#888" stroke-width="0.8"/>
+  <text x="890" y="258" text-anchor="middle" font-size="11" font-weight="500">SSM Parameter Store</text>
+  <text x="890" y="276" text-anchor="middle" font-size="9" fill="#666">state-secret</text>
+  <text x="890" y="290" text-anchor="middle" font-size="9" fill="#666">oauth-client-secret</text>
+
+  <rect x="816" y="312" width="148" height="66" rx="4" fill="#fff" stroke="#888" stroke-width="0.8"/>
+  <text x="890" y="330" text-anchor="middle" font-size="11" font-weight="500">Observability</text>
+  <text x="890" y="348" text-anchor="middle" font-size="9" fill="#666">CloudWatch · SNS</text>
+  <text x="890" y="362" text-anchor="middle" font-size="9" fill="#666">TokenLost / RefreshFailed</text>
+
+  <!-- ===== Layer 1: Quick Desktop ===== -->
+  <rect x="506" y="38" width="160" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="586" y="64" text-anchor="middle" font-size="13" font-weight="500">Quick Desktop</text>
+  <line x1="586" y1="82" x2="586" y2="100" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="594" y="96" fill="#666" font-size="10">HTTPS</text>
+
+  <!-- ===== Layer 2: Edge ===== -->
+  <rect x="80" y="100" width="700" height="88" rx="8" fill="#f8f9fa" stroke="#bbb" stroke-width="1"/>
+
+  <rect x="160" y="132" width="240" height="48" rx="4" fill="#fff" stroke="#333" stroke-width="1.2"/>
+  <text x="280" y="152" text-anchor="middle" font-size="11" font-weight="500">CloudFront</text>
+  <text x="280" y="170" text-anchor="middle" font-size="9" fill="#999" font-weight="400">+ WAFv2 (optional)</text>
+  <line x1="400" y1="158" x2="448" y2="158" stroke="#666" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <rect x="450" y="132" width="240" height="48" rx="4" fill="#fff" stroke="#333" stroke-width="1.2"/>
+  <text x="570" y="161" text-anchor="middle" font-size="11" font-weight="500">API Gateway</text>
+
+  <!-- API GW split: left L-shape, right straight line -->
+  <path d="M 510 180 L 510 215 L 280 215 L 280 240" stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#arr)"/>
+  <text x="290" y="196" fill="#666" font-size="10">/authorize /callback /token /register</text>
+  <text x="290" y="209" fill="#666" font-size="10">.well-known/* (metadata + DCR discovery)</text>
+
+  <line x1="630" y1="180" x2="630" y2="240" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="638" y="216" fill="#666" font-size="10">/mcp</text>
+
+  <!-- ===== Layer 3: Compute ===== -->
+  <rect x="100" y="240" width="280" height="60" rx="6" fill="#fff" stroke="#333" stroke-width="1.2"/>
+  <text x="240" y="266" text-anchor="middle" font-size="13" font-weight="500">OAuth Lambda</text>
+  <text x="240" y="286" text-anchor="middle" font-size="10" fill="#666">OAuth 2.0 + token auto-refresh</text>
+
+  <!-- EventBridge trigger chip below OAuth Lambda, arrow up into Lambda -->
+  <rect x="110" y="324" width="260" height="22" rx="3" fill="#fafafa" stroke="#bbb" stroke-width="0.8" stroke-dasharray="3,2"/>
+  <text x="240" y="339" text-anchor="middle" font-size="10" fill="#666">EventBridge · 30min cron triggers token refresh</text>
+  <line x1="240" y1="324" x2="240" y2="304" stroke="#888" stroke-width="1.2" marker-end="url(#arr)"/>
+
+  <rect x="500" y="240" width="280" height="60" rx="6" fill="#fff" stroke="#333" stroke-width="1.2"/>
+  <text x="640" y="266" text-anchor="middle" font-size="13" font-weight="500">Middleware Lambda</text>
+  <text x="640" y="286" text-anchor="middle" font-size="10" fill="#666">MCP token verify + SigV4 proxy</text>
+
+  <!-- Middleware → AgentCore Runtime -->
+  <line x1="640" y1="300" x2="640" y2="380" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="648" y="346" fill="#666" font-size="10">SigV4 invoke</text>
+
+  <!-- ===== Layer 4: AgentCore Runtime ===== -->
+  <rect x="200" y="380" width="540" height="80" rx="6" fill="#f8f9fa" stroke="#333" stroke-width="1.2"/>
+  <text x="212" y="398" fill="#666" font-size="10">AgentCore Runtime</text>
+  <rect x="212" y="406" width="516" height="46" rx="4" fill="#fff" stroke="#555" stroke-width="1"/>
+  <text x="470" y="424" text-anchor="middle" font-size="13" font-weight="500">server.js + lark-cli</text>
+  <text x="470" y="442" text-anchor="middle" font-size="10" fill="#666">28 Tier1 + lark_discover + lark_invoke (ARM64 Docker)</text>
+
+  <!-- Runtime → Feishu OpenAPI -->
+  <line x1="470" y1="460" x2="470" y2="510" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="478" y="486" fill="#666" font-size="10">user_access_token</text>
+
+  <!-- ===== Layer 5: Feishu OpenAPI ===== -->
+  <rect x="390" y="510" width="160" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="470" y="530" text-anchor="middle" font-size="13" font-weight="500">Feishu OpenAPI</text>
+  <text x="470" y="545" text-anchor="middle" font-size="9" fill="#999">OAuth + REST</text>
+</svg>

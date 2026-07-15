@@ -1,0 +1,38 @@
+{
+  "relaxed": {
+    "token_lost": 3,
+    "refresh_failed": 10,
+    "oauth_errors": 20,
+    "middleware_errors": 20,
+    "mcp_latency": 20000,
+    "feishu_not_auth": 30,
+    "concurrency_pct": 95,
+    "throttles": 5,
+    "apigw_5xx": 20,
+    "upstream_5xx": 10
+  },
+  "standard": {
+    "token_lost": 1,
+    "refresh_failed": 3,
+    "oauth_errors": 5,
+    "middleware_errors": 5,
+    "mcp_latency": 10000,
+    "feishu_not_auth": 10,
+    "concurrency_pct": 80,
+    "throttles": 1,
+    "apigw_5xx": 5,
+    "upstream_5xx": 3
+  },
+  "strict": {
+    "token_lost": 1,
+    "refresh_failed": 1,
+    "oauth_errors": 2,
+    "middleware_errors": 2,
+    "mcp_latency": 5000,
+    "feishu_not_auth": 5,
+    "concurrency_pct": 60,
+    "throttles": 1,
+    "apigw_5xx": 2,
+    "upstream_5xx": 1
+  }
+}

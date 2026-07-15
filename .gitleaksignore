@@ -1,0 +1,31 @@
+# gitleaks false-positive allowlist (finding fingerprints).
+#
+# Every entry below is a reviewed false positive — no real credentials. Fingerprints
+# are listed in BOTH formats so they match whether gitleaks runs in git mode
+# (gitleaks-action / CI: <commit>:file:rule:line) or --no-git / directory mode
+# (lefthook pre-commit: file:rule:line).
+#
+# Regenerate the --no-git fingerprints with:
+#   gitleaks detect --source . --no-git --report-format json --report-path /tmp/gl.json
+#
+# --- Feishu/Lark API reference docs: illustrative placeholder tokens in usage
+#     examples (share_token / page_token / document token). One literally ends in "xxxx".
+docker/skills/lark-base/references/lark-base-form-submit.md:generic-api-key:112
+docker/skills/lark-im/references/lark-im-reactions.md:generic-api-key:124
+docker/skills/lark-approval/references/lark-approval-instance-form-control-parameters.md:generic-api-key:205
+
+# --- CDK generated CloudFormation snapshot: CDK asset content-hashes (S3Key = SHA-256
+#     of the built Lambda bundle); bucket uses AWS docs placeholder account 123456789012.
+infra/test/__snapshots__/snapshot.test.ts.snap:generic-api-key:499
+infra/test/__snapshots__/snapshot.test.ts.snap:generic-api-key:2111
+
+# --- E2E test: deliberately-invalid bearer ("Bearer not-a-real-token") sent to assert
+#     the service returns 401. Not a credential.
+scripts/test-e2e.sh:curl-auth-header:93
+
+# --- Same findings in git-mode fingerprint format (commit 6c9949d), for gitleaks-action/CI.
+6c9949dad60c67d23700b6157a1b68f22286d038:docker/skills/lark-base/references/lark-base-form-submit.md:generic-api-key:112
+6c9949dad60c67d23700b6157a1b68f22286d038:docker/skills/lark-im/references/lark-im-reactions.md:generic-api-key:124
+6c9949dad60c67d23700b6157a1b68f22286d038:docker/skills/lark-approval/references/lark-approval-instance-form-control-parameters.md:generic-api-key:205
+6c9949dad60c67d23700b6157a1b68f22286d038:infra/test/__snapshots__/snapshot.test.ts.snap:generic-api-key:499
+6c9949dad60c67d23700b6157a1b68f22286d038:infra/test/__snapshots__/snapshot.test.ts.snap:generic-api-key:2111

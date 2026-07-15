@@ -1,0 +1,1997 @@
+{
+  "_meta": {
+    "lark_cli_version": "1.0.69",
+    "source": "lark-cli schema _meta.scopes"
+  },
+  "rawApis": [
+    {
+      "service": "approval",
+      "resource": "approvals",
+      "method": "get",
+      "scopes": [
+        "approval:approval:read"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "approvals",
+      "method": "search",
+      "scopes": [
+        "approval:approval:read"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "instances",
+      "method": "cancel",
+      "scopes": [
+        "approval:instance:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "instances",
+      "method": "cc",
+      "scopes": [
+        "approval:instance:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "instances",
+      "method": "create",
+      "scopes": [
+        "approval:instance:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "instances",
+      "method": "get",
+      "scopes": [
+        "approval:instance:read"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "instances",
+      "method": "initiated",
+      "scopes": [
+        "approval:instance:read"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "tasks",
+      "method": "add_sign",
+      "scopes": [
+        "approval:task:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "tasks",
+      "method": "approve",
+      "scopes": [
+        "approval:task:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "tasks",
+      "method": "query",
+      "scopes": [
+        "approval:task:read"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "tasks",
+      "method": "reject",
+      "scopes": [
+        "approval:task:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "tasks",
+      "method": "remind",
+      "scopes": [
+        "approval:instance:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "tasks",
+      "method": "rollback",
+      "scopes": [
+        "approval:task:write"
+      ]
+    },
+    {
+      "service": "approval",
+      "resource": "tasks",
+      "method": "transfer",
+      "scopes": [
+        "approval:task:write"
+      ]
+    },
+    {
+      "service": "attendance",
+      "resource": "user_tasks",
+      "method": "query",
+      "scopes": [
+        "attendance:task:readonly"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "calendars",
+      "method": "create",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar:create"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "calendars",
+      "method": "delete",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar:delete"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "calendars",
+      "method": "get",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "calendars",
+      "method": "list",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar.calendar:readonly",
+        "calendar:calendar:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "calendars",
+      "method": "patch",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar:update"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "calendars",
+      "method": "primary",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar.calendar:readonly",
+        "calendar:calendar:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "calendars",
+      "method": "search",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "event.attendees",
+      "method": "batch_delete",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar.event:writeonly",
+        "calendar:calendar.event:update"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "event.attendees",
+      "method": "create",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar.event:update"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "event.attendees",
+      "method": "list",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar.event:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "events",
+      "method": "create",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar.event:create"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "events",
+      "method": "delete",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar.event:writeonly",
+        "calendar:calendar.event:delete"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "events",
+      "method": "get",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar.event:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "events",
+      "method": "instance_view",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar.event:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "events",
+      "method": "patch",
+      "scopes": [
+        "calendar:calendar",
+        "calendar:calendar.event:update"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "events",
+      "method": "search_event",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar.event:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "events",
+      "method": "share_info",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar.event:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "resource": "freebusys",
+      "method": "list",
+      "scopes": [
+        "calendar:calendar:readonly",
+        "calendar:calendar",
+        "calendar:calendar.free_busy:read"
+      ]
+    },
+    {
+      "service": "contact",
+      "resource": "user_profiles",
+      "method": "batch_query",
+      "scopes": [
+        "profile:user_profile:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comment.reply.reactions",
+      "method": "update_reaction",
+      "scopes": [
+        "docs:document.comment:create",
+        "docs:document.comment:write_only"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comment.replys",
+      "method": "create",
+      "scopes": [
+        "drive:drive",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "drive:drive:readonly",
+        "docs:doc:readonly",
+        "sheets:spreadsheet:readonly",
+        "docs:document.comment:create"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comment.replys",
+      "method": "delete",
+      "scopes": [
+        "drive:drive",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "drive:drive:readonly",
+        "docs:doc:readonly",
+        "sheets:spreadsheet:readonly",
+        "docs:document.comment:write_only",
+        "docs:document.comment:delete"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comment.replys",
+      "method": "list",
+      "scopes": [
+        "drive:drive",
+        "drive:drive:readonly",
+        "docs:document.comment:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comment.replys",
+      "method": "update",
+      "scopes": [
+        "drive:drive",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "drive:drive:readonly",
+        "docs:doc:readonly",
+        "sheets:spreadsheet:readonly",
+        "docs:document.comment:write_only",
+        "docs:document.comment:update"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comments",
+      "method": "batch_query",
+      "scopes": [
+        "drive:drive",
+        "drive:drive:readonly",
+        "docs:document.comment:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comments",
+      "method": "create_v2",
+      "scopes": [
+        "docs:document.comment:create",
+        "docs:document.comment:write_only"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comments",
+      "method": "list",
+      "scopes": [
+        "drive:drive",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "drive:drive:readonly",
+        "docs:doc:readonly",
+        "sheets:spreadsheet:readonly",
+        "docs:document.comment:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.comments",
+      "method": "patch",
+      "scopes": [
+        "drive:drive",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "drive:drive:readonly",
+        "docs:doc:readonly",
+        "sheets:spreadsheet:readonly",
+        "docs:document.comment:write_only",
+        "docs:document.comment:update"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.statistics",
+      "method": "get",
+      "scopes": [
+        "drive:drive",
+        "drive:drive:readonly",
+        "drive:drive.metadata:readonly"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "file.view_records",
+      "method": "list",
+      "scopes": [
+        "contact:user.base:readonly",
+        "drive:file:view_record:readonly"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "files",
+      "method": "copy",
+      "scopes": [
+        "drive:drive",
+        "docs:document:copy"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "files",
+      "method": "create_folder",
+      "scopes": [
+        "drive:drive",
+        "space:folder:create"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "files",
+      "method": "list",
+      "scopes": [
+        "drive:drive",
+        "drive:drive:readonly",
+        "space:document:retrieve"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "files",
+      "method": "patch",
+      "scopes": [
+        "docx:document:write_only",
+        "sheets:spreadsheet:write_only",
+        "base:app:update",
+        "drive:file:upload"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "metas",
+      "method": "batch_query",
+      "scopes": [
+        "drive:drive",
+        "drive:drive.metadata:readonly"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "permission.members",
+      "method": "auth",
+      "scopes": [
+        "drive:drive",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "bitable:bitable",
+        "wiki:wiki",
+        "bitable:app",
+        "docs:permission.member:auth"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "permission.members",
+      "method": "create",
+      "scopes": [
+        "drive:drive",
+        "drive:file",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "wiki:wiki",
+        "bitable:bitable",
+        "bitable:app",
+        "docs:permission.member:create"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "permission.members",
+      "method": "transfer_owner",
+      "scopes": [
+        "drive:drive",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "bitable:bitable",
+        "wiki:wiki",
+        "bitable:app",
+        "docs:permission.member:transfer"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "permission.public",
+      "method": "get",
+      "scopes": [
+        "drive:drive",
+        "drive:drive:readonly",
+        "drive:file",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "wiki:wiki",
+        "bitable:bitable",
+        "docs:permission.setting:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "permission.public",
+      "method": "patch",
+      "scopes": [
+        "drive:drive",
+        "drive:file",
+        "docs:doc",
+        "sheets:spreadsheet",
+        "wiki:wiki",
+        "bitable:bitable",
+        "docs:permission.setting:write_only"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "quota_details",
+      "method": "get",
+      "scopes": [
+        "drive:quota_detail:read_one"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "user",
+      "method": "remove_subscription",
+      "scopes": [
+        "docs:event:subscribe"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "user",
+      "method": "subscription",
+      "scopes": [
+        "docs:event:subscribe"
+      ]
+    },
+    {
+      "service": "drive",
+      "resource": "user",
+      "method": "subscription_status",
+      "scopes": [
+        "docs:event:subscribe"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.managers",
+      "method": "add_managers",
+      "scopes": [
+        "im:chat",
+        "im:chat.managers:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.managers",
+      "method": "delete_managers",
+      "scopes": [
+        "im:chat",
+        "im:chat.managers:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.members",
+      "method": "bots",
+      "scopes": [
+        "im:chat:readonly",
+        "im:chat",
+        "im:chat.group_info:readonly",
+        "im:chat.members:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.members",
+      "method": "create",
+      "scopes": [
+        "im:chat",
+        "im:chat.members:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.members",
+      "method": "delete",
+      "scopes": [
+        "im:chat",
+        "im:chat.members:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.members",
+      "method": "get",
+      "scopes": [
+        "im:chat:readonly",
+        "im:chat",
+        "im:chat.group_info:readonly",
+        "im:chat.members:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.moderation",
+      "method": "get",
+      "scopes": [
+        "im:chat:readonly",
+        "im:chat",
+        "im:chat.moderation:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.moderation",
+      "method": "update",
+      "scopes": [
+        "im:chat",
+        "im:chat:moderation:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.nickname",
+      "method": "delete",
+      "scopes": [
+        "im:chat",
+        "im:chat.nickname:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.nickname",
+      "method": "get",
+      "scopes": [
+        "im:chat",
+        "im:chat:read",
+        "im:chat:readonly",
+        "im:chat.nickname:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.nickname",
+      "method": "update",
+      "scopes": [
+        "im:chat",
+        "im:chat.nickname:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.user_setting",
+      "method": "batch_query",
+      "scopes": [
+        "im:chat:read",
+        "im:chat:readonly",
+        "im:chat",
+        "im:chat.user_setting:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.user_setting",
+      "method": "batch_update",
+      "scopes": [
+        "im:chat",
+        "im:chat.user_setting:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chats",
+      "method": "get",
+      "scopes": [
+        "im:chat:readonly",
+        "im:chat",
+        "im:chat:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chats",
+      "method": "link",
+      "scopes": [
+        "im:chat:readonly",
+        "im:chat",
+        "im:chat:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chats",
+      "method": "update",
+      "scopes": [
+        "im:chat",
+        "im:chat:update"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "feed.groups",
+      "method": "batch_add_item",
+      "scopes": [
+        "im:feed_group_v1:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "feed.groups",
+      "method": "batch_query",
+      "scopes": [
+        "im:feed_group_v1:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "feed.groups",
+      "method": "batch_remove_item",
+      "scopes": [
+        "im:feed_group_v1:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "feed.groups",
+      "method": "create",
+      "scopes": [
+        "im:feed_group_v1:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "feed.groups",
+      "method": "delete",
+      "scopes": [
+        "im:feed_group_v1:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "feed.groups",
+      "method": "update",
+      "scopes": [
+        "im:feed_group_v1:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "images",
+      "method": "create",
+      "scopes": [
+        "im:resource:upload",
+        "im:resource"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "messages",
+      "method": "delete",
+      "scopes": [
+        "im:message:recall",
+        "im:message"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "messages",
+      "method": "forward",
+      "scopes": [
+        "im:message"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "pins",
+      "method": "create",
+      "scopes": [
+        "im:message",
+        "im:message.pins:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "pins",
+      "method": "delete",
+      "scopes": [
+        "im:message",
+        "im:message.pins:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "pins",
+      "method": "list",
+      "scopes": [
+        "im:message:readonly",
+        "im:message",
+        "im:message.pins:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "reactions",
+      "method": "batch_query",
+      "scopes": [
+        "im:message:readonly",
+        "im:message.reactions:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "reactions",
+      "method": "create",
+      "scopes": [
+        "im:message",
+        "im:message.reactions:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "reactions",
+      "method": "delete",
+      "scopes": [
+        "im:message",
+        "im:message.reactions:write_only"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "reactions",
+      "method": "list",
+      "scopes": [
+        "im:message:readonly",
+        "im:message.reactions:read"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "threads",
+      "method": "forward",
+      "scopes": [
+        "im:message"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "multi_entity",
+      "method": "search",
+      "scopes": [
+        "mail:user_mailbox:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.drafts",
+      "method": "cancel_scheduled_send",
+      "scopes": [
+        "mail:user_mailbox.message:send"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.drafts",
+      "method": "create",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.drafts",
+      "method": "delete",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.drafts",
+      "method": "get",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.drafts",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.drafts",
+      "method": "send",
+      "scopes": [
+        "mail:user_mailbox.message:send"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.drafts",
+      "method": "update",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.event",
+      "method": "subscribe",
+      "scopes": [
+        "mail:event"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.event",
+      "method": "subscription",
+      "scopes": [
+        "mail:event"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.event",
+      "method": "unsubscribe",
+      "scopes": [
+        "mail:event"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.folders",
+      "method": "create",
+      "scopes": [
+        "mail:user_mailbox.folder:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.folders",
+      "method": "delete",
+      "scopes": [
+        "mail:user_mailbox.folder:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.folders",
+      "method": "get",
+      "scopes": [
+        "mail:user_mailbox.folder:write",
+        "mail:user_mailbox.folder:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.folders",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.folder:write",
+        "mail:user_mailbox.folder:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.folders",
+      "method": "patch",
+      "scopes": [
+        "mail:user_mailbox.folder:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.labels",
+      "method": "create",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.labels",
+      "method": "delete",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.labels",
+      "method": "get",
+      "scopes": [
+        "mail:user_mailbox.message:modify",
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.labels",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.message:readonly",
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.labels",
+      "method": "patch",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.mail_contacts",
+      "method": "create",
+      "scopes": [
+        "mail:user_mailbox.mail_contact:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.mail_contacts",
+      "method": "delete",
+      "scopes": [
+        "mail:user_mailbox.mail_contact:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.mail_contacts",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.mail_contact:write",
+        "mail:user_mailbox.mail_contact:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.mail_contacts",
+      "method": "patch",
+      "scopes": [
+        "mail:user_mailbox.mail_contact:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.message.attachments",
+      "method": "download_url",
+      "scopes": [
+        "mail:user_mailbox.message.body:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "batch_get",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "batch_modify",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "batch_trash",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "get",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "modify",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "send_status",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.messages",
+      "method": "trash",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.rules",
+      "method": "create",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.rules",
+      "method": "delete",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.rules",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.rule:write",
+        "mail:user_mailbox.rule:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.rules",
+      "method": "reorder",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.rules",
+      "method": "update",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.sent_messages",
+      "method": "get_recall_detail",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.sent_messages",
+      "method": "recall",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.settings",
+      "method": "send_as",
+      "scopes": [
+        "mail:user_mailbox:readonly",
+        "mail:user_mailbox"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.template.attachments",
+      "method": "download_url",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.templates",
+      "method": "create",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.templates",
+      "method": "delete",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.templates",
+      "method": "get",
+      "scopes": [
+        "mail:user_mailbox.message:readonly",
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.templates",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.message:readonly",
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.templates",
+      "method": "update",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.threads",
+      "method": "batch_modify",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.threads",
+      "method": "batch_trash",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.threads",
+      "method": "get",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.threads",
+      "method": "list",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.threads",
+      "method": "modify",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailbox.threads",
+      "method": "trash",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailboxes",
+      "method": "accessible_mailboxes",
+      "scopes": [
+        "mail:user_mailbox",
+        "mail:user_mailbox:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailboxes",
+      "method": "profile",
+      "scopes": [
+        "mail:user_mailbox:readonly"
+      ]
+    },
+    {
+      "service": "mail",
+      "resource": "user_mailboxes",
+      "method": "search",
+      "scopes": [
+        "mail:user_mailbox.message:readonly"
+      ]
+    },
+    {
+      "service": "mindnotes",
+      "resource": "nodes",
+      "method": "create",
+      "scopes": [
+        "mindnote:node:create"
+      ]
+    },
+    {
+      "service": "mindnotes",
+      "resource": "nodes",
+      "method": "list",
+      "scopes": [
+        "mindnote:node:read"
+      ]
+    },
+    {
+      "service": "minutes",
+      "resource": "minutes",
+      "method": "get",
+      "scopes": [
+        "minutes:minutes",
+        "minutes:minutes:readonly",
+        "minutes:minutes.basic:read"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "alignments",
+      "method": "delete",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "alignments",
+      "method": "get",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "categories",
+      "method": "list",
+      "scopes": [
+        "okr:okr.setting:read"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "cycle.objectives",
+      "method": "create",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "cycle.objectives",
+      "method": "list",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "cycles",
+      "method": "list",
+      "scopes": [
+        "okr:okr.period:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "cycles",
+      "method": "objectives_position",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "cycles",
+      "method": "objectives_weight",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "indicators",
+      "method": "patch",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "key_result.indicators",
+      "method": "list",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "key_results",
+      "method": "delete",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "key_results",
+      "method": "get",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "key_results",
+      "method": "patch",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objective.alignments",
+      "method": "create",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objective.alignments",
+      "method": "list",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objective.indicators",
+      "method": "list",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objective.key_results",
+      "method": "create",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objective.key_results",
+      "method": "list",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objectives",
+      "method": "delete",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objectives",
+      "method": "get",
+      "scopes": [
+        "okr:okr.content:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objectives",
+      "method": "key_results_position",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objectives",
+      "method": "key_results_weight",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "resource": "objectives",
+      "method": "patch",
+      "scopes": [
+        "okr:okr.content:writeonly"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.slide",
+      "method": "create",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.slide",
+      "method": "delete",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.slide",
+      "method": "get",
+      "scopes": [
+        "slides:presentation:read"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.slide",
+      "method": "replace",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentations",
+      "method": "get",
+      "scopes": [
+        "slides:presentation:read"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_field_options",
+      "method": "create",
+      "scopes": [
+        "task:custom_field:writeonly",
+        "task:tasklist:write",
+        "task:tasklist:read"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_field_options",
+      "method": "patch",
+      "scopes": [
+        "task:custom_field:writeonly",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_fields",
+      "method": "add",
+      "scopes": [
+        "task:custom_field:writeonly",
+        "task:custom_field:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_fields",
+      "method": "create",
+      "scopes": [
+        "task:custom_field:writeonly",
+        "task:custom_field:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_fields",
+      "method": "get",
+      "scopes": [
+        "task:custom_field:write",
+        "task:custom_field:read"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_fields",
+      "method": "list",
+      "scopes": [
+        "task:custom_field:read",
+        "task:custom_field:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_fields",
+      "method": "patch",
+      "scopes": [
+        "task:custom_field:writeonly",
+        "task:custom_field:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "custom_fields",
+      "method": "remove",
+      "scopes": [
+        "task:custom_field:writeonly",
+        "task:custom_field:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "members",
+      "method": "add",
+      "scopes": [
+        "task:personnel:writeonly",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "members",
+      "method": "remove",
+      "scopes": [
+        "task:personnel:writeonly",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "sections",
+      "method": "create",
+      "scopes": [
+        "task:section:writeonly",
+        "task:section:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "sections",
+      "method": "delete",
+      "scopes": [
+        "task:section:delete",
+        "task:section:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "sections",
+      "method": "get",
+      "scopes": [
+        "task:section:write",
+        "task:section:read"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "sections",
+      "method": "list",
+      "scopes": [
+        "task:section:write",
+        "task:section:read"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "sections",
+      "method": "patch",
+      "scopes": [
+        "task:section:writeonly",
+        "task:section:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "sections",
+      "method": "tasks",
+      "scopes": [
+        "task:section:read",
+        "task:section:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "subtasks",
+      "method": "create",
+      "scopes": [
+        "task:task:writeonly",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "subtasks",
+      "method": "list",
+      "scopes": [
+        "task:task:read",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "add_members",
+      "scopes": [
+        "task:tasklist:writeonly",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "create",
+      "scopes": [
+        "task:tasklist:writeonly",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "delete",
+      "scopes": [
+        "task:tasklist:delete",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "get",
+      "scopes": [
+        "task:tasklist:read",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "list",
+      "scopes": [
+        "task:tasklist:read",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "patch",
+      "scopes": [
+        "task:tasklist:writeonly",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "remove_members",
+      "scopes": [
+        "task:tasklist:writeonly",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasklists",
+      "method": "tasks",
+      "scopes": [
+        "task:tasklist:read",
+        "task:tasklist:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasks",
+      "method": "create",
+      "scopes": [
+        "task:task:write",
+        "task:task:writeonly"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasks",
+      "method": "delete",
+      "scopes": [
+        "task:task:delete",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasks",
+      "method": "get",
+      "scopes": [
+        "task:task:read",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasks",
+      "method": "list",
+      "scopes": [
+        "task:task:read",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "task",
+      "resource": "tasks",
+      "method": "patch",
+      "scopes": [
+        "task:task:writeonly",
+        "task:task:write"
+      ]
+    },
+    {
+      "service": "vc",
+      "resource": "meeting",
+      "method": "get",
+      "scopes": [
+        "vc:meeting:readonly",
+        "vc:meeting.meetingevent:read"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "members",
+      "method": "create",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:member:create"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "members",
+      "method": "delete",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:member:update"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "members",
+      "method": "list",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:wiki:readonly",
+        "wiki:member:retrieve"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "nodes",
+      "method": "copy",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:node:copy"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "nodes",
+      "method": "create",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:node:create"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "nodes",
+      "method": "list",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:wiki:readonly",
+        "wiki:node:retrieve"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "spaces",
+      "method": "create",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:space:write_only"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "spaces",
+      "method": "get",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:wiki:readonly",
+        "wiki:space:read"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "spaces",
+      "method": "get_node",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:wiki:readonly",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "wiki",
+      "resource": "spaces",
+      "method": "list",
+      "scopes": [
+        "wiki:wiki",
+        "wiki:wiki:readonly",
+        "wiki:space:retrieve"
+      ]
+    }
+  ]
+}

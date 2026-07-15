@@ -1,0 +1,43 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint lambda/ docker/server.js docker/server-lib.js docker/generate-tools.js docker/generate-tools-lib.js docker/skill-description.js docker/skill-sections.js",
+    "lint:fix": "eslint lambda/ docker/server.js docker/server-lib.js docker/generate-tools.js docker/generate-tools-lib.js docker/skill-description.js docker/skill-sections.js --fix",
+    "knip": "knip"
+  },
+  "dependencies": {
+    "@aws-crypto/sha256-js": "^5.0.0",
+    "@aws-sdk/client-dynamodb": "^3.700.0",
+    "@aws-sdk/client-secrets-manager": "^3.700.0",
+    "@aws-sdk/client-ssm": "^3.700.0",
+    "@aws-sdk/credential-provider-node": "^3.700.0",
+    "@aws-sdk/lib-dynamodb": "^3.700.0",
+    "@smithy/protocol-http": "^4.0.0",
+    "@smithy/signature-v4": "^4.0.0"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stryker-mutator/core": "^9.6.1",
+    "@stryker-mutator/typescript-checker": "^9.6.1",
+    "@stryker-mutator/vitest-runner": "^9.6.1",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.2.6",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.4.1",
+    "fast-check": "^4.8.0",
+    "knip": "^5.0.0",
+    "lefthook": "^2.1.9",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4",
+    "vitest": "^3.2.6"
+  },
+  "comment:overrides": "Pin transitive dev-only deps to patched versions to clear advisories without a vitest major bump. All are test/build-time (vite dev-server, stryker's qs/babel) and never enter the production container (docker/ depends only on @aws-sdk/client-secrets-manager).",
+  "overrides": {
+    "esbuild": "^0.28.1",
+    "vite": "^6.4.2",
+    "qs": "^6.15.2",
+    "@babel/core": "^7.29.1"
+  }
+}

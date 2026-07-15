@@ -1,0 +1,36 @@
+# semgrep path exclusions.
+#
+# NOTE: creating this file REPLACES semgrep's built-in default .semgrepignore
+# (it is not merged), so the default entries are replicated first.
+#
+# --- semgrep defaults (keep in sync with upstream defaults) ---------------
+node_modules/
+build/
+dist/
+vendor/
+.env/
+.venv/
+.tox/
+*.min.js
+test/
+tests/
+.semgrep
+.semgrep_logs
+# Generated / vendored artifacts of this repo
+coverage/
+cdk.out/
+.stryker-tmp/
+
+# --- Reviewed false positives --------------------------------------------
+# 1) Unit test asserting the local in-process HTTP test server; connects to
+#    http://127.0.0.1 by design (TLS not applicable). Consistent with semgrep's
+#    default philosophy of excluding test dirs (this repo uses Jest-style
+#    __tests__/, which the default list does not cover).
+docker/__tests__/server-runtime.test.js
+# 2) Skill helper scripts flagged by use-defused-xml. Both guard the stdlib
+#    parser with ensure_safe_xml_source() (rejects DOCTYPE/ENTITY declarations,
+#    caps input size — blocks XXE and XML bombs; verified with attack payloads).
+#    defusedxml cannot be imported: the container runs skill scripts with the
+#    base-image python3 and has no pip / third-party Python deps by design.
+docker/skills/lark-doc/scripts/doc_word_stat.py
+docker/skills/lark-slides/scripts/xml_text_overlap_lint.py
