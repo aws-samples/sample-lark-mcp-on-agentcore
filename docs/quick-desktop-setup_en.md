@@ -39,6 +39,13 @@ Fill in Name, Description, MCP server endpoint (from deploy output), Connection 
 
 Fill in Client ID, Client Secret, Token URL, Authorization URL (all from deploy output), click **Create and continue**:
 
+| Field | Value |
+|-------|-------|
+| Client ID | `lark-mcp-on-agentcore` |
+| Client Secret | From deploy output (saved in `.local/deploy-output.md`), or retrieve with:<br>`aws ssm get-parameter --name /lark-mcp-on-agentcore/oauth-client-secret --with-decryption --query 'Parameter.Value' --output text --region <your-region>` |
+| Token URL | `<OAuth endpoint>/token` |
+| Authorization URL | `<OAuth endpoint>/authorize` |
+
 <p align="center">
   <img src="images/quick-mcp-authenticate.png" alt="Authenticate" width="600">
 </p>
