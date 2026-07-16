@@ -31,7 +31,7 @@
     "lefthook": "^2.1.9",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4",
-    "vitest": "^3.2.6"
+    "vitest": "^4.1.10"
   },
   "comment:overrides": "Pin transitive dev-only deps to patched versions to clear advisories without a vitest major bump. All are test/build-time (vite dev-server, stryker's qs/babel) and never enter the production container (docker/ depends only on @aws-sdk/client-secrets-manager).",
   "overrides": {
