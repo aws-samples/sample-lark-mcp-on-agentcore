@@ -1,6 +1,6 @@
 # Pin to a tested base image. Update with:
 #   docker pull node:20-bookworm-slim 2>&1 | grep Digest
-FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d6f0193e162b5febfc0
+FROM node:26-bookworm-slim@sha256:2d49d876e96237d76de412761cf05dbfe5aee325cc4406a4d41d5824c5bb8beb
 
 # Pin lark-cli to the version whose scope mapping is captured in shortcut-scopes.json.
 # Drift is detected by scripts/check-lark-cli-version.sh.
