@@ -3,15 +3,16 @@
 
 将文件或文件夹移动到用户云空间（云盘/云存储）的其他位置。
 
-## 与 `lark_wiki_move` 的区别
+## 与 Wiki 移动 shortcut 的区别
 
 - `lark_drive_move` 只处理 **Drive 文件夹树内部** 的位置调整，目标位置用 `folder_token` 表示
 - `lark_wiki_move` 处理的是 **Wiki 知识空间 / 页面层级**：要么移动已有 Wiki 节点，要么把 Drive 文档迁入 Wiki
-- 如果用户说"移动到某个文件夹""移动到我的空间根目录"，应使用 `lark_drive_move`
+- `lark_wiki_move_to_drive` 把 **已有 Wiki 节点移出知识库**，放到 Drive 文件夹或"我的空间"根目录
+- 如果用户说"移动到某个文件夹""移动到我的空间根目录"，还要判断源对象：源对象已在 Drive 时使用 `lark_drive_move`；源对象是 Wiki 节点时使用 `lark_wiki_move_to_drive`
 - 如果用户说"移动到某个知识库 / 页面下""迁入 Wiki / 知识空间"，应使用 `lark_wiki_move`
 - 如果用户说"移动到我的文档库 / 我的知识库 / 个人知识库 / my_library"，不要使用 `lark_drive_move`；先按 Wiki 目标处理
 - `我的文档库` 不是 Drive root folder，也不是 `folder_token` 省略后的默认目的地
-- `lark_drive_move` 不支持 wiki 文档；如果目标是 Wiki，不要尝试用 `lark_drive_move` 代替
+- `lark_drive_move` 不支持 Wiki 文档；Wiki 节点到 Drive 应使用 `lark_wiki_move_to_drive`，目标是 Wiki 时使用 `lark_wiki_move`
 
 ## 不要误用到 `我的文档库`
 
@@ -98,4 +99,5 @@ lark_drive_task_result(scenario="task_check", task_id="<TASK_ID>")
 
 ## 参考
 
-- [lark-drive](../SKILL.md) -- 云空间（云盘/云存储）全部命令
+- `lark_get_skill(domain="drive")` -- 云空间（云盘/云存储）全部命令
+- `lark_get_skill(domain="wiki", section="move-to-drive")` -- 将 Wiki 节点移出知识库并放入 Drive

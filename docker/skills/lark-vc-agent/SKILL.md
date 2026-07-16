@@ -12,8 +12,15 @@ description: "飞书视频会议会中能力：发现当前用户正在进行中
 ## 内测提示
 
 - 当前功能正在内测中，仅少数用户可用。
-- 如果工具提示 `missing required scope(s)` / `permission_violations`，不要走普通权限申请流程；先提示用户加入早鸟群确认内测权限已开通：`https://go.larkoffice.com/join-chat/2f4nb0e1-fe00-4f67-bed7-25beaf533fbd`，再按"应用身份权限配置检查"处理应用权限、安装和数据范围。
+- 如果工具提示 `missing required scope(s)` / `missing_scopes`，不要走普通权限申请流程；先提示用户加入早鸟群确认内测权限已开通：`https://go.larkoffice.com/join-chat/2f4nb0e1-fe00-4f67-bed7-25beaf533fbd`，再按"应用身份权限配置检查"处理应用权限、安装和数据范围。
 - 如果工具返回 `error.code=20017` / `ErrNotInGray`，提示用户加入早鸟群：`https://go.larkoffice.com/join-chat/2f4nb0e1-fe00-4f67-bed7-25beaf533fbd`。
+
+## 会议查询权限
+
+`lark_vc_meeting_list_active` 和 `lark_vc_meeting_events` 缺少权限时，先按上面的内测提示确认功能已开通，再读取工具错误中的 `hint`，并根据当前身份处理：
+
+- 用户身份（MCP server 可用）：按提示为当前用户授权 `vc:meeting.meetingevent:read`。
+- ⚠️ 应用身份（MCP server 不可用）：需请应用开发者开通 `vc:meeting.bot.join:write`，随后按"应用身份权限配置检查"确认应用发布、安装和数据范围。
 
 ## 定位
 
@@ -143,9 +150,9 @@ Shortcut 是对常用操作的高级封装。
 
 > ⚠️ 应用身份相关权限配置说明仅供排查参考；应用身份操作本身在 MCP server 上不可用。
 
-应用身份报 `no permission`、`missing required scope(s)`、`permission_violations`、`ErrNotInGray` 或 `20017` 时，可按顺序检查：
+应用身份报 `no permission`、`missing required scope(s)`、`missing_scopes`、`ErrNotInGray` 或 `20017` 时，可按顺序检查：
 
-1. 以工具返回的 metadata / error envelope 为准，确认提示的 VC Agent 相关权限已开通。常见读取 active meeting / events 需要会中事件读取权限；应用机器人入会 / 离会需要 bot 入会写权限。
+1. 确认内测权限后，按工具错误中的 `hint` 处理；返回 `console_url` 时将其原样提供给用户。
 2. 应用已发布并安装到当前租户。
 3. 开放平台"权限可访问的数据范围"已开通并保存。
 4. 数据范围选择"按条件筛选"，条件配置为：**会议的归属者 包含 与应用的可用范围一致**。
@@ -153,7 +160,7 @@ Shortcut 是对常用操作的高级封装。
 
 ## 用户身份被拒绝时
 
-用户身份报权限或身份不支持类错误时，先以工具返回的 metadata / error envelope 为准判断：
+用户身份调用 `lark_vc_meeting_list_active` 或 `lark_vc_meeting_events` 报普通 scope 缺失时，按上面的"会议查询权限"处理；其他工具的 scope 缺失按各自的 `hint` 处理。普通 scope 缺失不表示接口不支持用户身份，只有工具明确表明当前接口不支持用户身份访问时，才按下述判断：
 
 1. 如果错误表明当前接口不支持用户身份访问（例如只能用应用身份发现目标用户的会议、或只能用应用身份读取应用机器人可见事件），说明该链路依赖应用身份，**而应用身份在 MCP server 上不可用**——应向用户说明该能力当前不可用，而不是反复尝试。
 2. 如果是数据范围 / 内测灰度类错误，按上面的"应用身份权限配置检查"与"内测提示"处理（提示加入早鸟群）。

@@ -88,21 +88,21 @@ lark_base_dashboard_block_get(base_token="bascn***************CtadY", dashboard_
 
 ## 返回结构总览
 
-服务端响应外层仍然是标准 OpenAPI 包装：
+工具成功输出使用标准 `{ok, identity, data}` 信封：
 
 ```json
 {
-  "code": 0,
-  "msg": "success",
+  "ok": true,
+  "identity": "user",
   "data": {
-    "dimensions": [...],
-    "measures": [...],
-    "main_data": [...]
+    "dimensions": [],
+    "measures": [],
+    "main_data": []
   }
 }
 ```
 
-其中 `data` 就是图表协议本体。不同图表类型的 `data` 结构略有不同：
+其中 `identity` 是本次调用实际使用的身份，`data` 是图表协议本体。不同图表类型的 `data` 结构略有不同：
 
 | 图表类型 | 一定有 | 可能有 |
 |----------|--------|--------|

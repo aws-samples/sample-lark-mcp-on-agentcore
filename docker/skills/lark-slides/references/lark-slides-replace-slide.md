@@ -27,7 +27,7 @@ lark_slides_replace_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX",
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `presentation` | 是 | `xml_presentation_id`、`/slides/<token>` URL，或 `/wiki/<token>` URL |
-| `slide_id` | 是 | 页面 ID |
+| `slide_id` | 是 | 页面 ID（`lark_invoke(tool_name="lark_slides_xml_presentation_slide_get")` / `lark_slides_xml_get` 都能拿到） |
 | `parts` | 是 | JSON 数组（`[{...}, ...]`），单次最多 200 条。支持 `@<file>` 和 `-`（stdin）读取 |
 | `revision_id` | 否 | 基础版本号；默认 `-1` 表示基于最新版执行 |
 | `tid` | 否 | 并发事务 ID；单次单人调用留空 |

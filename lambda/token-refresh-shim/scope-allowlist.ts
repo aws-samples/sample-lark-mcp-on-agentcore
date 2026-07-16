@@ -162,6 +162,7 @@ export const SCOPE_ALLOWLIST: ReadonlySet<string> = new Set([
   "minutes:minutes.upload:write",
   "minutes:minutes:readonly",
   "minutes:minutes:update",
+  "minutes:permission:apply",
   "offline_access",
   "okr:okr.content:readonly",
   "okr:okr.content:writeonly",

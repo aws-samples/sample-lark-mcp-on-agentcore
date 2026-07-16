@@ -24,11 +24,11 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_delete", args={
 
 ```json
 {
-  "code": 0,
+  "ok": true,
+  "identity": "user",
   "data": {
     "revision_id": 100
-  },
-  "msg": "success"
+  }
 }
 ```
 
@@ -39,5 +39,5 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_delete", args={
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="create")` - 创建空白 PPT
-- `lark_get_skill(domain="slides", section="xml-presentations-get")` - 读取 PPT 内容
+- `lark_get_skill(domain="slides", section="create")` - 创建 PPT / 添加幻灯片页面
+- `lark_get_skill(domain="slides", section="xml-get")` - 读取 PPT 内容并保存到本地文件
