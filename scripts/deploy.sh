@@ -577,6 +577,42 @@ fi
 info "AWS Account: ${ACCOUNT_ID}"
 info "Region: ${REGION}"
 
+# Brand / edition: feishu (China, *.feishu.cn) or lark (international, *.larksuite.com).
+# Selects BOTH the OAuth flow endpoints (token-refresh-shim) and lark-cli's API
+# gateway (LARKSUITE_CLI_BRAND). Env LARK_BRAND / LARKSUITE_CLI_BRAND wins; then the
+# saved config; else an interactive picker. Default feishu (byte-identical to before).
+LARK_BRAND="${LARK_BRAND:-${LARKSUITE_CLI_BRAND:-}}"
+PREV_BRAND=""
+if [ -f "$DEPLOY_CONFIG" ]; then
+  PREV_BRAND=$(grep '^LARK_BRAND=' "$DEPLOY_CONFIG" 2>/dev/null | cut -d= -f2- || echo "")
+fi
+if [ -z "$LARK_BRAND" ] && [ -n "$PREV_BRAND" ]; then
+  if [ -t 0 ]; then
+    info "$(t brand_existing "$PREV_BRAND")"
+    if confirm "${L[brand_keep]}"; then LARK_BRAND="$PREV_BRAND"; fi
+  else
+    LARK_BRAND="$PREV_BRAND"
+  fi
+fi
+if [ -z "$LARK_BRAND" ]; then
+  if [ -t 0 ]; then
+    echo ""
+    echo "  ${L[select_brand]}"
+    echo ""
+    pick _BRAND_PICK "Feishu (中国)" "Lark (international)"
+    case "$_BRAND_PICK" in
+      "Lark (international)") LARK_BRAND="lark" ;;
+      *) LARK_BRAND="feishu" ;;
+    esac
+  else
+    LARK_BRAND="feishu"
+  fi
+fi
+[ "$LARK_BRAND" = "lark" ] || LARK_BRAND="feishu"
+# Host used for the credential-verification curl below (lark-cli/shim derive the rest).
+BRAND_OPEN_HOST=$([ "$LARK_BRAND" = "lark" ] && echo "open.larksuite.com" || echo "open.feishu.cn")
+info "Edition: ${LARK_BRAND}"
+
 # 配置飞书应用
 step configure_feishu
 
@@ -606,7 +642,7 @@ fi
 
 if [ -z "${APP_ID:-}" ]; then
   echo "  ${L[feishu_creds_needed]}"
-  echo "  ${L[feishu_platform]}"
+  echo "  ${L[feishu_platform]} https://${BRAND_OPEN_HOST}/app"
   echo ""
 fi
 
@@ -659,7 +695,7 @@ while [ -z "${APP_ID:-}" ]; do
     *)
       info "${L[verifying_creds]}"
       VERIFY_RESP=$(curl -s --max-time 10 -X POST \
-        "https://open.feishu.cn/open-apis/auth/v3/app_access_token/internal" \
+        "https://${BRAND_OPEN_HOST}/open-apis/auth/v3/app_access_token/internal" \
         -H "Content-Type: application/json" \
         -d "{\"app_id\":\"${APP_ID}\",\"app_secret\":\"${APP_SECRET}\"}" 2>/dev/null || echo '{}')
       # `|| true`: grep returns non-zero on no match, which under `set -e -o
@@ -1462,6 +1498,7 @@ if [ -n "$OAUTH_FN" ] && [ -n "$OAUTH_ENDPOINT" ]; then
     CODE_TABLE="$CODE_TABLE" \
     OPENID_TABLE="$OPENID_TABLE" \
     USER_SECRET_KMS_KEY_ARN="$USER_SECRET_KMS_KEY_ARN" \
+    LARK_BRAND="$LARK_BRAND" \
     python3 -c '
 import json, os
 # update-function-configuration REPLACES the whole env, so every per-slug value
@@ -1477,6 +1514,9 @@ vars = {
   "FEISHU_SCOPES": os.environ.get("FEISHU_SCOPES", ""),
   "CODE_TABLE": os.environ["CODE_TABLE"],
   "OPENID_TABLE": os.environ["OPENID_TABLE"],
+  # Endpoint cluster for the OAuth flow (feishu.cn vs larksuite.com). Threaded
+  # here too because update-function-configuration REPLACES the whole env.
+  "LARKSUITE_CLI_BRAND": os.environ.get("LARK_BRAND", "feishu"),
 }
 # CMK ARN for user token secrets. Empty (key output missing) keeps pre-CMK
 # behavior — CreateSecret omits KmsKeyId and the refresh loop skips key swaps.
@@ -1560,6 +1600,7 @@ RUNTIME_ID=$(APP_ID="$APP_ID" REGION="$REGION" ROLE_ARN="$ROLE_ARN" \
   IMAGE_URI="$IMAGE_URI" OAUTH_ENDPOINT="$OAUTH_ENDPOINT" \
   AGENTCORE_IDLE_TIMEOUT="$AGENTCORE_IDLE_TIMEOUT" \
   RUNTIME_NAME="$RUNTIME_NAME" APP_SECRET_ID_VAL="$FEISHU_SECRET" APP_TAG="${SLUG:-default}" \
+  LARK_BRAND="$LARK_BRAND" \
   python3 << 'PYEOF'
 import os, boto3, sys
 region = os.environ['REGION']
@@ -1576,7 +1617,7 @@ runtime_config = {
         'APP_ID': os.environ['APP_ID'],
         'APP_SECRET_ID': os.environ['APP_SECRET_ID_VAL'],
         'AWS_REGION': region,
-        'LARKSUITE_CLI_BRAND': 'feishu',
+        'LARKSUITE_CLI_BRAND': os.environ.get('LARK_BRAND', 'feishu'),
         'AUTHORIZE_BASE': os.environ['OAUTH_ENDPOINT'],
     },
 }
@@ -1703,6 +1744,7 @@ DEPLOY_STARTED=false
 cat > "$DEPLOY_CONFIG" << CFGEOF
 LARK_LANG=${LARK_LANG}
 REGION=${REGION}
+LARK_BRAND=${LARK_BRAND}
 CUSTOM_DOMAIN=${CUSTOM_DOMAIN:-}
 EXTRA_ALLOWED_DOMAINS=${EXTRA_ALLOWED_DOMAINS:-}
 DOMAIN_VERIFICATION_TOKENS=${DOMAIN_VERIFICATION_TOKENS:-}
@@ -1775,7 +1817,7 @@ Save → Connect → Authorize in browser → Connected.
 
 ## Feishu App Settings (first deploy only)
 
-Open: https://open.feishu.cn/app/${APP_ID}/safe
+Open: https://${BRAND_OPEN_HOST}/app/${APP_ID}/safe
 
 Add redirect URL: ${REDIRECT_URL}
 
@@ -1854,7 +1896,7 @@ echo -e "${CYAN}  ${L[feishu_app_title]}${NC}"
 echo -e "${GREEN}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo ""
 echo "    ${L[step1_open]}"
-echo "    https://open.feishu.cn/app/${APP_ID}/safe"
+echo "    https://${BRAND_OPEN_HOST}/app/${APP_ID}/safe"
 echo ""
 echo "    ${L[step1_add]}"
 echo "    ${REDIRECT_URL}"

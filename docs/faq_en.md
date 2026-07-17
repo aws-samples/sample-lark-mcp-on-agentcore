@@ -12,9 +12,13 @@ A: Two paths:
 
 A: Confirm the URL is the `/mcp` endpoint (not `/authorize`). All current clients use loopback — no allowlist needed. Custom schemes (e.g. `cursor://`) are not supported.
 
-**Q: Authentication fails when connecting from Quick Desktop?**
+**Q: Authentication fails when connecting from Quick Desktop (error 20029)?**
 
-A: Verify the Redirect URL from deploy output is added to your Feishu app's Security Settings.
+A: Verify the Redirect URL from deploy output is registered in the correct developer console:
+- **Feishu (China):** https://open.feishu.cn → app Security Settings → Redirect URLs
+- **Lark (International):** https://open.larksuite.com → app Security Settings → Redirect URLs
+
+Use the console matching your `LARKSUITE_CLI_BRAND` setting. The Feishu and Lark consoles are independent — registering in one does not apply to the other.
 
 **Q: User token expired after 30 days of inactivity?**
 
@@ -69,7 +73,7 @@ A: No. This service only calls Feishu synchronously under each user's **own iden
 
 **Q: Quick Desktop shows "Creation failed"?**
 
-A: Check two things: 1) The Redirect URL from deploy output is added to your Feishu app's Security Settings; 2) The Client Secret matches the deploy output (if unsure, run `./scripts/ops.sh rotate-secret` to regenerate).
+A: Check two things: 1) The Redirect URL from deploy output is registered in the correct developer console (Feishu: open.feishu.cn / Lark: open.larksuite.com — must match your `LARKSUITE_CLI_BRAND`); 2) The Client Secret matches the deploy output (if unsure, run `./scripts/ops.sh rotate-secret` to regenerate).
 
 **Q: How to upgrade lark-cli?**
 
@@ -130,7 +134,13 @@ A: Yes. Set `CUSTOM_DOMAIN=mcp.company.com` or follow the deploy script prompt.
 
 **Q: Lark (international) support?**
 
-A: Yes. Set `LARKSUITE_CLI_BRAND=lark` during deployment.
+A: Yes. `./scripts/deploy.sh` shows an edition picker — choose **Lark
+(international)** and it points both the OAuth flow (`*.larksuite.com`) and
+`lark-cli`'s API gateway at the international cluster. For non-interactive /
+`--yes` deploys, set `LARK_BRAND=lark` (or `LARKSUITE_CLI_BRAND=lark`) in the
+environment. The choice is remembered in `deploy-config`. Default is **Feishu
+(China)** (`*.feishu.cn`). Enter your Lark app credentials from
+`open.larksuite.com` (not `open.feishu.cn`).
 
 **Q: Can one AWS account host multiple Feishu apps?**
 

@@ -175,6 +175,24 @@ describe('/authorize — t= incremental-auth token', () => {
     expect(result.headers?.Location).toContain('accounts.feishu.cn');
   });
 
+  it('redirects to the Lark (international) host when LARKSUITE_CLI_BRAND=lark', async () => {
+    process.env.LARKSUITE_CLI_BRAND = 'lark';
+    try {
+      const exp = Math.floor(Date.now() / 1000) + 300;
+      const t = signIncrToken('ou_test', exp);
+      const result = await call({
+        path: '/authorize',
+        httpMethod: 'GET',
+        queryStringParameters: { t },
+      });
+      expect(result.statusCode).toBe(302);
+      expect(result.headers?.Location).toContain('accounts.larksuite.com');
+      expect(result.headers?.Location).not.toContain('feishu.cn');
+    } finally {
+      delete process.env.LARKSUITE_CLI_BRAND;
+    }
+  });
+
   it('rejects a t= token signed with a different secret (tamper)', async () => {
     const exp = Math.floor(Date.now() / 1000) + 300;
     const t = signIncrToken('ou_attacker', exp, Buffer.from('wrong-secret'));

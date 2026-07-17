@@ -4,6 +4,15 @@
 
 After deployment, add the Feishu MCP connection in Amazon Quick (Quick Desktop) with the steps below. (For Kiro / Claude Code / Codex, which self-register without a Client Secret, see [connect-mcp-clients_en.md](connect-mcp-clients_en.md) instead.)
 
+## Prerequisites
+
+Before creating the connector, ensure the **Redirect URL** from deploy output (`<OAuth endpoint>/callback`) is registered in your app's developer console:
+
+- **Feishu (China):** https://open.feishu.cn → app Security Settings → Redirect URLs
+- **Lark (International):** https://open.larksuite.com → app Security Settings → Redirect URLs
+
+Use the console that matches your `LARKSUITE_CLI_BRAND` setting. If this is missing, the authorization step will fail with error code **20029** ("Redirect URL invalid").
+
 ## Step 1: Create Connector
 
 In Quick Desktop click **Settings → Capabilities → Browse connections** (opens browser), choose **Create for your team** → **Model Context Protocol**:
@@ -29,6 +38,13 @@ Fill in Name, Description, MCP server endpoint (from deploy output), Connection 
 ## Step 3: OAuth Config
 
 Fill in Client ID, Client Secret, Token URL, Authorization URL (all from deploy output), click **Create and continue**:
+
+| Field | Value |
+|-------|-------|
+| Client ID | `lark-mcp-on-agentcore` |
+| Client Secret | From deploy output (saved in `.local/deploy-output.md`), or retrieve with:<br>`aws ssm get-parameter --name /lark-mcp-on-agentcore/oauth-client-secret --with-decryption --query 'Parameter.Value' --output text --region <your-region>` |
+| Token URL | `<OAuth endpoint>/token` |
+| Authorization URL | `<OAuth endpoint>/authorize` |
 
 <p align="center">
   <img src="images/quick-mcp-authenticate.png" alt="Authenticate" width="600">

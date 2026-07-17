@@ -31,6 +31,7 @@ deploy.sh is an interactive deployment script handling the full flow from enviro
 **Configuration Collection (interactive):**
 1. Language selection (Chinese/English)
 1b. App selection (only when run with **no** `--app` at a TTY): pick the default app, an existing named app, or create a new one (prompts for slug + alias). Skipped when `--app`/`APP_SLUG`/`--yes` is set or stdin is not a TTY. See the **Multi-app** section below.
+1c. Edition selection (Feishu China / Lark International): sets `LARKSUITE_CLI_BRAND`, which drives both the OAuth flow endpoints and lark-cli's API gateway. Overridable via env `LARK_BRAND`/`LARKSUITE_CLI_BRAND`; reuses the saved choice on re-deploy; defaults to `feishu` (non-interactive/CI).
 2. Feishu App ID + App Secret (supports env vars `FEISHU_APP_ID`/`FEISHU_APP_SECRET`, detects and reuses existing credentials)
 3. Validates credentials against Feishu API
 4. Custom domain (optional)
@@ -288,10 +289,12 @@ oauth-codes, openid, openid-map, alarms, app, admin, waf, runtime`.
 
 ### Onboard a new app
 
-**Prerequisite:** create the Feishu app and grant its scopes in the
-[Feishu Open Platform](https://open.feishu.cn/app) console **first**. `deploy.sh`
-cannot create a Feishu app — it only associates and validates an existing App ID +
-App Secret.
+**Prerequisite:** create the app and grant its scopes in the Open Platform console
+**first** — Feishu (China): [open.feishu.cn/app](https://open.feishu.cn/app), Lark
+(International): [open.larksuite.com/app](https://open.larksuite.com/app). Use the
+console that matches your `LARKSUITE_CLI_BRAND` setting (`feishu` or `lark`).
+`deploy.sh` cannot create the app — it only associates and validates an existing
+App ID + App Secret.
 
 ```bash
 ./scripts/deploy.sh --app <slug> --alias "<display name>"
@@ -315,7 +318,12 @@ passed, or stdin/stdout is not a TTY (e.g. the `curl | bash` install path or CI)
   CloudFront endpoint. The WAF stack is **shared** across all apps.
 
 **After deploy:** register the printed Redirect URL (`<OAuth endpoint>/callback`) in
-that app's Feishu console, then paste the printed MCP endpoint into your MCP client.
+the app's developer console, then paste the printed MCP endpoint into your MCP client.
+
+- **Feishu (China):** https://open.feishu.cn → app Security Settings → Redirect URLs
+- **Lark (International):** https://open.larksuite.com → app Security Settings → Redirect URLs
+
+Use the console that matches your `LARKSUITE_CLI_BRAND` setting (`feishu` or `lark`).
 
 ### Operate one app
 
