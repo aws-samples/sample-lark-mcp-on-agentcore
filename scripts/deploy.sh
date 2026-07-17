@@ -608,7 +608,10 @@ if [ -z "$LARK_BRAND" ]; then
     LARK_BRAND="feishu"
   fi
 fi
-[ "$LARK_BRAND" = "lark" ] || LARK_BRAND="feishu"
+if [ "$LARK_BRAND" != "lark" ] && [ "$LARK_BRAND" != "feishu" ]; then
+  warn "Unrecognized brand '${LARK_BRAND}', defaulting to feishu"
+  LARK_BRAND="feishu"
+fi
 # Host used for the credential-verification curl below (lark-cli/shim derive the rest).
 BRAND_OPEN_HOST=$([ "$LARK_BRAND" = "lark" ] && echo "open.larksuite.com" || echo "open.feishu.cn")
 info "Edition: ${LARK_BRAND}"
@@ -642,7 +645,7 @@ fi
 
 if [ -z "${APP_ID:-}" ]; then
   echo "  ${L[feishu_creds_needed]}"
-  echo "  ${L[feishu_platform]}"
+  printf "  ${L[feishu_platform]}\n" "$BRAND_OPEN_HOST"
   echo ""
 fi
 
