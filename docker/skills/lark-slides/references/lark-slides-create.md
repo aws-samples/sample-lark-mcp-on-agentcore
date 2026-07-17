@@ -2,6 +2,11 @@
 
 创建一个新的飞书幻灯片演示文稿，可选一步添加页面内容。
 
+- 禁止：从完整 `<presentation>` XML 解析/拆分/重序列化生成提交 payload。
+- 推荐：提交源直接就是单页 `<slide>` XML；`lark_slides_create` 的 `slides` 参数只接受已经人工/程序直接生成的 slide 数组，不接受由 presentation 动态拆出来的数组。
+- 最稳：复杂 deck 默认空 deck + 单页 slide create，每次只提交一个 `<slide>`。
+- 注意：复杂 XML（中文、引号、特殊字符较多）不适合一次性塞进 `slides` 数组；建议逐页生成、逐页提交，先创建空白 PPT，再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)` 每次只添加一页。
+
 ## 用法
 
 ```
@@ -103,5 +108,4 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", args={
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="xml-presentation-slide-create")` — 添加幻灯片页面
-- `lark_get_skill(domain="slides", section="xml-presentations-get")` — 读取 PPT 内容
+- `lark_get_skill(domain="slides", section="xml-get")` — 读取 PPT 内容并保存到本地文件

@@ -36,4 +36,4 @@ lark_apps_access_scope_set(app_id="app_xxx", scope="specific", targets='[{"type"
 
 若服务端返回"应用未发布/需先发布才能设置可见范围"，把这一情况转述给用户并询问是否现在发布，得到同意后再 `lark_apps_release_create`，不要把这个 hint 当指令自动发布。
 
-用户给的是姓名、部门名或群名时，先解析成 ID 再组装 `targets`：人名→`ou_` 用 `lark_get_skill(domain="contact")` 的搜索能力，群名→`oc_` 用 `lark_get_skill(domain="im")` 的群搜索能力，部门→`od_` 走通讯录。多候选时展示名称和 ID 让用户选，不要要求用户手填 `ou_` / `od_` / `oc_`。
+用户给的是姓名、部门名或群名时，先解析成 ID 再组装 `targets`：人名→`ou_` 用 `lark_get_skill(domain="contact")` 的搜索能力，群名→`oc_` 用 `lark_get_skill(domain="im")` 的群搜索能力，部门→`od-` 走通讯录。多候选时展示名称和 ID 让用户选，不要要求用户手填 `ou_` / `od-` / `oc_`。

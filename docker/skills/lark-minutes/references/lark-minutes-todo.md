@@ -118,8 +118,8 @@ lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", operation="delete", t
 | 未指定操作 | 单条模式传 `operation`，或批量传 `todos` |
 | `todos` 与单条参数冲突 | 二选一 |
 | `todos[i]` 校验失败 | 检查该条 `operation` 与字段组合 |
-| `error.type` = `no_edit_permission` | **妙记资源无编辑权**：向妙记所有者申请该妙记的编辑/协作权限 |
-| 缺少 OAuth scope（`permission_violations` 含 `minutes:minutes:update`） | 联系妙记所有者授权（认证由 MCP server 自动处理） |
+| `error.subtype` = `permission_denied` | **妙记资源无编辑权**：向妙记所有者申请该妙记的编辑/协作权限 |
+| 缺少 OAuth scope（`error.missing_scopes` 含 `minutes:minutes:update`） | 联系妙记所有者授权（认证由 MCP server 自动处理） |
 
 ## 参考
 

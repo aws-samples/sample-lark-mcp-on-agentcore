@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.69",
-    "extracted_at": "2026-07-14",
+    "lark_cli_version": "1.0.71",
+    "extracted_at": "2026-07-16",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -55,6 +55,48 @@
       "command": "+analytics-list",
       "scopes": [
         "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+automation-create",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+automation-disable",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+automation-enable",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+automation-get",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+automation-list",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+automation-update",
+      "scopes": [
+        "spark:app:write"
       ]
     },
     {
@@ -419,6 +461,69 @@
       "command": "+release-list",
       "scopes": [
         "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-create",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-delete",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-get",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-list",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-match-list",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-member-add",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-member-list",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-member-remove",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+role-update",
+      "scopes": [
+        "spark:app:write"
       ]
     },
     {
@@ -1344,7 +1449,8 @@
       "service": "drive",
       "command": "+delete",
       "scopes": [
-        "space:document:delete"
+        "space:document:delete",
+        "drive:drive.metadata:readonly"
       ]
     },
     {
@@ -1919,6 +2025,13 @@
         "drive:file:download",
         "drive:file:upload",
         "drive:drive.metadata:readonly"
+      ]
+    },
+    {
+      "service": "minutes",
+      "command": "+apply-permission",
+      "scopes": [
+        "minutes:permission:apply"
       ]
     },
     {
@@ -3286,6 +3399,14 @@
       "scopes": [
         "wiki:node:move",
         "wiki:node:read",
+        "wiki:space:read"
+      ]
+    },
+    {
+      "service": "wiki",
+      "command": "+move-to-drive",
+      "scopes": [
+        "space:document:move",
         "wiki:space:read"
       ]
     },

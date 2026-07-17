@@ -7,18 +7,19 @@
 
 当 `docs_to_wiki` 返回 `task_id` 时，shortcut 会先轮询一小段时间；如果轮询窗口内仍未完成，会返回 `next_command`，让调用方继续执行 `lark_drive_task_result(scenario="wiki_move", task_id="<TASK_ID>")`。
 
-## 与 `lark_drive_move` 的区别
+## 与 `lark_wiki_move_to_drive` / `lark_drive_move` 的区别
 
 - `lark_wiki_move` 的目标是 **知识空间或 Wiki 父节点**，使用 `target_space_id` / `target_parent_token`
+- `lark_wiki_move_to_drive` 把 **已有 Wiki 节点移出知识库，放入 Drive 文件夹或"我的空间"根目录**，使用 `folder_token`
 - `lark_drive_move` 的目标是 **Drive 文件夹**，使用 `folder_token`
-- 如果源对象已经是 Wiki 节点，必须使用 `lark_wiki_move`，而不是 `lark_drive_move`
+- 如果源对象已经是 Wiki 节点：目标仍是 Wiki 时使用 `lark_wiki_move`；目标是 Drive 文件夹或根目录时使用 `lark_wiki_move_to_drive`
 - 如果源对象还是 Drive 文档，但用户要"迁入知识库""挂到某个 Wiki 页面下"，也应使用 `lark_wiki_move`
 - 如果用户只是想整理云空间（云盘/云存储）文件夹，把文件/文件夹挪到另一个 Drive 文件夹，应使用 `lark_drive_move`
 
 ## 口语目标识别
 
 - 当用户说"移动到某个知识库""挂到某个页面下""迁入 Wiki"时，按 **Wiki 目标** 处理，优先使用 `lark_wiki_move`
-- 当用户说"移动到某个文件夹""移动到云空间（云盘/云存储）根目录"时，按 **Drive 文件夹目标** 处理，优先使用 `lark_drive_move`
+- 当用户说"移动到某个文件夹""移动到云空间（云盘/云存储）根目录"时，按 **Drive 文件夹目标** 处理；源对象是 Wiki 节点时使用 `lark_wiki_move_to_drive`，源对象已在 Drive 时使用 `lark_drive_move`
 - 当用户说"移动到我的文档库""移动到我的知识库""放到个人知识库"时，应先按 **Wiki 个人知识库目标** 理解，而不是直接退化成 `lark_drive_move`
 - 遇到"我的文档库"这类表述时，可以把它理解成：先用 `my_library` 去查询用户个人知识库，再拿到真实 `space_id`
 - 推荐做法是先执行 `lark_invoke(tool_name="lark_wiki_spaces_get", args={params: {"space_id": "my_library"}})`，取回真实知识库 `space_id`，再把这个 `space_id` 用到 `lark_wiki_move`
@@ -158,4 +159,5 @@ lark_wiki_move(obj_type="sheet", obj_token="<SHEET_TOKEN>", target_space_id="<TA
 ## 参考
 
 - 调用 `lark_get_skill(domain="wiki")` 查看知识库全部命令
+- 调用 `lark_get_skill(domain="wiki", section="move-to-drive")` 查看将 Wiki 节点移出知识库并放入 Drive
 - 调用 `lark_get_skill(domain="drive", section="task-result")` 查看 docs-to-wiki 异步任务的续跑查询命令

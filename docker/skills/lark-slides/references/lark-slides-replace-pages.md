@@ -82,7 +82,7 @@ lark_slides_replace_pages(presentation="<PID>", pages='[...]', validate_only=tru
 
 ## 使用建议
 
-1. 大幅改写前先 `lark_invoke(tool_name="lark_slides_xml_presentations_get", ...)` 保存当前 XML，并记录要替换页面的 `slide_id`。
+1. 大幅改写前先 `lark_slides_xml_get` 保存当前 XML，并记录要替换页面的 `slide_id`。
 2. 生成只含 `slide_id` 的 `pages` 后先用 `validate_only=true` 校验。
 3. 默认不要开 `continue_on_error`，除非能接受部分页面已替换。
 4. 替换后再回读全文 XML 并截图检查，确认页序、视觉和文本没有破损。
