@@ -642,7 +642,7 @@ fi
 
 if [ -z "${APP_ID:-}" ]; then
   echo "  ${L[feishu_creds_needed]}"
-  echo "  ${L[feishu_platform]}"
+  echo "  ${L[feishu_platform]} https://${BRAND_OPEN_HOST}/app"
   echo ""
 fi
 
