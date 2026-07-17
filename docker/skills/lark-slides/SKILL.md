@@ -5,30 +5,36 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 
 # slides (v1)
 
+**CRITICAL — 全局硬约束：PPT 的尺寸是 960x540，确保主体内容在页面边界内。**
+
+**CRITICAL — 图片至关重要：必须有意识的主动多用图片！素材图使用生图工具和搜图工具，缺图时用生图工具生成配图补足；背景图必须使用生图工具，且生图指令中必须明确要求不要出现任何文字。**
+
+**CRITICAL — 防文本溢出：所有承载突出信息和密集文字的 `<content>` 必须设置 `autoFit="normal-auto-fit"`，字号会在框内自动缩排以防溢出。**
+
 ## Quick Reference
 
 | 用户需求 | 优先动作 | 关键文档 / 工具 |
 |----------|----------|-----------------|
 | 新建 PPT | 先规划 `slide_plan.json`，再按复杂度选择一步或两步创建 | `planning-layer.md`、`visual-planning.md`、`asset-planning.md`、`lark_slides_create` |
-| 已有 PPT 大幅改写 | 多页整页重建用 `lark_slides_replace_pages`，单页局部编辑用 `lark_slides_replace_slide` | `lark_invoke(tool_name="lark_slides_xml_presentations_get")`、`lark-slides-replace-pages.md`、`lark-slides-edit-workflows.md` |
-| 编辑单个标题、文本块、图片或局部元素 | 优先块级替换/插入，不改页序 | `lark_slides_replace_slide` |
-| 读取或分析已有 PPT | 解析 slides/wiki token，回读全文或单页 XML，保存 `xml_presentation_id`、`slide_id`、`revision_id` | `lark_invoke(tool_name="lark_slides_xml_presentations_get")`、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_get")` |
-| 获取幻灯片页面截图 | 用 `slide_id` 或页号指定页面 | `lark_slides_screenshot`、`lark_get_skill(domain="slides", section="screenshot")` |
+| 从模板创建或编辑已有本地 PPTX | 导入 PPTX 为 Slides | `lark-slides-pptx-template-workflows.md` |
+| 编辑单个标题、文本块、图片或局部元素 | 优先块级替换/插入，不改页序 | `lark_slides_replace_slide`、`lark-slides-replace-slide.md` |
+| 读取或分析已有 PPT | 解析 slides/wiki token，用 shortcut 回读全文 XML 或读取单页 XML，保存 `xml_presentation_id`、`slide_id`、`revision_id` | `lark_slides_xml_get`、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_get")` |
+| 获取幻灯片页面截图 | 用 `slide_id` 或页号指定页面，一次不超过 10 页 | `lark_slides_screenshot`、`lark-slides-screenshot.md` |
 | 上传或使用图片 | 先上传为 `file_token`，禁止直接写 http(s) 外链 | `lark_slides_media_upload`，或 `lark_slides_create` 的 `@./path` 占位符 |
-| 在 slide 中绘制柱/条/折线/面积/雷达/饼等有数据序列的图表 | 使用原生 `<chart>` 元素 | `xml-schema-quick-ref.md` |
-| 在 slide 中绘制流程图、时序图、架构图、散点图、漏斗图或装饰图案 | 必须先调用 `lark_get_skill(domain="slides", section="whiteboard")` 获取参考文档，再生成 `<whiteboard>` 元素 | `lark_get_skill(domain="slides", section="whiteboard")` |
-| 使用语义图标 | 先检索 IconPark，再写 `<icon iconType="...">` | `lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", args=["search", ...])`、`lark_get_skill(domain="slides", section="iconpark")` |
+| 绘制图表 | 原生图表用 `<chart>`，其他用 `<shape>` + `<line>`，只有复杂 Mermaid、SVG 用 `<whiteboard>` | `xml-schema-quick-ref.md`、`slides_chart_demo.xml` |
+| 绘制表格 | 优先用 `rect` 和 `text` 模拟，其他用 `<table>` | `xml-schema-quick-ref.md` |
+| 使用图标 | 禁止盲猜 `iconType`，必须先检索 IconPark，再写 `<icon iconType="...">`，图标必须填充颜色并和背景有足够对比，禁止使用 emoji 图标 | `lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", args=["search", ...])`、`lark_get_skill(domain="slides", section="iconpark")` |
 | 创建失败、空白页、3350001、布局异常 | 先回读状态，再按排障清单修复，不假设原操作原子成功 | `troubleshooting.md`、`validation-checklist.md` |
 
 **CRITICAL — 生成任何 XML 之前，MUST 先调用 `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` 获取 XML 协议规则，禁止凭记忆猜测 XML 结构。**
-
-**CRITICAL — PPT 生成与模板编辑硬约束：PPT 的尺寸是 960x540，确保主体内容在页面边界内。多用生图，辅助搜图，必须要图文并茂。不要为了画出一个具象物体而堆叠 3 个以上仅用于拟形的 shape。生成背景图时必须在 prompt 中明确要求不要出现任何文字。用户指定 PPT 模板时，用 `lark_drive_import(type="slides")` 导入成 lark slides，回读理解每页版式后，直接在该 slides 上编辑，可以填改文字和图片、按需增删模板页，必须严格沿用原版式和字体，只改内容不做设计，完成后回读并微调，凝练文字或缩减字号消除文字溢出，调整 shape 顺序或位置避免文字遮挡。**
 
 **CRITICAL — 新建演示文稿或大幅改写页面时，MUST 先生成 `.lark-slides/plan/<deck-or-task-id>/slide_plan.json`，再生成 XML。先创建对应目录，规划层规则和中间产物生命周期见 `lark_get_skill(domain="slides", section="planning-layer")`。仅替换一个标题、插入一个块等小型已有页编辑可豁免。**
 
 **CRITICAL — 新建演示文稿或大幅改写页面时，生成 XML 前 MUST 调用 `lark_get_skill(domain="slides", section="visual-planning")`，确保 `layout_type`、`visual_focus`、`text_density` 实际改变页面几何、主视觉和文本量。**
 
-**CRITICAL — 新建演示文稿或大幅改写页面时，规划 `asset_need` MUST 遵循 `lark_get_skill(domain="slides", section="asset-planning")`：只做元数据规划，必须有 `fallback_if_missing`，不得要求真实搜索、下载或上传素材。**
+**CRITICAL — 新建演示文稿或大幅改写页面时，规划 `asset_need` MUST 遵循 `lark_get_skill(domain="slides", section="asset-planning")`。**
+
+**CRITICAL — 将完整 `<slide>` XML 提交给 `lark_slides_create` 的 `slides` 参数、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` 或 `lark_slides_replace_pages` 之前，MUST 先运行 `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`；`summary.error_count` 必须为 0 才能调用接口。**
 
 **CRITICAL — 创建或大幅改写后，MUST 按 `lark_get_skill(domain="slides", section="validation-checklist")` 做显式验证：回读全文 XML、核对页数和关键元素、检查空白/破损页、明显溢出、布局风险。**
 
@@ -55,16 +61,16 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 按需再读：
 
 - 创建：`lark_get_skill(domain="slides", section="create")`
+- 从模板创建或编辑已有本地 PPTX：`lark_get_skill(domain="slides", section="pptx-template-workflows")`
 - 编辑：`lark_get_skill(domain="slides", section="edit-workflows")`、`lark_get_skill(domain="slides", section="replace-slide")`、`lark_get_skill(domain="slides", section="replace-pages")`
 - 截图：`lark_get_skill(domain="slides", section="screenshot")`
 - 图片：`lark_get_skill(domain="slides", section="media-upload")`
-- 流程图 / 时序图 / 架构图 / 装饰图案：`lark_get_skill(domain="slides", section="whiteboard")`
 - 图标：`lark_get_skill(domain="slides", section="iconpark")`、`lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", ...)`
 - 排障：`lark_get_skill(domain="slides", section="troubleshooting")`
 
 ## Workflow
 
-> **这是演示文稿，不是文档。** 每页 slide 是独立的视觉画面，信息密度要低，排版要留白。
+> **这是演示文稿，不是文档。** 每页 slide 是独立的视觉画面，信息密度要适当，排版要留白。
 
 ### 创建方式选择
 
@@ -97,21 +103,22 @@ lark_invoke(tool_name="lark_wiki_spaces_get_node", args={params: {"token": "wiki
 
 | Shortcut | 说明 |
 |----------|------|
-| `lark_get_skill(domain="slides", section="create")` | 创建 PPT（可选 `slides` 一步添加页面，支持 `<img src="@./local.png">` 占位符自动上传） |
-| `lark_get_skill(domain="slides", section="media-upload")` | 上传本地图片到指定演示文稿，返回 `file_token`（用作 `<img src="...">`），最大 20 MB |
-| `lark_get_skill(domain="slides", section="replace-slide")` | 对已有幻灯片页面进行块级替换/插入（`block_replace` / `block_insert`），自动注入 id 和 `<content/>`，不改变页序 |
-| `lark_get_skill(domain="slides", section="replace-pages")` | 在原演示文稿内批量重建多个页面：先创建新页到旧页前，再删除旧页；适合已有 Slides 的多页大改，不新建链接 |
+| `lark_slides_create`（`lark_get_skill(domain="slides", section="create")`） | 创建 PPT（可选 `slides` 一步添加页面，支持 `<img src="@./local.png">` 占位符自动上传） |
+| `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-get")`） | 读取全文或单页 XML，并可保存到本地文件，避免终端输出被截断 |
+| `lark_slides_media_upload`（`lark_get_skill(domain="slides", section="media-upload")`） | 上传本地图片到指定演示文稿，返回 `file_token`（用作 `<img src="...">`），最大 20 MB |
+| `lark_slides_replace_slide`（`lark_get_skill(domain="slides", section="replace-slide")`） | 对已有幻灯片页面进行块级替换/插入（`block_replace` / `block_insert`），自动注入 id 和 `<content/>`，不改变页序 |
+| `lark_slides_replace_pages`（`lark_get_skill(domain="slides", section="replace-pages")`） | 在原演示文稿内批量重建多个页面：先创建新页到旧页前，再删除旧页；适合已有 Slides 的多页大改，不新建链接 |
 
 ```
-lark_discover(query="slides.xml_presentations.get")   # 调用 API 前必须先查看参数结构
-lark_invoke(tool_name="lark_slides_xml_presentations_get", args={params: {"xml_presentation_id": "..."}})
+lark_discover(query="slides.xml_presentation.slide.get")   # 调用 API 前必须先查看参数结构
+lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={params: {"xml_presentation_id": "...", "slide_id": "..."}})
 ```
 
-原生 API 高频资源：`xml_presentations.get` 读取全文；`xml_presentation.slide.create/delete/get/replace` 管理单页。使用原生 API 时，必须先运行 `lark_discover` 查看参数结构，不要猜字段。
+没有 Shortcut 覆盖时使用原生 API。高频资源：`lark_slides_xml_get` 读取全文；`xml_presentation.slide.create/delete/get/replace` 管理单页。使用原生 API 时，必须先运行 `lark_discover` 查看参数结构，不要猜字段。
 
 ## 核心规则
 
-1. **先规划再写 XML**：新建演示文稿或大幅改写页面时，必须先写入 `.lark-slides/plan/<deck-or-task-id>/slide_plan.json`；风格和大纲只能作为规划输入，不能绕过规划层
+1. **先规划再写 XML**：新建演示文稿或大幅改写页面时，必须先写入 `.lark-slides/plan/<deck-or-task-id>/slide_plan.json`；模板、风格和大纲只能作为规划输入，不能绕过规划层
 2. **创建流程**：简单短 XML 可用 `lark_slides_create(title="...", slides='[...]')` 一步创建；复杂内容默认先创建空白 PPT，再逐页添加
 3. **`<slide>` 直接子元素只有 `<style>`、`<data>`、`<note>`**：文本和图形必须放在 `<data>` 内
 4. **文本通过 `<content>` 表达**：必须用 `<content><p>...</p></content>`，不能把文字直接写在 shape 内

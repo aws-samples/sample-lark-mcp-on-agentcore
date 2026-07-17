@@ -24,15 +24,15 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={
 
 ```json
 {
-  "code": 0,
+  "ok": true,
+  "identity": "user",
   "data": {
     "slide": {
       "slide_id": "slide_example_id",
       "content": "<slide id=\"slide_example_id\"><style/><data>...</data></slide>"
     },
     "revision_id": 100
-  },
-  "msg": "success"
+  }
 }
 ```
 
@@ -43,5 +43,6 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={
 ## 相关命令
 
 - `lark_get_skill(domain="slides", section="replace-slide")` — 块级替换 shortcut（推荐）
-- `lark_get_skill(domain="slides", section="xml-presentations-get")` — 读整个 PPT
+- `lark_get_skill(domain="slides", section="xml-presentation-slide-replace")` — 底层 replace API 参考
+- `lark_get_skill(domain="slides", section="xml-get")` — 读整个 PPT 并保存到本地文件
 - `lark_get_skill(domain="slides", section="edit-workflows")` — 读-改-写闭环

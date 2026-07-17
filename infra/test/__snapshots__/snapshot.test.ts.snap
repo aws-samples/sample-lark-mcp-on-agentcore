@@ -2108,7 +2108,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
       "Properties": {
         "Code": {
           "S3Bucket": "cdk-hnb659fds-assets-123456789012-us-west-2",
-          "S3Key": "ec5ec7b1362e4e60e125726ec3d2d00a781338ae52d132150ba58a83524d2fd9.zip",
+          "S3Key": "8a1cf3b94cf7919cb3b8a99ff76c3c975813f4f31af286e6ae378ababc9afbec.zip",
         },
         "Environment": {
           "Variables": {
