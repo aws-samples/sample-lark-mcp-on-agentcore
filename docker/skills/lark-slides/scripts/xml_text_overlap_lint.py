@@ -69,6 +69,8 @@ def ensure_safe_xml_source(source: str) -> None:
 
 
 def read_file(file_path: str | Path) -> str:
+    if str(file_path) == "-":
+        return sys.stdin.read()
     return Path(file_path).read_text(encoding="utf-8")
 
 
@@ -1180,7 +1182,7 @@ def lint_xml(xml: str, source_path: str | None = None) -> dict[str, Any]:
 
 
 def print_usage() -> None:
-    print("Usage:\n  python3 xml_text_overlap_lint.py --input <presentation.xml>", file=sys.stderr)
+    print("Usage:\n  python3 xml_text_overlap_lint.py --input <presentation.xml>\n  python3 xml_text_overlap_lint.py --input -   # read XML from stdin", file=sys.stderr)
 
 
 def run_cli(argv: list[str] | None = None) -> None:
@@ -1191,8 +1193,9 @@ def run_cli(argv: list[str] | None = None) -> None:
     if not options.get("input"):
         print_usage()
         fail("--input is required")
-    input_path = Path(options["input"]).resolve()
-    result = lint_xml(read_file(input_path), str(input_path))
+    input_arg = options["input"]
+    input_path = "-" if input_arg == "-" else str(Path(input_arg).resolve())
+    result = lint_xml(read_file(input_path), input_path)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if result["summary"]["error_count"] > 0:
         raise SystemExit(1)

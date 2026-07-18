@@ -280,10 +280,23 @@ Handle them like this:
   `lark_exec_script(script="<relative-path>", args=[...])`. The `script` value is relative to
   the skills dir (e.g. `lark-slides/scripts/iconpark_tool.py`). Arguments are passed as a JSON
   array of strings.
-- **For scripts that read input from a file** (e.g. `--input <file>`): use the `stdin` parameter
-  if the script supports `--input -` (reading from stdin). The server pipes the `stdin` string to
-  the child process. If the script doesn't support stdin, note it in the skill and propose adding
-  the 2-line stdin support (see `xml_text_overlap_lint.py` for the pattern).
+- **For scripts that read input from a file** (e.g. `--input <file>`): the adapted `.md` MUST
+  invoke them via the `stdin` parameter (`args=["--input", "-"], stdin="<content>"`), because the
+  container gives `lark_exec_script` child processes **no writable filesystem** for the agent to
+  stage an input file — stdin is the only data channel. This is a hard contract: **if a doc pipes
+  `stdin=` to a script, that script MUST read stdin**, or the payload lands in the literal path
+  `/tmp/-` and the call dies with `FileNotFoundError`. So whenever you rewrite a file-reading
+  invocation to use `stdin`, first confirm the script reads stdin; if it doesn't, add the standard
+  2-line shim to its file-reading helper:
+
+  ```python
+  if str(file_path) == "-":
+      return sys.stdin.read()
+  ```
+
+  (Reference implementations: `doc_word_stat.py`, `xml_text_overlap_lint.py`.) The
+  `skill-quality` test "every script invoked with stdin= actually reads stdin" enforces this
+  statically — a doc/script drift fails CI rather than surfacing as a silent runtime error.
 - **Data files consumed by scripts** (e.g. `references/iconpark-index.json`,
   `assets/templates/*.xml`) stay at their current paths — the scripts locate them via
   `Path(__file__).parent.parent` which resolves correctly in the container.
