@@ -13,6 +13,9 @@
 # 退回到单个节点
 lark_invoke(tool_name="lark_approval_tasks_rollback", args={data: {"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","node_ids":["<NODE_ID>"],"comment":"请补充附件后重新提交"}, _confirm: true})
 
+# 退回到发起节点（发起节点 ID 为 START）
+lark_invoke(tool_name="lark_approval_tasks_rollback", args={data: {"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","node_ids":["START"],"comment":"退回发起人补充材料"}, _confirm: true})
+
 # 传多个候选节点 ID（以实际审批定义支持情况为准）
 lark_invoke(tool_name="lark_approval_tasks_rollback", args={data: {"instance_code":"<INSTANCE_CODE>","task_id":"<TASK_ID>","node_ids":["<NODE_ID_1>","<NODE_ID_2>"],"comment":"退回上一处理节点"}, _confirm: true})
 ```
@@ -24,7 +27,7 @@ lark_invoke(tool_name="lark_approval_tasks_rollback", args={data: {"instance_cod
 | `data` | 是 | 请求体，JSON 对象 |
 | `instance_code` | 是 | 审批实例 Code；通常先通过 `tasks query` 或 `instances initiated` / `instances get` 获取 |
 | `task_id` | 是 | 审批任务 ID；通常先通过 `tasks query` 获取 |
-| `node_ids` | 是 | 退回目标节点 ID 数组；执行前应先确认这些节点确实可作为退回目标 |
+| `node_ids` | 是 | 退回目标节点 ID 数组；发起节点 ID 为 `START`；执行前应先确认这些节点确实可作为退回目标 |
 | `comment` | 否 | 审批意见或退回说明，例如 `请补充附件后重新提交`、`预算说明不完整，请补充` |
 | `_confirm` | 是 | 确认执行高风险写操作；未带时会返回 `user_approval_required` |
 | `format` | 否 | 输出格式：`json`（默认）、`ndjson`、`table`、`csv` |
@@ -54,7 +57,7 @@ lark_invoke(tool_name="lark_approval_instances_get", args={params: {"instance_co
 ## 使用建议
 
 - **`instance_code` 和 `task_id` 要成对使用**：仅有实例 ID 或仅有任务 ID 都不足以准确执行退回操作。
-- **`node_ids` 是必填项**：退回并不是“自动退回上一步”，而是要明确给出目标节点 ID 数组。
+- **`node_ids` 是必填项**：退回并不是“自动退回上一步”，而是要明确给出目标节点 ID 数组；退回发起节点时传 `START`。
 - **先确认节点是否可退回**：不同审批定义支持的退回目标可能不同；在不确定时，先通过 `instances get` 或业务侧流程信息核实。
 - **优先从 `tasks query` 的待办列表拿任务参数**：尤其是 `topic=1` 的待办审批，最适合作为 rollback 的输入来源。
 - **先检查是否支持 API 操作**：如果 `tasks[].support_api_operate` 为 `false`，说明该任务可能不支持通过 API 执行处理动作，退回前应谨慎验证。
