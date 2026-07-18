@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.71",
+    "lark_cli_version": "1.0.72",
     "source": "lark-cli schema _meta.scopes"
   },
   "rawApis": [
@@ -570,7 +570,7 @@
       "resource": "user",
       "method": "remove_subscription",
       "scopes": [
-        "docs:event:subscribe"
+        "docs:document.comment:read"
       ]
     },
     {
@@ -578,7 +578,7 @@
       "resource": "user",
       "method": "subscription",
       "scopes": [
-        "docs:event:subscribe"
+        "docs:document.comment:read"
       ]
     },
     {
@@ -586,7 +586,7 @@
       "resource": "user",
       "method": "subscription_status",
       "scopes": [
-        "docs:event:subscribe"
+        "docs:document.comment:read"
       ]
     },
     {

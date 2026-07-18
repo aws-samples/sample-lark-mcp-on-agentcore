@@ -39,6 +39,8 @@ SXSD_ATTR_ALIASES = {
     "fontColor": "color",
 }
 SERVER_FILLED_SXSD_ATTRS = {"id"}
+DEFAULT_TABLE_COLUMN_WIDTH = 110
+DEFAULT_TABLE_ROW_HEIGHT = 37
 _SXSD_TAG_ATTRIBUTES_CACHE: dict[str, set[str]] | None = None
 _ICONPARK_ICON_TYPES_CACHE: set[str] | None = None
 
@@ -67,6 +69,8 @@ def ensure_safe_xml_source(source: str) -> None:
 
 
 def read_file(file_path: str | Path) -> str:
+    if str(file_path) == "-":
+        return sys.stdin.read()
     return Path(file_path).read_text(encoding="utf-8")
 
 
@@ -102,6 +106,84 @@ def extract_numeric_attribute(tag_source: str, name: str) -> int | float | None:
     except ValueError:
         return None
     return int(value) if value.is_integer() else value
+
+
+def sum_sizes(sizes: list[int | float]) -> int | float:
+    return sum(sizes)
+
+
+def is_filled_size(size: int | float | None) -> bool:
+    return isinstance(size, (int, float)) and math.isfinite(size) and size > 0
+
+
+def fill_last_size_gap(sizes: list[int | float], target_size: int | float) -> list[int | float]:
+    if not sizes:
+        return sizes
+    final_sizes = [
+        size if index == len(sizes) - 1 else max(1, math.floor(size + 0.5))
+        for index, size in enumerate(sizes)
+    ]
+    remaining_size = target_size - sum_sizes(final_sizes[:-1])
+    if remaining_size >= 1:
+        final_sizes[-1] = remaining_size
+        return final_sizes
+
+    size_to_redistribute = 1 - remaining_size
+    for index in range(len(final_sizes) - 2, -1, -1):
+        reduction = min(final_sizes[index] - 1, size_to_redistribute)
+        final_sizes[index] -= reduction
+        size_to_redistribute -= reduction
+        if size_to_redistribute == 0:
+            final_sizes[-1] = 1
+            return final_sizes
+
+    final_sizes[-1] = 1
+    return final_sizes
+
+
+def solve_weighted_min_layout(
+    input_sizes: list[int | float | None], default_size: int | float, target_min_size: int | float | None
+) -> dict[str, Any]:
+    filled_indexes: list[int] = []
+    empty_indexes: list[int] = []
+    base_sizes: list[int | float] = []
+    for index, size in enumerate(input_sizes):
+        if is_filled_size(size):
+            filled_indexes.append(index)
+            base_sizes.append(size)
+        else:
+            empty_indexes.append(index)
+            base_sizes.append(0)
+    filled_sum = sum_sizes(base_sizes)
+
+    if target_min_size is None:
+        final_sizes = [default_size if index in empty_indexes else size for index, size in enumerate(base_sizes)]
+        return {"final_sizes": final_sizes, "actual_size": sum_sizes(final_sizes), "ratio": 1}
+
+    if not filled_indexes:
+        average_size = target_min_size / len(input_sizes)
+        final_sizes = fill_last_size_gap([average_size] * len(input_sizes), target_min_size)
+        return {"final_sizes": final_sizes, "actual_size": sum_sizes(final_sizes), "ratio": 1}
+
+    if empty_indexes:
+        remaining_size = target_min_size - filled_sum
+        final_sizes = [*base_sizes]
+        if remaining_size > 0:
+            average_size = remaining_size / len(empty_indexes)
+            empty_sizes = fill_last_size_gap([average_size] * len(empty_indexes), remaining_size)
+            for index, empty_size in zip(empty_indexes, empty_sizes):
+                final_sizes[index] = empty_size
+        else:
+            for index in empty_indexes:
+                final_sizes[index] = default_size
+        return {"final_sizes": final_sizes, "actual_size": sum_sizes(final_sizes), "ratio": 1}
+
+    ratio = max(1, target_min_size / filled_sum)
+    actual_size = max(target_min_size, filled_sum)
+    if ratio == 1:
+        return {"final_sizes": [*base_sizes], "actual_size": actual_size, "ratio": ratio}
+    final_sizes = fill_last_size_gap([size * ratio for size in base_sizes], actual_size)
+    return {"final_sizes": final_sizes, "actual_size": sum_sizes(final_sizes), "ratio": ratio}
 
 
 def strip_xml(value: str) -> str:
@@ -531,8 +613,8 @@ def extract_elements(slide_xml: str) -> list[dict[str, Any]]:
     for match in re.finditer(r"<(shape|img|table|chart|whiteboard)\b([^>]*)>", slide_xml):
         kind, attrs = match.group(1), match.group(2)
         content = ""
-        if kind == "shape":
-            close_index = slide_xml.find("</shape>", match.end())
+        if kind in {"shape", "table"}:
+            close_index = slide_xml.find(f"</{kind}>", match.end())
             if close_index != -1:
                 content = slide_xml[match.end() : close_index]
 
@@ -541,6 +623,14 @@ def extract_elements(slide_xml: str) -> list[dict[str, Any]]:
         y = extract_numeric_attribute(attrs, "topLeftY")
         width = extract_numeric_attribute(attrs, "width")
         height = extract_numeric_attribute(attrs, "height")
+        table_layouts: dict[str, dict[str, Any] | None] = {}
+        if kind == "table":
+            width, table_layouts["width"] = resolve_table_dimension(
+                content, width, extract_table_column_sizes, DEFAULT_TABLE_COLUMN_WIDTH
+            )
+            height, table_layouts["height"] = resolve_table_dimension(
+                content, height, extract_table_row_sizes, DEFAULT_TABLE_ROW_HEIGHT
+            )
         if all(value is not None for value in [x, y, width, height]):
             element = {
                 "id": element_id,
@@ -552,6 +642,14 @@ def extract_elements(slide_xml: str) -> list[dict[str, Any]]:
                 "height": height,
                 "order": len(elements),
             }
+            if kind == "table":
+                element.update(
+                    {
+                        "declared_width": extract_numeric_attribute(attrs, "width"),
+                        "declared_height": extract_numeric_attribute(attrs, "height"),
+                        "table_layouts": table_layouts,
+                    }
+                )
             if kind == "shape":
                 element.update(
                     {
@@ -883,11 +981,129 @@ def detect_whiteboard_external_overlaps(
     return issues
 
 
+def detect_table_out_of_canvas(
+    elements: list[dict[str, Any]], slide_width: int | float, slide_height: int | float
+) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    for table in (element for element in elements if element["kind"] == "table"):
+        overflow = {
+            "left": max(-table["x"], 0),
+            "top": max(-table["y"], 0),
+            "right": max(table["x"] + table["width"] - slide_width, 0),
+            "bottom": max(table["y"] + table["height"] - slide_height, 0),
+        }
+        overflow_details = [
+            f"{side} by {amount:g}px" for side, amount in overflow.items() if amount > 0
+        ]
+        if not overflow_details:
+            continue
+        issues.append(
+            {
+                "level": "error",
+                "code": "table_out_of_canvas",
+                "elements": [table["id"]],
+                "canvas": {"width": slide_width, "height": slide_height},
+                "bbox": {
+                    "x": table["x"],
+                    "y": table["y"],
+                    "width": table["width"],
+                    "height": table["height"],
+                },
+                "overflow": overflow,
+                "message": (
+                    f'table {table["id"]} exceeds the {slide_width:g}x{slide_height:g} canvas '
+                    f'({", ".join(overflow_details)})'
+                ),
+                "hint": (
+                    "Move the table inside the canvas, reduce table.width/table.height, or split the table across "
+                    "slides."
+                ),
+            }
+        )
+    return issues
+
+
+def extract_table_column_sizes(table_xml: str) -> list[int | float | None]:
+    sizes: list[int | float | None] = []
+    for match in re.finditer(r"<col\b([^>]*)/?>", table_xml):
+        attrs = match.group(1)
+        span = extract_numeric_attribute(attrs, "span") or 1
+        span_count = int(span) if math.isfinite(span) and span > 0 and float(span).is_integer() else 1
+        sizes.extend([extract_numeric_attribute(attrs, "width")] * span_count)
+    return sizes
+
+
+def extract_table_row_sizes(table_xml: str) -> list[int | float | None]:
+    return [extract_numeric_attribute(match.group(1), "height") for match in re.finditer(r"<tr\b([^>]*)>", table_xml)]
+
+
+def resolve_table_dimension(
+    table_xml: str,
+    declared_size: int | float | None,
+    extract_sizes: Any,
+    default_size: int | float,
+) -> tuple[int | float | None, dict[str, Any] | None]:
+    input_sizes = extract_sizes(table_xml)
+    if not input_sizes:
+        return declared_size, None
+    layout = solve_weighted_min_layout(
+        input_sizes, default_size, declared_size if is_filled_size(declared_size) else None
+    )
+    return layout["actual_size"], layout
+
+
+def format_size(size: int | float) -> str:
+    return f"{size:g}"
+
+
+def detect_table_layout_size_mismatches(elements: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    issues: list[dict[str, Any]] = []
+    dimensions = {
+        "width": ("col", "column widths"),
+        "height": ("tr", "row heights"),
+    }
+    for table in (element for element in elements if element["kind"] == "table"):
+        for dimension, (child_tag, child_description) in dimensions.items():
+            target_size = table[f"declared_{dimension}"]
+            if not is_filled_size(target_size):
+                continue
+            layout = table["table_layouts"][dimension]
+            if layout is None:
+                continue
+            actual_size = layout["actual_size"]
+            if math.isclose(actual_size, target_size, rel_tol=1e-9, abs_tol=1e-9):
+                continue
+            issues.append(
+                {
+                    "level": "info",
+                    "code": "table_resolved_size_mismatch",
+                    "elements": [table["id"]],
+                    "dimension": dimension,
+                    "declared_size": target_size,
+                    "resolved_size": actual_size,
+                    "resolved_sizes": layout["final_sizes"],
+                    "message": (
+                        f'table {table["id"]} declares {dimension}={format_size(target_size)}px, but its '
+                        f"{child_description} resolve to {format_size(actual_size)}px"
+                    ),
+                    "hint": (
+                        f"Set table.{dimension} to {format_size(actual_size)}px, or adjust <{child_tag}> sizes "
+                        f"so their resolved total matches {format_size(target_size)}px."
+                    ),
+                }
+            )
+    return issues
+
+
 def lint_slide(
     slide_xml: str, slide_number: int, slide_width: int | float = 960, slide_height: int | float = 540
 ) -> dict[str, Any]:
     elements = extract_elements(slide_xml)
-    issues: list[dict[str, Any]] = detect_whiteboard_external_overlaps(elements, slide_width, slide_height)
+    issues: list[dict[str, Any]] = [
+        *detect_whiteboard_external_overlaps(elements, slide_width, slide_height),
+        *detect_table_out_of_canvas(elements, slide_width, slide_height),
+        *detect_table_layout_size_mismatches(elements),
+    ]
 
     for index, left in enumerate(elements):
         for right in elements[index + 1 :]:
@@ -913,7 +1129,7 @@ def lint_xml(xml: str, source_path: str | None = None) -> dict[str, Any]:
         return {
             "file": source_path,
             "slide_size": {"width": 960, "height": 540},
-            "summary": {"slide_count": 0, "error_count": 1, "warning_count": 0},
+            "summary": {"slide_count": 0, "error_count": 1, "warning_count": 0, "info_count": 0},
             "issues": [xml_error],
             "slides": [],
         }
@@ -925,10 +1141,16 @@ def lint_xml(xml: str, source_path: str | None = None) -> dict[str, Any]:
     if namespace_issues:
         error_count = sum(1 for issue in top_level_issues if issue["level"] == "error")
         warning_count = sum(1 for issue in top_level_issues if issue["level"] == "warning")
+        info_count = sum(1 for issue in top_level_issues if issue["level"] == "info")
         return {
             "file": source_path,
             "slide_size": {"width": 960, "height": 540},
-            "summary": {"slide_count": 0, "error_count": error_count, "warning_count": warning_count},
+            "summary": {
+                "slide_count": 0,
+                "error_count": error_count,
+                "warning_count": warning_count,
+                "info_count": info_count,
+            },
             "issues": top_level_issues,
             "slides": [],
         }
@@ -941,10 +1163,17 @@ def lint_xml(xml: str, source_path: str | None = None) -> dict[str, Any]:
     error_count += sum(1 for slide in slides for issue in slide["issues"] if issue["level"] == "error")
     warning_count = sum(1 for issue in top_level_issues if issue["level"] == "warning")
     warning_count += sum(1 for slide in slides for issue in slide["issues"] if issue["level"] == "warning")
+    info_count = sum(1 for issue in top_level_issues if issue["level"] == "info")
+    info_count += sum(1 for slide in slides for issue in slide["issues"] if issue["level"] == "info")
     result = {
         "file": source_path,
         "slide_size": {"width": presentation["width"], "height": presentation["height"]},
-        "summary": {"slide_count": len(slides), "error_count": error_count, "warning_count": warning_count},
+        "summary": {
+            "slide_count": len(slides),
+            "error_count": error_count,
+            "warning_count": warning_count,
+            "info_count": info_count,
+        },
         "slides": slides,
     }
     if top_level_issues:
@@ -953,7 +1182,7 @@ def lint_xml(xml: str, source_path: str | None = None) -> dict[str, Any]:
 
 
 def print_usage() -> None:
-    print("Usage:\n  python3 xml_text_overlap_lint.py --input <presentation.xml>", file=sys.stderr)
+    print("Usage:\n  python3 xml_text_overlap_lint.py --input <presentation.xml>\n  python3 xml_text_overlap_lint.py --input -   # read XML from stdin", file=sys.stderr)
 
 
 def run_cli(argv: list[str] | None = None) -> None:
@@ -964,8 +1193,9 @@ def run_cli(argv: list[str] | None = None) -> None:
     if not options.get("input"):
         print_usage()
         fail("--input is required")
-    input_path = Path(options["input"]).resolve()
-    result = lint_xml(read_file(input_path), str(input_path))
+    input_arg = options["input"]
+    input_path = "-" if input_arg == "-" else str(Path(input_arg).resolve())
+    result = lint_xml(read_file(input_path), input_path)
     print(json.dumps(result, ensure_ascii=False, indent=2))
     if result["summary"]["error_count"] > 0:
         raise SystemExit(1)

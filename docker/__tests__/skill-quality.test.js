@@ -231,4 +231,36 @@ describe.skipIf(skipIfNoSkills)('skill quality', () => {
       expect.fail(`${violations.length} resource file(s) unreachable (not referenced by any file in the skill):\n${report}`);
     }
   });
+
+  it('every script invoked with stdin= actually reads stdin (else the piped payload lands in /tmp/- and the call fails)', () => {
+    // Contract: the MCP container gives lark_exec_script child processes NO writable
+    // filesystem for the agent to stage an input file — stdin is the only data channel.
+    // So any adapted doc that calls lark_exec_script(script=X, ..., stdin="...") REQUIRES
+    // script X to read from stdin (typically `if path == "-": return sys.stdin.read()`).
+    // If it doesn't, `--input -` is resolved as the literal path /tmp/- and the tool call
+    // dies with FileNotFoundError. This static check keeps the docs and the scripts from
+    // drifting apart across lark-cli bumps (the failure mode is otherwise silent until a
+    // real tool call). See docs/skills/adapt-skill-for-mcp.md Rule 9.
+    const callRe = /lark_exec_script\(\s*script="([^"]+)"[^)]*\bstdin\b/g;
+    const offenders = [];
+    for (const file of allFiles) {
+      const content = readFileSync(file, 'utf8');
+      let m;
+      while ((m = callRe.exec(content)) !== null) {
+        const scriptRel = m[1]; // e.g. lark-slides/scripts/xml_text_overlap_lint.py
+        const scriptPath = join(SKILLS_DIR, scriptRel);
+        if (!existsSync(scriptPath)) {
+          offenders.push({ file: file.replace(SKILLS_DIR + '/', ''), script: scriptRel, reason: 'script file not found' });
+          continue;
+        }
+        if (!readFileSync(scriptPath, 'utf8').includes('sys.stdin')) {
+          offenders.push({ file: file.replace(SKILLS_DIR + '/', ''), script: scriptRel, reason: 'script does not read sys.stdin' });
+        }
+      }
+    }
+    if (offenders.length > 0) {
+      const report = offenders.map(o => `  ${o.file} → ${o.script}: ${o.reason}`).join('\n');
+      expect.fail(`${offenders.length} stdin-invoked script(s) that can't read stdin (piped payload would fail):\n${report}`);
+    }
+  });
 });
