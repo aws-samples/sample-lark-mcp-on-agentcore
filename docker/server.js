@@ -210,7 +210,17 @@ function execScript(script, args, stdin, abortSignal) {
       activeChildren.delete(child);
       if (err) {
         const code = typeof err.code === 'number' ? err.code : err.killed ? 'TIMEOUT' : err.code;
-        resolve({ error: 'exec_failed', message: stderr || err.message, exit_code: code });
+        // A non-zero exit does NOT mean there is no result: lint-style scripts print
+        // their full JSON to stdout and then exit 1 to signal severity (e.g. the slides
+        // linter exits 1 when error_count > 0). Dropping stdout here would hide exactly
+        // the findings the caller needs to act on. So if stdout parses as JSON, return
+        // it (the payload carries its own error_count); only fall back to exec_failed
+        // when there is no structured output to salvage (real crash / empty stdout).
+        try {
+          resolve(JSON.parse(stdout));
+        } catch {
+          resolve({ error: 'exec_failed', message: stderr || err.message, exit_code: code });
+        }
         return;
       }
       try {
