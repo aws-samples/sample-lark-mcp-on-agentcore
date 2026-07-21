@@ -108,4 +108,5 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", args={
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="xml-get")` — 读取 PPT 内容并保存到本地文件
+- `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")`（`lark_get_skill(domain="slides", section="xml-presentation-slide-create")`） — 添加幻灯片页面
+- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） — 读取 PPT 内容并保存到本地文件

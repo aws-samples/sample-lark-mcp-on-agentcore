@@ -32,6 +32,5 @@ lark_apps_create(name="审批系统", app_type="full_stack", description="部门
 
 创建后按用户路径继续：
 
-- 发布现成 HTML/静态目录：读 `lark_get_skill(domain="apps", section="html-publish")`。
-- 本地全栈开发：读 `lark_get_skill(domain="apps", section="local-dev")`。
+- 本地应用开发（含 html 和 full_stack）：读 `lark_get_skill(domain="apps", section="local-dev")`。
 - 云端 Agent 生成/迭代：读 `lark_get_skill(domain="apps", section="cloud-dev")`。

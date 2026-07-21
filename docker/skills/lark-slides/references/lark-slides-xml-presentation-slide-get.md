@@ -38,11 +38,11 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={
 
 ## 注意事项
 
-1. **block_id 提取**：返回 XML 里每个顶层块（shape、img、table、chart、whiteboard 等）的 `id` 属性即为 `block_id`，通常是 3 字符短码，例如 `<shape id="bUn" ...>`。
+1. **block_id 提取**：返回 XML 里每个顶层块（shape、img、table、chart 等）的 `id` 属性即为 `block_id`，通常是 3 字符短码，例如 `<shape id="bUn" ...>`。
 
 ## 相关命令
 
 - `lark_get_skill(domain="slides", section="replace-slide")` — 块级替换 shortcut（推荐）
 - `lark_get_skill(domain="slides", section="xml-presentation-slide-replace")` — 底层 replace API 参考
-- `lark_get_skill(domain="slides", section="xml-get")` — 读整个 PPT 并保存到本地文件
+- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） — 读整个 PPT 并保存到本地文件
 - `lark_get_skill(domain="slides", section="edit-workflows")` — 读-改-写闭环
