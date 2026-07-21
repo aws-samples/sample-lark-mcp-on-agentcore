@@ -1,0 +1,23 @@
+# Trivy ignore file — reviewed, time-boxed suppressions.
+#
+# Trivy (fs scan, HIGH/CRITICAL, exit-code 1) runs in CI security-scan
+# (.github/workflows/ci.yml). It auto-reads this file from the repo root.
+#
+# --- brace-expansion ReDoS, bundled inside aws-cdk-lib -----------------------
+# CVE-2026-13149 (HIGH): brace-expansion denial-of-service via exponential-time
+# complexity. Present as aws-cdk-lib > minimatch > brace-expansion@5.0.5 in
+# infra/package-lock.json.
+#
+# Why suppressed (not fixable by us):
+#   - brace-expansion is `"inBundle": true` inside aws-cdk-lib's vendored tree,
+#     so an npm `overrides` entry does NOT reach it (see the "comment:overrides"
+#     note in infra/package.json). It clears only when aws-cdk-lib ships a
+#     rebuilt bundle with a patched brace-expansion (>= 5.0.7 / 2.1.2 / 1.1.16).
+#   - Verified 2026-07-21: the latest aws-cdk-lib (2.261.0) still bundles 5.0.6,
+#     which is below the 5.0.7 fix — upgrading aws-cdk-lib does not resolve it.
+#   - Impact is CDK build/synth-time only (glob over our own repo files, not
+#     untrusted input); aws-cdk-lib never enters the production container.
+#
+# Re-review when aws-cdk-lib publishes a bundle with brace-expansion >= 5.0.7;
+# drop this line and let the scan pass on its own. Revisit by 2026-10-21.
+CVE-2026-13149

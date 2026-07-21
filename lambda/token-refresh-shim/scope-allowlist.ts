@@ -182,6 +182,7 @@ export const SCOPE_ALLOWLIST: ReadonlySet<string> = new Set([
   "sheets:spreadsheet:write_only",
   "slides:presentation:create",
   "slides:presentation:read",
+  "slides:presentation:screenshot",
   "slides:presentation:update",
   "slides:presentation:write_only",
   "space:document:delete",

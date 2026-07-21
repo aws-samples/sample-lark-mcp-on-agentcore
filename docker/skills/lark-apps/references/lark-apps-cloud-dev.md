@@ -115,5 +115,4 @@ lark_apps_session_list(app_id="app_xxx")
 
 ## 不适用
 
-- 用户已有本地 HTML/dist，要马上发布 URL：读 `lark_get_skill(domain="apps", section="html-publish")`。
 - 用户要本地写代码、改仓库、跑 dev server：读 `lark_get_skill(domain="apps", section="local-dev")`。

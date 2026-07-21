@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.72",
+    "lark_cli_version": "1.0.73",
     "source": "lark-cli schema _meta.scopes"
   },
   "rawApis": [
@@ -1568,6 +1568,31 @@
     },
     {
       "service": "slides",
+      "resource": "xml_presentation.history",
+      "method": "list",
+      "scopes": [
+        "slides:presentation:read"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.history",
+      "method": "revert",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.history",
+      "method": "revert_status",
+      "scopes": [
+        "slides:presentation:read"
+      ]
+    },
+    {
+      "service": "slides",
       "resource": "xml_presentation.slide",
       "method": "create",
       "scopes": [
@@ -1599,6 +1624,30 @@
       "scopes": [
         "slides:presentation:update",
         "slides:presentation:write_only"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.slide_image",
+      "method": "list",
+      "scopes": [
+        "slides:presentation:screenshot"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentation.slide_image",
+      "method": "render",
+      "scopes": [
+        "slides:presentation:screenshot"
+      ]
+    },
+    {
+      "service": "slides",
+      "resource": "xml_presentations",
+      "method": "create",
+      "scopes": [
+        "slides:presentation:create"
       ]
     },
     {

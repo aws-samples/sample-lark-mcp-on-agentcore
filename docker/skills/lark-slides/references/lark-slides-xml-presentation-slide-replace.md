@@ -20,7 +20,6 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_replace", args={
 1. **parts 原子事务**：任一条失败整批回滚。
 2. **`block_replace` 要求 `replacement` 根元素带 `id="<block_id>"`**：推荐走 `lark_slides_replace_slide`——它会自动注入。
 3. **`<shape>` 必须有 `<content/>` 子元素**：`lark_slides_replace_slide` 会自动注入，直接调底层 API 需要自己加。
-4. **`<whiteboard>` 返回结构不含内部数据**：`slide.get` 返回的 whiteboard 块只有外层标签和位置属性，SVG / Mermaid 内容不会随 XML 一起返回。但 `block_replace` 仍然可以强行覆盖——直接写入完整新 whiteboard XML 即可。
 
 ## 相关命令
 

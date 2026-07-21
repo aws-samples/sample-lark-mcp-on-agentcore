@@ -46,3 +46,4 @@ lark_slides_media_upload(file="./pic.png", presentation="https://xxx.feishu.cn/w
 
 - `lark_get_skill(domain="slides", section="create")` — 新建 PPT（支持 `@` 占位符自动上传图片）
 - `lark_get_skill(domain="slides", section="replace-slide")` — 给已有页加图 / 换图
+- `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")`（`lark_get_skill(domain="slides", section="xml-presentation-slide-create")`） — 创建 slide 页面（拿到 file_token 后塞进 XML）
