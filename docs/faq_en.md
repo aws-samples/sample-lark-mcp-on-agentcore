@@ -89,19 +89,21 @@ Upgrading lark-cli does not affect existing users.
 
 A: This is a Feishu app permission issue, not a client issue. Fix:
 
-1. Go to [Feishu Open Platform](https://open.feishu.cn/app) → Your app → **Permissions**
-2. Search and enable required permissions (common ones below)
+1. Go to the Open Platform ([Feishu (China)](https://open.feishu.cn/app) / [Lark (International)](https://open.larksuite.com/app)) → Your app → **Permissions & Scopes**
+2. Search and enable required permissions (common ones below; full list and bulk-enable in [app-setup_en.md](app-setup_en.md))
 3. **Publish a new app version** (permission changes require a new version to take effect)
-4. Users do NOT need to re-authorize — permissions take effect on next API call
+4. A scope the user already consented to takes effect on the next call, no re-authorization needed; a scope the user never authorized requires already-connected users to re-connect (see below)
+
+> The scope names below follow `config/oauth-scopes.json` in the repo (the list actually requested at deploy time).
 
 | Feature | Required Permission |
 |---------|-------------------|
 | Read calendar/events | `calendar:calendar:read`, `calendar:calendar.event:read` |
-| Search/read messages | `im:message:read`, `im:chat:read` |
-| Send messages | `im:message:send_as_user` |
+| Search/read messages | `im:message:readonly`, `im:chat:read`, `search:message` |
+| Send messages | `im:message.send_as_user` |
 | List chats | `im:chat:read` |
-| Search docs | `drive:drive:read` |
-| Read/write Bitable | `bitable:bitable:read`, `bitable:bitable:write` |
+| Search docs | `search:docs:read`, `space:document:retrieve` |
+| Read/write Base (Bitable) | `base:record:read`, `base:record:create`, `base:record:update` |
 
 > If the admin adds new API permissions on the Open Platform and publishes a new version, **previously connected users** will not automatically gain the new permissions. Re-connection required: Quick Desktop → Settings → Capabilities → Browse Connections (bottom) → search for Feishu Remote MCP → click the card → click Test action APIs → click Re-Connect on the right side → complete Feishu authorization in the popup.
 

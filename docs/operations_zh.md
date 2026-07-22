@@ -289,7 +289,8 @@ alarms, app, admin, waf, runtime`。
 （中国）：[open.feishu.cn/app](https://open.feishu.cn/app)，Lark（国际版）：
 [open.larksuite.com/app](https://open.larksuite.com/app)。请使用与 `LARKSUITE_CLI_BRAND`
 设置（`feishu` 或 `lark`）对应的控制台。`deploy.sh` 无法创建 App —— 它只能关联并验证
-已存在的 App ID + App Secret。
+已存在的 App ID + App Secret。建应用、开通权限的完整步骤与 scope 批量导入清单见
+[app-setup_zh.md](app-setup_zh.md)。
 
 ```bash
 ./scripts/deploy.sh --app <slug> --alias "<显示名称>"
