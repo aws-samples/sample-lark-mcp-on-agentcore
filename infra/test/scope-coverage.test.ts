@@ -154,4 +154,56 @@ describe("scope coverage", () => {
       "bot-only scopes must be filtered by scripts/extract-rawapi-scopes.sh",
     ).toEqual([]);
   });
+
+  // The console-import scope list embedded in docs/app-setup_{en,zh}.md is a derived
+  // snapshot of the allowlist: user-only, minus offline_access, minus the scopes the
+  // Feishu/Lark console rejects on bulk import (config/console-rejected-scopes.json).
+  // These tests turn "remember to re-run bump-lark-cli Step 6c" into a hard failure.
+  const allowlistScopes = new Set(
+    [...allowlistSrc.matchAll(/^\s*"([^"]+)",?/gm)].map((m) => m[1]),
+  );
+  const consoleRejected: Record<string, { scopes: string[] }> = JSON.parse(
+    readFileSync(resolve(ROOT, "config/console-rejected-scopes.json"), "utf-8"),
+  );
+  const rejectedSet = new Set(
+    Object.entries(consoleRejected)
+      .filter(([k]) => !k.startsWith("_"))
+      .flatMap(([, v]) => v.scopes),
+  );
+
+  it("console-rejected scopes are all present in the allowlist (no dead entries)", () => {
+    const dead = [...rejectedSet].filter((s) => !allowlistScopes.has(s)).sort();
+    expect(
+      dead,
+      "config/console-rejected-scopes.json lists scopes no longer in scope-allowlist.ts — " +
+        "a lark-cli bump likely renamed or dropped them; re-verify the set (bump-lark-cli Step 6c).",
+    ).toEqual([]);
+  });
+
+  for (const doc of ["docs/app-setup_en.md", "docs/app-setup_zh.md"]) {
+    it(`${doc} embeds the console-import list = allowlist − offline_access − console-rejected`, () => {
+      const expected = [...allowlistScopes]
+        .filter((s) => s !== "offline_access" && !rejectedSet.has(s))
+        .sort();
+
+      const src = readFileSync(resolve(ROOT, doc), "utf-8");
+      const block = src.match(/```json\n([\s\S]*?)\n```/);
+      expect(block, `${doc} has no \`\`\`json block`).not.toBeNull();
+      const parsed = JSON.parse(block![1]) as { scopes: { tenant: string[]; user: string[] } };
+
+      expect(parsed.scopes.tenant, `${doc}: tenant must be empty (user-only project)`).toEqual([]);
+      expect(
+        parsed.scopes.user,
+        `${doc} scope list is stale — regenerate per bump-lark-cli Step 6c ` +
+          `(expected ${expected.length} entries).`,
+      ).toEqual(expected);
+
+      // Prose entry count must match the list length (with unit, not a bare substring).
+      const countStated = new RegExp(`${expected.length}\\s*(entries|条)`).test(src);
+      expect(
+        countStated,
+        `${doc} prose must state the entry count as "${expected.length} entries" / "${expected.length} 条"`,
+      ).toBe(true);
+    });
+  }
 });

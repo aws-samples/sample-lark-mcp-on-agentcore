@@ -177,7 +177,7 @@ Spanning 20+ domains: Calendar, IM, Bitable, Mail, Docs, VC, Task, Wiki, Sheets,
 | Topic | Link |
 |-------|------|
 | Smart Orchestration (Skill) | [docs/skills_en.md](docs/skills_en.md) |
-| Before deploy: Feishu/Lark app setup | [docs/app-setup_en.md](docs/app-setup_en.md) |
+| Feishu/Lark app setup (before & after deploy) | [docs/app-setup_en.md](docs/app-setup_en.md) |
 | Connect clients (Kiro / Claude Code / Codex) | [docs/connect-mcp-clients_en.md](docs/connect-mcp-clients_en.md) |
 | Quick Desktop Setup (6 steps, screenshots) | [docs/quick-desktop-setup_en.md](docs/quick-desktop-setup_en.md) |
 | Security | [docs/security_en.md](docs/security_en.md) |
@@ -411,7 +411,7 @@ lark-cli 官方 20+ 个业务域 Skill 沉淀了多步操作的最佳实践—�
 | 主题 | 链接 |
 |------|------|
 | 智能编排（Skill） | [docs/skills_zh.md](docs/skills_zh.md) |
-| 部署前：飞书/Lark 应用配置 | [docs/app-setup_zh.md](docs/app-setup_zh.md) |
+| 飞书/Lark 应用配置（部署前后） | [docs/app-setup_zh.md](docs/app-setup_zh.md) |
 | 连接客户端（Kiro / Claude Code / Codex） | [docs/connect-mcp-clients_zh.md](docs/connect-mcp-clients_zh.md) |
 | Quick Desktop 配置（图文 6 步） | [docs/quick-desktop-setup_zh.md](docs/quick-desktop-setup_zh.md) |
 | 安全设计 | [docs/security_zh.md](docs/security_zh.md) |

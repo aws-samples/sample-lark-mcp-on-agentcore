@@ -1,6 +1,6 @@
 [中文](app-setup_zh.md) | [English](app-setup_en.md)
 
-# Before deploy: Feishu / Lark app setup
+# Feishu / Lark app setup (before & after deploy)
 
 The deploy script **does not create the app** — it only validates the App ID / App
 Secret of an existing app. Do steps 1–5 **before** running `install.sh` / `deploy.sh`.
@@ -33,97 +33,248 @@ safe and never commit it to version control.
 
 ## 3. Enable permission scopes
 
-Open the app → **Permissions & Scopes** in the left nav. The scopes this project
-requests are defined by [`config/oauth-scopes.json`](../config/oauth-scopes.json) in
-the repo — the exact list `deploy.sh` requests from Feishu/Lark at deploy time.
+Open the app → **Permissions & Scopes** in the left nav, click **Import/Export**, and
+paste the scope list into the import box to enable it all at once. This project is
+**user-identity only** (no app identity), so every scope goes under `user` and `tenant`
+stays empty.
 
-On the Permissions page, click **Import/Export** and paste the JSON below into the
-import box to enable them all at once. This project is **user-identity only** (no app
-identity), so every scope goes under `user` and `tenant` stays empty:
+**Enable all scopes at once — recommended.** Across the 200+ tools, first
+authorization requests only the high-frequency minimal set; lower-frequency tools
+authorize **incrementally** when first used. But incremental authorization only succeeds
+if the scope is already enabled in the console — if you enable only the minimal set,
+a user hitting a low-frequency tool fails because the scope was never requested, and an
+admin still has to go back, enable it, and re-publish. Enabling everything up front
+avoids that loop. It does **not** widen what users see at first authorization (still the
+minimal set); the only cost is a larger declared permission ceiling and more items for
+your admin to approve.
+
+Scope list (212 entries, copy-paste ready):
 
 ```json
 {
   "scopes": {
     "tenant": [],
     "user": [
-      "im:message",
-      "im:message:readonly",
-      "im:message.send_as_user",
-      "im:chat:read",
-      "im:chat:update",
-      "im:chat:create_by_user",
-      "im:chat.members:read",
-      "im:message.group_msg:get_as_user",
-      "im:message.p2p_msg:get_as_user",
-      "im:message.reactions:read",
-      "calendar:calendar:read",
-      "calendar:calendar.event:read",
-      "calendar:calendar.event:create",
-      "calendar:calendar.event:update",
-      "calendar:calendar.event:delete",
-      "calendar:calendar.free_busy:read",
-      "docx:document:create",
-      "docx:document:readonly",
-      "docx:document:write_only",
-      "docs:document.content:read",
-      "docs:document:export",
-      "docs:document:import",
-      "drive:drive.metadata:readonly",
-      "drive:file:upload",
-      "drive:file:download",
-      "space:document:retrieve",
-      "search:docs:read",
-      "search:message",
-      "sheets:spreadsheet:read",
-      "sheets:spreadsheet:write_only",
-      "sheets:spreadsheet:create",
+      "application:app_slash_command:read",
+      "application:app_slash_command:write",
+      "approval:approval:read",
+      "approval:instance:read",
+      "approval:instance:write",
+      "approval:task:read",
+      "approval:task:write",
+      "attendance:task:readonly",
+      "base:app:copy",
+      "base:app:create",
       "base:app:read",
-      "base:table:read",
-      "base:record:read",
-      "base:record:create",
-      "base:record:update",
-      "base:record:delete",
+      "base:app:update",
+      "base:block:create",
+      "base:block:delete",
+      "base:block:read",
+      "base:block:update",
+      "base:dashboard:create",
+      "base:dashboard:delete",
+      "base:dashboard:read",
+      "base:dashboard:update",
+      "base:field:create",
+      "base:field:delete",
       "base:field:read",
-      "task:task:read",
-      "task:task:write",
+      "base:field:update",
+      "base:form:create",
+      "base:form:delete",
+      "base:form:read",
+      "base:form:update",
+      "base:history:read",
+      "base:record:create",
+      "base:record:delete",
+      "base:record:read",
+      "base:record:update",
+      "base:role:create",
+      "base:role:delete",
+      "base:role:read",
+      "base:role:update",
+      "base:table:create",
+      "base:table:delete",
+      "base:table:read",
+      "base:table:update",
+      "base:view:read",
+      "base:view:write_only",
+      "base:workflow:create",
+      "base:workflow:read",
+      "base:workflow:update",
+      "bitable:app",
+      "board:whiteboard:node:create",
+      "board:whiteboard:node:read",
+      "calendar:calendar",
+      "calendar:calendar.event:create",
+      "calendar:calendar.event:delete",
+      "calendar:calendar.event:read",
+      "calendar:calendar.event:reply",
+      "calendar:calendar.event:update",
+      "calendar:calendar.free_busy:read",
+      "calendar:calendar:create",
+      "calendar:calendar:delete",
+      "calendar:calendar:read",
+      "calendar:calendar:readonly",
+      "calendar:calendar:update",
       "contact:user.base:readonly",
       "contact:user.basic_profile:readonly",
       "contact:user:search",
-      "mail:user_mailbox:readonly",
+      "docs:doc",
+      "docs:doc:readonly",
+      "docs:document.comment:create",
+      "docs:document.comment:delete",
+      "docs:document.comment:read",
+      "docs:document.comment:update",
+      "docs:document.comment:write_only",
+      "docs:document.content:read",
+      "docs:document.media:download",
+      "docs:document.media:upload",
+      "docs:document:copy",
+      "docs:document:export",
+      "docs:document:import",
+      "docs:permission.member:apply",
+      "docs:permission.member:auth",
+      "docs:permission.member:create",
+      "docs:permission.member:transfer",
+      "docs:permission.setting:read",
+      "docs:permission.setting:write_only",
+      "docs:secure_label:readonly",
+      "docs:secure_label:write_only",
+      "docx:document:create",
+      "docx:document:readonly",
+      "docx:document:write_only",
+      "drive:drive",
+      "drive:drive.metadata:readonly",
+      "drive:drive:readonly",
+      "drive:file",
+      "drive:file:download",
+      "drive:file:upload",
+      "drive:file:view_record:readonly",
+      "drive:quota_detail:read_one",
+      "im:chat",
+      "im:chat.managers:write_only",
+      "im:chat.members:read",
+      "im:chat.members:write_only",
+      "im:chat.moderation:read",
+      "im:chat.nickname:read",
+      "im:chat.nickname:write",
+      "im:chat.user_setting:read",
+      "im:chat.user_setting:write",
+      "im:chat:create_by_user",
+      "im:chat:moderation:write_only",
+      "im:chat:read",
+      "im:chat:readonly",
+      "im:chat:update",
+      "im:feed.flag:read",
+      "im:feed.flag:write",
+      "im:feed.shortcut:read",
+      "im:feed.shortcut:write",
+      "im:feed_group_v1:read",
+      "im:feed_group_v1:write",
+      "im:message",
+      "im:message.group_msg:get_as_user",
+      "im:message.p2p_msg:get_as_user",
+      "im:message.pins:read",
+      "im:message.pins:write_only",
+      "im:message.reactions:read",
+      "im:message.reactions:write_only",
+      "im:message.send_as_user",
+      "im:message:readonly",
+      "im:message:recall",
+      "im:resource",
+      "mail:event",
+      "mail:user_mailbox.event.mail_address:read",
+      "mail:user_mailbox.folder:read",
+      "mail:user_mailbox.folder:write",
+      "mail:user_mailbox.mail_contact:read",
+      "mail:user_mailbox.mail_contact:write",
+      "mail:user_mailbox.message.address:read",
+      "mail:user_mailbox.message.body:read",
+      "mail:user_mailbox.message.subject:read",
       "mail:user_mailbox.message:modify",
+      "mail:user_mailbox.message:readonly",
       "mail:user_mailbox.message:send",
-      "wiki:wiki:readonly",
-      "wiki:node:read"
+      "mail:user_mailbox.rule:read",
+      "mail:user_mailbox.rule:write",
+      "mail:user_mailbox:readonly",
+      "mindnote:node:create",
+      "mindnote:node:read",
+      "minutes:minutes",
+      "minutes:minutes.artifacts:read",
+      "minutes:minutes.basic:read",
+      "minutes:minutes.media:export",
+      "minutes:minutes.search:read",
+      "minutes:minutes.upload:write",
+      "minutes:minutes:readonly",
+      "minutes:minutes:update",
+      "minutes:permission:apply",
+      "okr:okr.content:readonly",
+      "okr:okr.content:writeonly",
+      "okr:okr.period:readonly",
+      "okr:okr.progress.file:upload",
+      "okr:okr.progress:delete",
+      "okr:okr.progress:readonly",
+      "okr:okr.progress:writeonly",
+      "okr:okr.setting:read",
+      "profile:user_profile:read",
+      "search:docs:read",
+      "search:message",
+      "sheets:spreadsheet",
+      "sheets:spreadsheet.meta:read",
+      "sheets:spreadsheet:create",
+      "sheets:spreadsheet:read",
+      "sheets:spreadsheet:readonly",
+      "sheets:spreadsheet:write_only",
+      "slides:presentation:create",
+      "slides:presentation:read",
+      "slides:presentation:update",
+      "slides:presentation:write_only",
+      "space:document:delete",
+      "space:document:move",
+      "space:document:retrieve",
+      "space:document:shortcut",
+      "space:folder:create",
+      "spark:app:read",
+      "spark:app:write",
+      "task:attachment:write",
+      "task:comment:write",
+      "task:custom_field:read",
+      "task:custom_field:write",
+      "task:section:read",
+      "task:section:write",
+      "task:task:read",
+      "task:task:write",
+      "task:task:writeonly",
+      "task:tasklist:read",
+      "task:tasklist:write",
+      "vc:meeting.bot.join:write",
+      "vc:meeting.meetingevent:read",
+      "vc:meeting.message:write",
+      "vc:meeting.search:read",
+      "vc:meeting:readonly",
+      "vc:note:read",
+      "vc:record:readonly",
+      "wiki:member:create",
+      "wiki:member:retrieve",
+      "wiki:member:update",
+      "wiki:node:copy",
+      "wiki:node:create",
+      "wiki:node:move",
+      "wiki:node:read",
+      "wiki:node:retrieve",
+      "wiki:space:read",
+      "wiki:space:retrieve",
+      "wiki:space:write_only",
+      "wiki:wiki",
+      "wiki:wiki:readonly"
     ]
   }
 }
 ```
 
-> Scopes can change when lark-cli is bumped; regenerate from the current repo:
->
-> ```bash
-> node -e 'console.log(JSON.stringify({scopes:{tenant:[],user:require("./config/oauth-scopes.json").filter(x=>x!=="offline_access")}},null,2))'
-> ```
-
-### A minimal set, not the full surface
-
-The list above is the default minimal set requested at first authorization, covering
-common im / calendar / docx / drive / sheets / base / task / contact / mail / wiki
-scenarios. Lower-frequency tools authorize incrementally — the extra scope is requested
-from the user on demand. The full scope surface lives in the generated file
-`lambda/token-refresh-shim/scope-allowlist.ts` (never hand-edit).
-
-- **Grant on demand (recommended):** enable the minimal set above. When a tool later
-  reports "permission denied", go back and enable the corresponding scope, then publish
-  a new version (see the "permission denied" entry in [faq_en.md](faq_en.md)).
-- **Grant everything at once:** import the full list from `scope-allowlist.ts` (also
-  with `offline_access` removed) into the console. This does **not** change what users
-  see at first authorization — that stays the minimal set from `config/oauth-scopes.json`,
-  and extra scopes are still authorized incrementally. It only spares you the
-  enable-scope-then-republish round-trip each time a new tool needs one, at the cost of a
-  larger declared permission ceiling (a wider request surface if credentials leak) and a
-  larger footprint for your admin to approve. Prefer on-demand unless that round-trip
-  becomes a burden.
+> This list omits the few scopes that bulk import rejects with a "permission does not
+> exist" error (spelling aliases or bare aggregates, fine-grained actions the coarse
+> `:write` already covers, and whitelist-only scopes) — capabilities are unaffected.
 
 ## 4. Set app availability
 
@@ -159,16 +310,12 @@ paste that `.../callback` address → click **Add**.
 > authorization page reports **20029**, and the auth-code endpoint returns
 > `redirect_uri unmatch`.
 
-## Scope consistency & when changes take effect
+## When permission changes take effect
 
-- **The scopes requested must already be enabled in the console.** Otherwise the
-  authorization page silently drops the un-enabled ones, or API calls still fail with
-  `permission denied`. So the enabled permissions must **cover** every entry in
-  `config/oauth-scopes.json` except `offline_access`.
-- **A permission change requires publishing a new version.** A scope the user already
-  consented to (but the console had left off) takes effect on the next call. A scope the
-  user never authorized won't reach already-connected users automatically — **they must
-  re-authorize** (re-connect steps in [faq_en.md](faq_en.md)).
+A permission change requires publishing a new version. A scope the user already
+consented to (but the console had left off) takes effect on the next call. A scope the
+user never authorized won't reach already-connected users automatically — **they must
+re-authorize** (re-connect steps in [faq_en.md](faq_en.md)).
 
 ## Official docs
 

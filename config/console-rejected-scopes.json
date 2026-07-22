@@ -1,0 +1,32 @@
+{
+  "_comment": "Scopes present in scope-allowlist.ts (via the rawapi source) that the Feishu/Lark developer console rejects with 'permission does not exist' on bulk import. Excluded from the console-import list embedded in docs/app-setup_{en,zh}.md. Ground truth: a real bulk-import into a test app (all 226 imported, exactly these were rejected). Capabilities are unaffected — coarse :write scopes and correctly-spelled variants remain in the allowlist. Re-verify after each lark-cli bump (see docs/skills/bump-lark-cli.md Step 6c).",
+  "misspelled_or_aggregate": {
+    "_comment": "Not real console permission points — wrong spelling or a bare aggregate. Correct forms remain in the list (e.g. bitable:app, im:resource, mail:user_mailbox:readonly, calendar:calendar:readonly).",
+    "scopes": [
+      "bitable:bitable",
+      "calendar:calendar.calendar:readonly",
+      "calendar:calendar.event:writeonly",
+      "im:chat.group_info:readonly",
+      "im:resource:upload",
+      "mail:user_mailbox"
+    ]
+  },
+  "task_fine_grained": {
+    "_comment": "Fine-grained task actions the console folds into the coarse task:*:write (which remains). Exception: task:personnel:writeonly has no coarse counterpart, but no user-facing tool depends on it — it is rawapi-only.",
+    "scopes": [
+      "task:custom_field:writeonly",
+      "task:personnel:writeonly",
+      "task:section:delete",
+      "task:section:writeonly",
+      "task:task:delete",
+      "task:tasklist:delete",
+      "task:tasklist:writeonly"
+    ]
+  },
+  "whitelist_gated": {
+    "_comment": "Real scope but whitelist-restricted; ordinary apps cannot request it. The lark_slides_screenshot tool maps to wiki:node:read via shortcut, not this scope, so dropping it costs nothing.",
+    "scopes": [
+      "slides:presentation:screenshot"
+    ]
+  }
+}
