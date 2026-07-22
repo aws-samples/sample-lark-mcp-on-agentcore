@@ -76,12 +76,15 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 | 用户要求使用模板 | 将模板导入为 Slides 再编辑 | `lark-slides-pptx-template-workflows.md` |
 | 编辑单个标题、文本块、图片或局部元素 | 优先块级替换/插入，不改页序 | `lark_slides_replace_slide`、`lark-slides-replace-slide.md` |
 | 读取或分析已有 PPT | 解析 slides/wiki token，用 shortcut 回读全文 XML 或读取单页 XML，保存 `xml_presentation_id`、`slide_id`、`revision_id` | `lark_slides_xml_get`、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_get")`、`lark-slides-xml-presentations-get.md` |
+| 查看或回滚历史版本 | 先用 `lark_slides_history_list` 找 `history_version_id`，再 `lark_slides_history_revert`，必要时 `lark_slides_history_revert_status` 轮询 | `lark_slides_history_list`、`lark-slides-history.md` |
 | 获取幻灯片页面截图 | 用 `slide_id` 或页号指定页面，一次不超过 10 页 | `lark_slides_screenshot`、`lark-slides-screenshot.md` |
 | 上传或使用图片 | 先上传为 `file_token`，禁止直接写 http(s) 外链 | `lark_slides_media_upload`、`lark-slides-media-upload.md`，或 `lark_slides_create` 的 `@./path` 占位符 |
 | 绘制图表 | 原生图表（柱状、条形、折线、面积、饼（环）、雷达、组合图）用 `<chart>`，其他（漏斗图、金字塔图、象限图、矩阵图等）用 `<shape>` + `<line>` 模拟 | `xml-schema-quick-ref.md`、`slides_chart_demo.xml` |
 | 绘制表格 | 优先用 `rect` 和 `text` 模拟，其他用 `<table>` | `xml-schema-quick-ref.md` |
 | 使用图标 | 禁止盲猜 iconType，必须先检索 IconPark，再写 `<icon iconType="...">`，图标必须填充颜色并和背景有足够对比，禁止使用 emoji 图标 | `lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", args=["search", ...])`、`lark_get_skill(domain="slides", section="iconpark")` |
 | 创建失败、空白页、3350001、布局异常 | 先回读状态，再按排障清单修复，不假设原操作原子成功 | `troubleshooting.md`、`validation-checklist.md` |
+
+**CRITICAL — 查看或回滚历史版本前，MUST 先调用 `lark_get_skill(domain="slides", section="history")`。回滚接口只接受 `history_version_id`，不要把 `revision_id` 直接传给 `lark_slides_history_revert`。**
 
 **CRITICAL — 生成任何 XML 之前，MUST 先调用 `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` 获取 XML 协议规则，禁止凭记忆猜测 XML 结构。**
 
@@ -123,6 +126,7 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 - 从模板创建或编辑已有本地 PPTX：`lark_get_skill(domain="slides", section="pptx-template-workflows")`
 - 阅读：`lark_get_skill(domain="slides", section="xml-presentations-get")`
 - 编辑：`lark_get_skill(domain="slides", section="edit-workflows")`、`lark_get_skill(domain="slides", section="replace-slide")`、`lark_get_skill(domain="slides", section="replace-pages")`
+- 历史版本：`lark_get_skill(domain="slides", section="history")`
 - 截图：`lark_get_skill(domain="slides", section="screenshot")`
 - 图片：`lark_get_skill(domain="slides", section="media-upload")`
 - 图表：`slides_chart_demo.xml`

@@ -93,6 +93,13 @@ jobs:
             echo "::warning::CDK snapshot changed — review infrastructure diff"
           fi
 
+      # Real `cdk synth` through the aws-cdk CLI binary — the snapshot test above
+      # only calls the aws-cdk-lib App().synth() API and never exercises the CLI,
+      # so a CLI/lib cloud-assembly schema mismatch (CLI too old to read the lib's
+      # manifest) slips past every other check and only surfaces at deploy time.
+      - name: CDK synth (CLI ↔ lib compatibility)
+        run: cd infra && npx cdk synth --quiet
+
   docker-smoke:
     # End-to-end container boot: builds the image and verifies the container
     # actually starts and answers MCP initialize / tools/list. Catches the class
