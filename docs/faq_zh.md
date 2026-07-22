@@ -89,19 +89,21 @@ A: 不需要。`./scripts/ops.sh rotate-secret` 只更新 OAuth Client Secret（
 
 A: 这是飞书应用的权限配置问题，不是客户端问题。解决方法：
 
-1. 进入 [飞书开放平台](https://open.feishu.cn/app) → 你的应用 → **权限管理**
-2. 搜索并开通所需权限（常见的如下表）
+1. 进入开放平台（[飞书（中国）](https://open.feishu.cn/app) / [Lark（国际版）](https://open.larksuite.com/app)）→ 你的应用 → **权限管理**
+2. 搜索并开通所需权限（常见的如下表；完整清单与批量开通见 [app-setup_zh.md](app-setup_zh.md)）
 3. **重新发布应用版本**（权限变更需要发版才生效）
-4. 用户无需重新授权——下次调用时权限自动生效
+4. 若用户此前已授权同意该权限，发版后下次调用即生效，无需重连；若开通的是用户从未授权过的新权限，已连接的老用户则需重连授权（见下）
+
+> 下表 scope 名称以仓库 `config/oauth-scopes.json` 为准（部署时实际请求的列表）。
 
 | 功能 | 所需权限 |
 |------|---------|
 | 读取日历/日程 | `calendar:calendar:read`、`calendar:calendar.event:read` |
-| 搜索/读取消息 | `im:message:read`、`im:chat:read` |
-| 发送消息 | `im:message:send_as_user` |
+| 搜索/读取消息 | `im:message:readonly`、`im:chat:read`、`search:message` |
+| 发送消息 | `im:message.send_as_user` |
 | 读取群聊列表 | `im:chat:read` |
-| 搜索文档 | `drive:drive:read` |
-| 读写多维表格 | `bitable:bitable:read`、`bitable:bitable:write` |
+| 搜索文档 | `search:docs:read`、`space:document:retrieve` |
+| 读写多维表格（Base） | `base:record:read`、`base:record:create`、`base:record:update` |
 
 > 如果管理员在开放平台新增了 API 权限并发版，**之前已连接过的用户**不会自动获得新权限。需要重连，步骤：Quick Desktop → Settings → Capabilities → 最下方 Browse Connections → 搜索找到 Feishu Remote MCP → 点击卡片 → 点击 Test action APIs → 弹出页面右侧点击 Re-Connect → 弹出飞书授权页完成授权。
 

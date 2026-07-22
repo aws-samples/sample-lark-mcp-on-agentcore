@@ -294,7 +294,8 @@ oauth-codes, openid, openid-map, alarms, app, admin, waf, runtime`.
 (International): [open.larksuite.com/app](https://open.larksuite.com/app). Use the
 console that matches your `LARKSUITE_CLI_BRAND` setting (`feishu` or `lark`).
 `deploy.sh` cannot create the app — it only associates and validates an existing
-App ID + App Secret.
+App ID + App Secret. For the full create-app / enable-scopes walkthrough and the bulk
+scope-import list, see [app-setup_en.md](app-setup_en.md).
 
 ```bash
 ./scripts/deploy.sh --app <slug> --alias "<display name>"
