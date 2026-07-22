@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.73",
-    "extracted_at": "2026-07-21",
+    "lark_cli_version": "1.0.74",
+    "extracted_at": "2026-07-22",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -3123,6 +3123,31 @@
         "slides:presentation:create",
         "slides:presentation:write_only",
         "docs:document.media:upload"
+      ]
+    },
+    {
+      "service": "slides",
+      "command": "+history-list",
+      "scopes": [
+        "slides:presentation:read",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "slides",
+      "command": "+history-revert",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "slides",
+      "command": "+history-revert-status",
+      "scopes": [
+        "slides:presentation:read",
+        "wiki:node:read"
       ]
     },
     {

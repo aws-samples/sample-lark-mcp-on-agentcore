@@ -105,7 +105,7 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 - 表名、字段名、视图名、workflow 配置中的名称必须来自真实返回；跨表场景还要读取目标表结构。
 - 删除、角色更新、字段更新等高风险操作遵循 confirmation gate（`_confirm=true`）；目标不明确时先用 get/list 消歧。
 - 批量写入单批最多 200 条；连续写同一表时串行执行，遇到 `1254291` 按短暂等待后重试处理。
-- `lark_base_record_batch_update()` 是"同值批量更新"：同一份 patch 应用到全部 `record_id_list`，不要拿它做逐行不同值映射。
+- `lark_base_record_batch_update()` 用 `update_records`（`record_id` → 字段更新对象的映射）逐条提交不同的值；请求不预校验 record ID 是否存在，需要确认写入结果时用 `lark_base_record_get()` 读回。
 - select/multiselect 写入未知选项可能触发平台新增选项；不是要新增时，先用 `lark_base_field_list()` 或 `lark_base_field_search_options()` 确认可选值。
 
 ## 表单与视图细节
