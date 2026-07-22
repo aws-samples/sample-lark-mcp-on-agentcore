@@ -129,6 +129,12 @@ jobs:
         uses: actions/dependency-review-action@v4
         with:
           fail-on-severity: high
+          # brace-expansion ReDoS (GHSA-3jxr-9vmj-r5cp): bundled inside aws-cdk-lib
+          # (inBundle → npm overrides can't reach it), build/synth-time only, never
+          # in the production container. Same suppression as .trivyignore CVE-2026-13149;
+          # Dependency Review doesn't read .trivyignore, so it's mirrored here. Drop when
+          # aws-cdk-lib bundles brace-expansion >= 5.0.7.
+          allow-ghsas: GHSA-3jxr-9vmj-r5cp
 
       - name: Gitleaks (secret detection)
         uses: gitleaks/gitleaks-action@v2
