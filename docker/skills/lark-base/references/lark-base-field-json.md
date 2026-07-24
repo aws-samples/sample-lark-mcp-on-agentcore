@@ -180,11 +180,11 @@
 
 支持字段：`icon`、`min`、`max`
 
-默认值 / 约束：
+默认值 / 已知平台范围：
 - `icon` 默认 `star`
 - `icon` 可用：`star`、`heart`、`thumbsup`、`fire`、`smile`、`lightning`、`flower`、`number`
 - `min` 取值 `0..1`，默认 `1`
-- `max` 取值 `1..10`，默认 `5`
+- `max` 默认 `5`；常见或已文档化的范围为 `1..10`，但工具不强制上限为 `10`。如果用户明确需要更大评分范围，优先确认平台能力或用 `lark_base_field_create()` / `lark_base_field_update()` 检查请求形状；平台拒绝后再建议改用普通数字或进度字段。
 
 ```json
 {
@@ -419,7 +419,7 @@
 
 ### 3.11 auto_number
 
-自动编号字段；不写 `style.rules` 时使用默认规则：`NO.001`。
+自动编号字段；创建时不写 `style.rules` 会使用默认规则：`NO.001`。更新已有自动编号字段时应显式提交目标 `style.rules`，因为 `lark_base_field_update()` 会把新的编号规则重新应用到已有编号。
 
 最小写法：
 
@@ -512,7 +512,7 @@
 ## 4. 创建与更新
 
 - `lark_base_field_create()`：按目标字段配置直接构造 `json`。
-- `lark_base_field_update()`：使用同样的 JSON 结构，但语义是 `PUT`；建议先 `lark_base_field_get()`，再按目标完整状态提交，并带 `_confirm=true`。
+- `lark_base_field_update()`：使用同样的 JSON 结构，但语义是 `PUT`；建议先 `lark_base_field_get()`，再按目标完整状态提交，并带 `_confirm=true`。当 `type` 是 `auto_number` 时，更新编号规则本身就会把新规则应用到已有编号，无需额外参数，也不要在 JSON 里塞额外的底层实现参数。
 
 ## 5. 暂不支持字段
 

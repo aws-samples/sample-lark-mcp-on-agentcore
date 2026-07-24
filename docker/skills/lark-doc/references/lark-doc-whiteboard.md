@@ -123,7 +123,7 @@ Sub Agent 需要携带以下的最小上下文，以及后续的 [SVG 设计 Wor
 插入画板后，可以从返回值使用工具将画板内容导出为 png 图片。若是对设计不满意，可以修改后，删除原来的画板再重新插入，或是调用 `lark_get_skill(domain="whiteboard")` 编辑。
 
 ```
-lark_whiteboard_query(whiteboard_token="wbcnxxxxxxxx", output_as="image", output="./preview.png")
+lark_whiteboard_export(whiteboard_token="wbcnxxxxxxxx", output_type="preview", output="./preview.png")
 ```
 
 ### 步骤 3B：编辑已有画板 — 启动 lark-whiteboard SubAgent

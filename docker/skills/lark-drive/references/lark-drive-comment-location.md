@@ -184,7 +184,7 @@ lark_base_record_list(base_token="<base_token>", table_id="<table_id>", limit="2
 - 若要定位画板内部节点，切到 `lark_get_skill(domain="whiteboard")` 读取 raw 节点结构：
 
 ```
-lark_whiteboard_query(whiteboard_token="<whiteboard_token>", output_as="raw")
+lark_whiteboard_export(whiteboard_token="<whiteboard_token>", output_type="raw")
 ```
 
 - 如果 raw 节点中存在唯一匹配 `quote` 的文本节点，可定位到该节点；如果有多个相同文本节点，仍然是弱匹配，需要结合位置、样式、用户描述或人工确认。
