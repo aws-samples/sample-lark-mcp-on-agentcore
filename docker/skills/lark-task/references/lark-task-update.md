@@ -11,6 +11,9 @@ lark_task_update(task_id="<task_guid>", summary="New Summary")
 # Update multiple tasks' due dates
 lark_task_update(task_id="<task_guid>,<another_task_guid>", due="+2d")
 
+# A task applink is accepted directly; the tool extracts its guid query value
+lark_task_update(task_id="https://applink.larksuite.com/client/todo/task?guid=<task_guid>", summary="New Summary")
+
 # Update with JSON data
 lark_task_update(task_id="<task_guid>", data="{\"description\": \"New description\"}")
 ```
@@ -19,7 +22,7 @@ lark_task_update(task_id="<task_guid>", data="{\"description\": \"New descriptio
 
 | Parameter | Required | Description |
 |-----------|----------|-------------|
-| `task_id` | Yes | The task GUID to update. Comma-separated task GUIDs are supported for multiple tasks. For Feishu task applinks, use the `guid` query parameter, not the `suite_entity_num` / display task ID like `t104121`. |
+| `task_id` | Yes | Task OpenAPI GUID or a task applink containing `guid=`. Comma-separated GUIDs/applinks are supported for multiple tasks. Display task IDs such as `t104121` / `suite_entity_num` are rejected. |
 | `summary` | No | New summary/title for the task. |
 | `description` | No | New description for the task. |
 | `due` | No | New due date (supports relative time). |
@@ -29,7 +32,8 @@ lark_task_update(task_id="<task_guid>", data="{\"description\": \"New descriptio
 
 1. Confirm with the user the tasks to update and the fields.
 2. Execute `lark_task_update(task_id="...", ...)`
-3. Report the successful updates.
+3. Read `data.updated_fields` and `data.tasks[].confirmed` from the result and report only the fields confirmed by the server.
+4. Do not routinely query task details after the update when `confirmed` already contains the required state. Query details only if a required field is absent or the user explicitly asks for a full verification.
 
 > [!CAUTION]
 > This is a **Write Operation** -- You must confirm the user's intent before executing.

@@ -33,6 +33,13 @@ description: "飞书任务：管理任务、清单和任务智能体。创建待
 > Task OpenAPI 中用于更新/操作任务的 `guid` 是任务的全局唯一标识（GUID），不是客户端展示的任务编号（例如 `t104121` / `suite_entity_num`）。
 > 对于 Feishu 的任务 applink（例如 `.../client/todo/task?guid=...`），必须使用 URL query 里的 `guid` 参数作为 task guid。
 
+> **从任务清单定位并修改任务的最短路径**：
+> 1. 已知任务清单 GUID 时直接使用，不要先搜索；已知任务清单 applink 时，取 URL query 中的 `guid` 作为 `tasklist_guid`。
+> 2. 只有清单名称或关键词、没有 GUID/applink 时，才调用一次 `lark_task_tasklist_search()` 解析目标清单。
+> 3. 按原生 API 规则先用 `lark_discover(query="task.tasklists.tasks")` 查 schema，再用 `lark_invoke(tool_name="lark_task_tasklists_tasks", args={params: {"tasklist_guid":"<tasklist_guid>"}})` 拉取清单任务。
+> 4. 从清单任务结果中取任务的 `guid`，直接传给 `lark_task_update()` 或 `lark_task_complete()`；禁止传客户端展示编号（例如 `t104121`）。这两个工具也可直接接收包含 `guid=` 的任务 applink。
+> 5. `lark_task_update()` 返回 `updated_fields` 和每个任务的服务端 `confirmed` 字段；`lark_task_complete()` 返回 `status`、`completed_at`、`already_completed`。这些字段已确认目标状态时，不要例行追加查询任务详情；仅在服务端未返回所需字段或用户明确要求完整复核时再查询详情。
+
 | Shortcut | 说明 |
 |----------|------|
 | `lark_get_skill(domain="task", section="create")` | create a task |
