@@ -34,6 +34,7 @@ lark_calendar_create(summary="...", start="...", end="...", calendar_id="cal_xxx
 > 自动设置 `reminders: [{"minutes": 5}]`，默认日程开始前 5 分钟提醒。
 > 自动设置 `vchat: {"vc_type": "vc"}`，默认日程包含飞书视频会议。如需其他视频会议类型或不含视频会议，请使用完整 API 命令。
 > 失败保护：若添加参会人失败（如 open_id 错误），系统会自动删除刚创建的空日程（回滚，不通知参会人）。
+> 搜索用户接口不支持 bot 身份，需以 user 身份搜索（MCP server 使用 user 身份，自动满足）。
 > 审批会议室：`lark_calendar_create` 不暴露低频字段 `attendees[].approval_reason`。如果会议室要求审批，请先创建日程，再用完整 API `lark_calendar_event_attendees_create` 添加会议室并传 `approval_reason`。
 
 ## 高级用法（完整 API 命令）

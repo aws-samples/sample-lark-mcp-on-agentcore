@@ -28,7 +28,9 @@ lark_okr_indicator_update(level="key-result", id="7000000000000000002", value="1
 
 1. 使用 `lark_okr_cycle_list` 和 `lark_okr_cycle_detail` 获取目标 ID 或 KR ID。
 2. 如需查看当前指标值，使用 `lark_invoke(tool_name="lark_okr_objective_indicators_list", ...)` 或 `lark_invoke(tool_name="lark_okr_key_result_indicators_list", ...)` 查询。
+   若当前量化指标没有 start_value/current_value/target_value/unit 这些字段，代表当前量化指标为未设置的默认初始进度。
 3. 执行 `lark_okr_indicator_update(level="objective", id="...", value="...")`。
+   使用 `lark_okr_indicator_update` 为默认初始进度设置当前值会将该量化指标配置为默认的百分比模式。若用户不希望将指标设置为百分比，请使用原生 API 详细设置，参考 `lark_get_skill(domain="okr", section="indicators")`。
 4. 工具自动查询指标 ID 并更新当前值。
 
 ## 输出

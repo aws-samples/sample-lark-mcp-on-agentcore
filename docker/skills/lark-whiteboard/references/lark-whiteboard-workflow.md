@@ -26,12 +26,12 @@
 **Step 2：判断修改策略**
 
 ```
-lark_whiteboard_query(output_as="code")
+lark_whiteboard_export(output_type="source")
   ├─ 返回 Mermaid/PlantUML 代码
   │   → 在原代码上修改 → lark_whiteboard_update(input_format="mermaid") 或 plantuml
   ├─ 无代码（SVG/DSL 或其他方式绘制的画板）
   │   ├─ 需纯新增（思维导图、流程图、时序图、类图、饼图、甘特图）图表节点
-  │   │    → lark_whiteboard_query(output_as="image") → 看图 → lark_whiteboard_query(output_as="raw") → 确定新节点坐标和层级 → [§ 渲染 & 写入画板]
+  │   │    → lark_whiteboard_export(output_type="preview") → 看图 → lark_whiteboard_export(output_type="raw") → 确定新节点坐标和层级 → [§ 渲染 & 写入画板]
   │   └─ 其他改动（几何变动/增删元素/结构调整/混合编辑等）
   │       → `lark_get_skill(domain="whiteboard", section="routes/svg-edit")`（视觉高保真还原，大部分场景适用）
   └─ 用户有明确要求 → 以用户要求优先

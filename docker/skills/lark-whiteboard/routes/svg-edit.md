@@ -25,7 +25,7 @@ SVG 导出是**纯视觉快照**，再次导入后画板语义（思维导图层
 ### 1. 导出当前画板 SVG
 
 ```
-lark_whiteboard_query(whiteboard_token="<TOKEN>", output_as="svg", output="<dir>/original.svg")
+lark_whiteboard_export(whiteboard_token="<TOKEN>", output_type="svg", output="<dir>/original.svg")
 ```
 
 ### 2. 编辑 SVG
