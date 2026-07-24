@@ -19,7 +19,7 @@
 2. 用 `lark_slides_xml_get` 回读，确认是否已有部分页面写入。
 3. 检查失败页是否含未转义字符：`Q&A -> Q&amp;A`，文本 `<` / `>` 写成 `&lt;` / `&gt;`，属性 URL `a=1&b=2 -> a=1&amp;b=2`。
 4. 检查标签闭合、属性引号、`<content>` 结构，以及 `<slide>` 直接子元素。
-5. 页面空白、溢出、重叠或越界时，按 `lark_get_skill(domain="slides", section="validation-checklist")` 运行 XML 文本重叠检查，并人工核对越界、截断、图文压盖等视觉风险；工具当前只会报告 `xml_not_well_formed` / `bbox_overlap`。
+5. 页面空白、溢出、重叠或越界时，按 `lark_get_skill(domain="slides", section="validation-checklist")` 运行 `xml_text_overlap_lint.py`；先修复所有 `error`，再对 `warning` 指向的页面和元素做截图复核。
 6. 如果使用 `slides` 参数一次性建多页失败，直接切到两步创建：先 `lark_slides_create`，再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)` 逐页添加。
 7. 局部问题用 `lark_slides_replace_slide` 块级修正；整页结构要改时再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_delete")` 删旧页 + `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` 建新页。
 

@@ -2,6 +2,8 @@
 
 通过表单分享链接填写并提交多维表格表单。仅支持分享模式（share_token），支持填写普通字段值和上传本地文件作为附件。
 
+> **⚠️ 高风险写操作（high-risk-write）：** 本工具会向表单写入并提交数据，属于高风险写操作，server 对高风险操作需要 `_confirm=true`；否则首次调用会被拒绝并返回确认指引。当用户明确要求提交且目标表单无歧义时，直接带上 `_confirm=true`，无需再次询问。
+
 ## 填写前必读：先获取表单详情
 
 **在调用 `lark_base_form_submit()` 之前，必须先使用 `lark_base_form_detail()` 获取表单详情。** 原因如下：
@@ -19,8 +21,8 @@ lark_base_form_detail(share_token="<share_token>")
 
 # 2️⃣ 根据返回的 questions 列表，按 type 格式化值、检查 required、判断 filter 条件
 
-# 3️⃣ 再提交
-lark_base_form_submit(json='{"fields":{...}}', share_token="<share_token>")
+# 3️⃣ 再提交（高风险写操作，必须带 _confirm=true）
+lark_base_form_submit(json='{"fields":{...}}', share_token="<share_token>", _confirm=true)
 ```
 
 `lark_base_form_detail()` 的返回中要重点读取 `questions[].type`、`questions[].required`、题目 `filter` 和附件场景所需的 `data.base_token`。
@@ -29,10 +31,10 @@ lark_base_form_submit(json='{"fields":{...}}', share_token="<share_token>")
 
 ```
 # 基本提交（填写普通字段）
-lark_base_form_submit(json='{"fields":{"服务评分":5,"评价内容":"服务态度好"}}', share_token="<share_token>")
+lark_base_form_submit(json='{"fields":{"服务评分":5,"评价内容":"服务态度好"}}', share_token="<share_token>", _confirm=true)
 
 # 带附件提交（需要额外提供 base_token）
-lark_base_form_submit(share_token="<share_token>", base_token="<base_token>", json="{\"fields\":{\"服务评分\":5,\"评价内容\":\"好\"},\"attachments\":{\"附件字段名\":[\"./report.pdf\",\"./photo.png\"],\"另一个附件字段\":[\"./doc.docx\"]}}")
+lark_base_form_submit(share_token="<share_token>", base_token="<base_token>", json="{\"fields\":{\"服务评分\":5,\"评价内容\":\"好\"},\"attachments\":{\"附件字段名\":[\"./report.pdf\",\"./photo.png\"],\"另一个附件字段\":[\"./doc.docx\"]}}", _confirm=true)
 ```
 
 > 表单提交始终以当前用户身份执行（本服务仅支持用户身份）。
@@ -44,6 +46,7 @@ lark_base_form_submit(share_token="<share_token>", base_token="<base_token>", js
 | `share_token <token>` | 是 | 表单分享 Token（必填），从表单分享链接中提取 |
 | `base_token <token>` | 条件必填 | Base token；**当 `json` 包含 `attachments` 时必须提供**，用于将附件上传到 Base Drive Media |
 | `json <json>` | 是 | JSON 对象，包含 `"fields"`（普通字段值）和 `"attachments"`（附件上传），详见下方说明 |
+| `_confirm` | 是 | 确认高风险写操作。本工具为 high-risk-write，不带 `_confirm=true` 会被 server 拒绝并返回确认指引 |
 | `format` | 否 | 输出格式：json（默认）\| pretty \| table \| ndjson \| csv |
 
 ### json 参数结构说明
@@ -109,7 +112,7 @@ https://www.example.com/share/base/form/shrbcvST8eZy0vk8zjVZ1CAXNye
 - `share-token` = `shrbcvST8eZy0vk8zjVZ1CAXNye`
 
 ```
-lark_base_form_submit(json='{"fields":{...}}', share_token="shrbcvST8eZy0vk8zjVZ1CAXNye")
+lark_base_form_submit(json='{"fields":{...}}', share_token="shrbcvST8eZy0vk8zjVZ1CAXNye", _confirm=true)
 ```
 
 ## 输出格式
@@ -129,6 +132,7 @@ lark_base_form_submit(json='{"fields":{...}}', share_token="shrbcvST8eZy0vk8zjVZ
 
 ## 提示
 
+- **本工具为高风险写操作（high-risk-write），必须带 `_confirm=true` 确认**，否则 server 会拒绝首次调用并返回确认指引
 - 本命令仅支持通过表单分享链接（share_token）提交，不支持通过 base_token + table_id + view_id 方式提交
 - **当 `json` 包含 `attachments` 时，必须额外提供 `base_token`**，因为附件上传到 Base Drive Media 需要指定目标 Base
 - 附件字段只需在 `json.attachments` 中提供本地路径即可，工具自动完成校验、并行上传、Token 获取和合并写入

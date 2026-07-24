@@ -4,7 +4,7 @@ FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d
 
 # Pin lark-cli to the version whose scope mapping is captured in shortcut-scopes.json.
 # Drift is detected by scripts/check-lark-cli-version.sh.
-ARG LARK_CLI_VERSION=1.0.76
+ARG LARK_CLI_VERSION=1.0.77
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get upgrade -y \

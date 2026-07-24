@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.76",
-    "extracted_at": "2026-07-23",
+    "lark_cli_version": "1.0.77",
+    "extracted_at": "2026-07-24",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -3187,6 +3187,7 @@
       "service": "slides",
       "command": "+screenshot",
       "scopes": [
+        "slides:presentation:screenshot",
         "wiki:node:read"
       ]
     },
