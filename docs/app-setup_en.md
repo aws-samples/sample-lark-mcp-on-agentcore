@@ -48,7 +48,7 @@ avoids that loop. It does **not** widen what users see at first authorization (s
 minimal set); the only cost is a larger declared permission ceiling and more items for
 your admin to approve.
 
-Scope list (212 entries, copy-paste ready):
+Scope list (213 entries, copy-paste ready):
 
 ```json
 {
@@ -208,6 +208,7 @@ Scope list (212 entries, copy-paste ready):
       "minutes:minutes:readonly",
       "minutes:minutes:update",
       "minutes:permission:apply",
+      "offline_access",
       "okr:okr.content:readonly",
       "okr:okr.content:writeonly",
       "okr:okr.period:readonly",

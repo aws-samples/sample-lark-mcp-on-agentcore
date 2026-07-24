@@ -138,8 +138,10 @@ then re-run `scripts/build-scope-allowlist.sh`.
 ### 6c. Refresh the scope list embedded in app-setup docs
 
 `docs/app-setup_{en,zh}.md` embed the console-import scope list — a snapshot of
-`scope-allowlist.ts` that is **user-only**, has `offline_access` removed, and also drops
-the scopes the Feishu/Lark console rejects on bulk import.
+`scope-allowlist.ts` that is **user-only** and drops the scopes the Feishu/Lark console
+rejects on bulk import. `offline_access` stays in the list: it imports fine, and the
+token endpoint only returns a refresh token when it is granted (skipping it breaks login
+refresh with error code 20027).
 
 Why the extra drop: `scope-allowlist.ts` is the runtime allowlist (union of shortcut +
 rawapi + oauth sources) used to validate incremental-auth requests. The rawapi source is
@@ -156,16 +158,16 @@ costs nothing. Importing any of these makes the console report "permission does 
 Regenerate the snapshot and diff it against both docs:
 
 ```bash
-node -e 'const g=JSON.parse(require("fs").readFileSync("config/console-rejected-scopes.json","utf8")); const DROP=new Set(Object.entries(g).filter(([k])=>!k.startsWith("_")).flatMap(([,v])=>v.scopes)); const s=[...require("fs").readFileSync("lambda/token-refresh-shim/scope-allowlist.ts","utf8").matchAll(/"([a-z][a-z0-9_:.\-]*)"/g)].map(m=>m[1]).filter(x=>x!=="offline_access"&&!DROP.has(x)); console.log(JSON.stringify({scopes:{tenant:[],user:[...new Set(s)].sort()}},null,2))'
+node -e 'const g=JSON.parse(require("fs").readFileSync("config/console-rejected-scopes.json","utf8")); const DROP=new Set(Object.entries(g).filter(([k])=>!k.startsWith("_")).flatMap(([,v])=>v.scopes)); const s=[...require("fs").readFileSync("lambda/token-refresh-shim/scope-allowlist.ts","utf8").matchAll(/"([a-z][a-z0-9_:.\-]*)"/g)].map(m=>m[1]).filter(x=>!DROP.has(x)); console.log(JSON.stringify({scopes:{tenant:[],user:[...new Set(s)].sort()}},null,2))'
 ```
 
 If the output differs from the ```json block in either doc, replace the block in both
 (they must stay byte-identical) and update the entry count in the surrounding prose
-("212 entries" / "212 条"). The `tenant` array stays empty — this project is
+("213 entries" / "213 条"). The `tenant` array stays empty — this project is
 user-identity only.
 
 `infra/test/scope-coverage.test.ts` guards this: it fails if either doc's list drifts
-from `allowlist − offline_access − console-rejected`, or if a rejected scope no longer
+from `allowlist − console-rejected`, or if a rejected scope no longer
 exists in the allowlist (a bump renamed/dropped it). If a bumped lark-cli adds a *new*
 console-rejected scope, that is the one case tests can't catch statically — a real
 bulk-import into a test app is the ground truth; add it to `console-rejected-scopes.json`.
@@ -380,7 +382,7 @@ Include all changed files:
 - [ ] No bot-only scopes in shortcut-scopes.json (e.g. `im:message:send_as_bot` should NOT appear)
 - [ ] `scripts/check-lark-cli-version.sh` passes
 - [ ] `npm test` passes (scope-coverage test catches missing oauth-scopes)
-- [ ] app-setup scope snapshot in sync (Step 6c): `scope-coverage.test.ts` passes its `app-setup … = allowlist − offline_access − console-rejected` assertions for both `docs/app-setup_{en,zh}.md` (regenerate per Step 6c if red)
+- [ ] app-setup scope snapshot in sync (Step 6c): `scope-coverage.test.ts` passes its `app-setup … = allowlist − console-rejected` assertions for both `docs/app-setup_{en,zh}.md` (regenerate per Step 6c if red)
 - [ ] `bash scripts/test-smoke-docker.sh` passes — the image **builds and the container boots** (catches a broken artifact that `npm test` cannot, e.g. a new module not `COPY`ed into the Dockerfile)
 - [ ] `git diff --stat` shows only the expected files (4-5 depending on oauth-scopes changes)
 - [ ] Re-adaptation scope is correct — the touched `docker/skills/` domains match the Step 8
