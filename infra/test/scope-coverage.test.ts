@@ -156,8 +156,10 @@ describe("scope coverage", () => {
   });
 
   // The console-import scope list embedded in docs/app-setup_{en,zh}.md is a derived
-  // snapshot of the allowlist: user-only, minus offline_access, minus the scopes the
-  // Feishu/Lark console rejects on bulk import (config/console-rejected-scopes.json).
+  // snapshot of the allowlist: user-only, minus the scopes the Feishu/Lark console
+  // rejects on bulk import (config/console-rejected-scopes.json). offline_access stays
+  // in the list — it imports fine and the token endpoint only returns a refresh token
+  // when it is granted (skipping it breaks login refresh with error code 20027).
   // These tests turn "remember to re-run bump-lark-cli Step 6c" into a hard failure.
   const allowlistScopes = new Set(
     [...allowlistSrc.matchAll(/^\s*"([^"]+)",?/gm)].map((m) => m[1]),
@@ -181,9 +183,9 @@ describe("scope coverage", () => {
   });
 
   for (const doc of ["docs/app-setup_en.md", "docs/app-setup_zh.md"]) {
-    it(`${doc} embeds the console-import list = allowlist − offline_access − console-rejected`, () => {
+    it(`${doc} embeds the console-import list = allowlist − console-rejected`, () => {
       const expected = [...allowlistScopes]
-        .filter((s) => s !== "offline_access" && !rejectedSet.has(s))
+        .filter((s) => !rejectedSet.has(s))
         .sort();
 
       const src = readFileSync(resolve(ROOT, doc), "utf-8");
