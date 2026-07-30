@@ -315,6 +315,14 @@ describe('translateFlagDescription', () => {
     expect(translateFlagDescription(desc)).toBe('Untyped initial data as one 2D JSON array');
   });
 
+  it('strips the bare (@file or - for stdin) parenthetical (lark-cli 1.0.80)', () => {
+    const desc = 'event description as Markdown (@file or - for stdin); the unified description field. Supports bold/italic';
+    const out = translateFlagDescription(desc);
+    expect(out).not.toContain('@file');
+    expect(out).not.toContain('stdin');
+    expect(out).toBe('event description as Markdown; the unified description field. Supports bold/italic');
+  });
+
   it('rewrites --flag references to snake_case parameter names', () => {
     const desc = 'Mutually exclusive with --values. Pair with --styles for number formats.';
     expect(translateFlagDescription(desc)).toBe('Mutually exclusive with values. Pair with styles for number formats.');

@@ -86,6 +86,7 @@ export const SCOPE_ALLOWLIST: ReadonlySet<string> = new Set([
   "docs:permission.member:apply",
   "docs:permission.member:auth",
   "docs:permission.member:create",
+  "docs:permission.member:retrieve",
   "docs:permission.member:transfer",
   "docs:permission.setting:read",
   "docs:permission.setting:write_only",
