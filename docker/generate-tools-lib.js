@@ -97,6 +97,10 @@ function translateFlagDescription(desc) {
   out = out.replace(/\s*\(supports (?:@file|- reads stdin)(?:[^()]|\([^()]*\))*\)/g, '');
   // "; supports @file or -" tails (no parens)
   out = out.replace(/;?\s*supports @file[^.;)]*/gi, '');
+  // "(@file or - for stdin)" — lark-cli 1.0.80 writes the hint as a bare
+  // parenthetical without the "supports" verb (calendar +create/+update
+  // `--description`). Same noise, different shape.
+  out = out.replace(/\s*\(@file or -(?:[^()]|\([^()]*\))*\)/g, '');
   // inline "or @file" alternatives ("filter JSON object or @file, ...")
   out = out.replace(/\s+or @file/gi, '');
   // "run `--print-schema` for the full structure" → point at the embedded

@@ -15,6 +15,8 @@
 lark_drive_inspect(url="<url>")
 ```
 
+`lark_drive_inspect` 支持 Drive folder，并且是受支持 Drive URL 的统一解析入口。对文件夹自身权限设置，先通过 `lark_drive_inspect` 解析 URL，或直接使用 `lark_drive_permission_get_setting(token="<folder_url>")`；传裸 folder token 时必须显式传 `type="folder"`。
+
 `/wiki/space/<space_id>` URL 是 Wiki space 范围，不要用 `lark_drive_inspect` 当作单文档解析；直接提取 `space_id` 后进入 `DISCOVER_TARGETS`。
 
 ## 目标发现
@@ -47,11 +49,31 @@ lark_invoke(tool_name="lark_drive_files_list", args={params: {"folder_token": "<
 lark_invoke(tool_name="lark_drive_metas_batch_query", args={data: {"request_docs": [{"doc_token": "<token>", "doc_type": "<type>"}], "with_url": true}})
 ```
 
-读取 public permission：
+读取权限设置：
 
 ```
-lark_invoke(tool_name="lark_drive_permission_public_get", args={params: {"token": "<token>", "type": "<type>"}})
+lark_drive_permission_get_setting(token="<url-or-token>", type="<type>")
 ```
+
+裸 folder token 必须显式传 `type="folder"`：
+
+```
+lark_drive_permission_get_setting(token="<folder_token>", type="folder")
+```
+
+通过 URL 读取权限设置时可以省略 `type`：
+
+```
+lark_drive_permission_get_setting(token="<url>")
+```
+
+按需读取直接协作者/授权成员列表：
+
+```
+lark_drive_member_list(token="<token_or_url>", type="<type>", fields="name,type,external_label")
+```
+
+`fields` 默认不传；只有需要名称、协作者类型、头像或外部标签时才显式传。它只声明期望返回的字段，不授予字段级权限：请求用户的 `name` / `avatar` 时还需 `contact:user.base:readonly`（“获取用户基本信息”）。字段权限或数据可见性不足时，接口仍可能成功但省略相应字段；缺字段不能解释为空值。
 
 按需读取访问统计：
 
@@ -122,6 +144,7 @@ lark_drive_secure_label_list(page_size="10", page_token="<PAGE_TOKEN>", lang="zh
 显式确认后更新 secure label：
 
 ```
+# 调用前把 <label-id> 替换成上一步枚举出的真实标签 ID
 lark_drive_secure_label_update(token="<url>", label_id="<label-id>")
 
 lark_drive_secure_label_update(token="<bare-token>", type="<type>", label_id="<label-id>")

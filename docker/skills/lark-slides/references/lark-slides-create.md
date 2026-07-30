@@ -2,10 +2,22 @@
 
 创建一个新的飞书幻灯片演示文稿，可选一步添加页面内容。
 
-- 禁止：从完整 `<presentation>` XML 解析/拆分/重序列化生成提交 payload。
-- 推荐：提交源直接就是单页 `<slide>` XML；`lark_slides_create` 的 `slides` 参数只接受已经人工/程序直接生成的 slide 数组，不接受由 presentation 动态拆出来的数组。
-- 最稳：复杂 deck 默认空 deck + 单页 slide create，每次只提交一个 `<slide>`。
-- 注意：复杂 XML（中文、引号、特殊字符较多）不适合一次性塞进 `slides` 数组；建议逐页生成、逐页提交，先创建空白 PPT，再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)` 每次只添加一页。
+提交源必须是直接生成的单页 `<slide>` XML。禁止从完整 `<presentation>` XML 解析、拆分、重序列化出 slide 数组再提交。
+
+本工具只从零创建演示文稿，没有导入本地 PPT 文件的参数。要把已有 PPTX 变成 Slides，用 `lark_drive_import(file="<x.pptx>", type="slides")`，再在导入结果上编辑，流程见 `lark_get_skill(domain="slides", section="pptx-template-workflows")`。
+
+## 创建方式选择
+
+| 场景 | 推荐方式 |
+|------|----------|
+| 简单 XML（1-3 页、结构简单、几乎无复杂中文和特殊字符） | `lark_slides_create(slides='[...]')` 一步创建 |
+| 复杂 XML（多页、含中文、大段文本、复杂布局、嵌套引号、特殊字符较多） | **两步创建**：先 `lark_slides_create` 创建空白 PPT，再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)`（详见 `lark_get_skill(domain="slides", section="xml-presentation-slide-create")`）逐页添加 |
+| 已有 PPT 继续追加或插入页面 | 使用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)`（详见 `lark_get_skill(domain="slides", section="xml-presentation-slide-create")`），必要时配合 `before_slide_id` |
+
+> [!WARNING]
+> `slides='[...]'` 的风险点主要在一次性提交的 payload 复杂度，而不是单纯页数。即使只有 1 页，只要 XML 足够复杂，也建议使用两步创建法。
+> [!IMPORTANT]
+> `lark_slides_create` 的 `slides` 参数底层会逐页创建，不是原子操作。中途失败时先记录 `xml_presentation_id`，回读确认当前状态，再继续修复或追加。
 
 ## 用法
 

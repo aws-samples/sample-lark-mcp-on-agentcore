@@ -11,7 +11,7 @@ description: "飞书日历：管理日历日程和会议室。查看/搜索日�
 
 ## 身份
 
-日程操作默认使用当前用户身份（查看和管理当前用户的日程）。bot 身份只能访问 bot 自己的（空）日历，会拿到空结果——不要用 bot 身份查用户日程。
+身份按**日程归属**决定：MCP server 始终以当前登录用户身份执行，因此可以查看/管理登录用户本人的日程（绝大多数场景）。⚠️ 查看/管理 bot 自己创建或拥有的日程需要 bot 身份，MCP server 不可用。
 
 ## Shortcuts
 
@@ -34,6 +34,8 @@ description: "飞书日历：管理日历日程和会议室。查看/搜索日�
 # calendar_id 不传，默认 primary
 lark_calendar_get(calendar_id="<calendar_id>", event_id="<event_id>")
 ```
+
+日程描述统一使用 `description` 一个字段，按 **Markdown** 富文本处理。读取日程时 `description` 返回 Markdown 富文本（仅有纯文本描述时返回该纯文本）；创建/更新日程时也通过 `description` 传入 Markdown。
 
 ### `lark_calendar_search_event` — 按关键词、时间范围和参会人搜索日程
 
@@ -170,6 +172,8 @@ lark_contact_search_user(query="<query>")
 # 搜索群聊，更多参数详见 lark_get_skill(domain="im")
 lark_im_chat_search(query="<query>")
 ```
+
+> 搜索用户接口不支持 bot 身份，必须以用户身份调用（MCP server 始终为用户身份，自动满足）；搜到的 `ou_` open_id 用于日程参与人操作（如添加日程参与人）。
 
 ## 不在本 skill 范围
 

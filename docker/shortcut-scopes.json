@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.77",
-    "extracted_at": "2026-07-24",
+    "lark_cli_version": "1.0.80",
+    "extracted_at": "2026-07-30",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -1512,9 +1512,23 @@
     },
     {
       "service": "drive",
+      "command": "+member-list",
+      "scopes": [
+        "docs:permission.member:retrieve"
+      ]
+    },
+    {
+      "service": "drive",
       "command": "+move",
       "scopes": [
         "space:document:move"
+      ]
+    },
+    {
+      "service": "drive",
+      "command": "+permission-get-setting",
+      "scopes": [
+        "docs:permission.setting:read"
       ]
     },
     {

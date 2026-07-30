@@ -21,3 +21,21 @@
 # Re-review when aws-cdk-lib publishes a bundle with brace-expansion >= 5.0.7;
 # drop this line and let the scan pass on its own. Revisit by 2026-10-21.
 CVE-2026-13149
+
+# --- brace-expansion OOM DoS, same bundled copy ------------------------------
+# CVE-2026-14257 / GHSA-mh99-v99m-4gvg (HIGH): denial of service via unbounded
+# expansion length causing an out-of-memory crash. Affects brace-expansion
+# through 5.0.7; fixed in 5.0.8. Same vendored copy as CVE-2026-13149 above
+# (aws-cdk-lib > minimatch > brace-expansion@5.0.6 in infra/package-lock.json),
+# so the same reasoning applies: `inBundle: true` puts it out of reach of npm
+# `overrides`, and it is build/synth-time only — aws-cdk-lib never enters the
+# production container.
+#
+# Verified 2026-07-30: the latest aws-cdk-lib (2.262.2) bundles 5.0.7, which is
+# still within the vulnerable range — upgrading aws-cdk-lib does not resolve it.
+# Trivy's rolling DB published this CVE after the last green run on main, so it
+# fails main as well; it is not introduced by any change on this branch.
+#
+# Re-review when aws-cdk-lib publishes a bundle with brace-expansion >= 5.0.8;
+# drop this line and let the scan pass on its own. Revisit by 2026-10-30.
+CVE-2026-14257

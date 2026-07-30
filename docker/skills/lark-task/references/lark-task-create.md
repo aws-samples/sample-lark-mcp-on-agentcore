@@ -13,6 +13,9 @@ lark_task_create(summary="Nightly Sync", assignee="cli_xxx")
 
 # Create a simple task
 lark_task_create(summary="Buy milk")
+
+# Create a milestone by passing an API field without a named parameter
+lark_task_create(summary="Release v2.0", due="2026-08-15", data="{\"is_milestone\": true}")
 ```
 
 ## Parameters
@@ -26,6 +29,12 @@ lark_task_create(summary="Buy milk")
 | `due` | No | Due date. Supports ISO 8601, `YYYY-MM-DD`, relative time (e.g., `+2d`), or ms timestamp. `YYYY-MM-DD` and relative time will automatically set it as an all-day task. |
 | `tasklist_id` | No | The GUID of the tasklist, or a full AppLink URL (the tool will automatically extract the `guid` parameter from the URL). |
 | `idempotency_key` | No | Client token to ensure idempotency of the request. |
+| `data` | No | JSON object merged into the task create request for API fields without dedicated parameters, such as `{"is_milestone":true}`. Explicit named parameters override same-named fields in this object. |
+
+Use `lark_discover(query="task.tasks.create")` to confirm that an extra field is supported before
+passing it through `data`. Prefer this tool over the raw `lark_invoke(tool_name="lark_task_tasks_create", ...)`
+call when `data` can express the request. Do not assume that other tools accept a `data` parameter;
+check each one's schema via `lark_discover` first.
 
 ## Workflow
 

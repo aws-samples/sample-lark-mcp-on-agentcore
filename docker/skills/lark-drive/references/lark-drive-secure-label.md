@@ -26,7 +26,8 @@ lark_drive_secure_label_list(page_size="10", lang="zh")
 ## 修改文档密级
 
 ```
-lark_drive_secure_label_update(token="https://example.feishu.cn/docx/doxcnxxxx", label_id="7217780879644737539")
+# 调用前把 <label-id> 替换成 lark_drive_secure_label_list 返回的真实标签 ID
+lark_drive_secure_label_update(token="https://example.feishu.cn/docx/doxcnxxxx", label_id="<label-id>")
 ```
 
 参数：
