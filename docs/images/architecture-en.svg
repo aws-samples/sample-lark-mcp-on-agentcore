@@ -46,7 +46,7 @@
   <text x="415" y="63" text-anchor="middle" font-size="9" fill="#666">self-register (DCR) + PKCE · no secret</text>
 
   <rect x="560" y="26" width="180" height="48" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
-  <text x="650" y="46" text-anchor="middle" font-size="13" font-weight="500">Quick Desktop</text>
+  <text x="650" y="46" text-anchor="middle" font-size="13" font-weight="500">Amazon Quick</text>
   <text x="650" y="63" text-anchor="middle" font-size="9" fill="#666">shared Client ID + Secret</text>
 
   <line x1="415" y1="74" x2="415" y2="100" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
