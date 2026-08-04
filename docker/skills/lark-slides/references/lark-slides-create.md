@@ -11,8 +11,8 @@
 | 场景 | 推荐方式 |
 |------|----------|
 | 简单 XML（1-3 页、结构简单、几乎无复杂中文和特殊字符） | `lark_slides_create(slides='[...]')` 一步创建 |
-| 复杂 XML（多页、含中文、大段文本、复杂布局、嵌套引号、特殊字符较多） | **两步创建**：先 `lark_slides_create` 创建空白 PPT，再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)`（详见 `lark_get_skill(domain="slides", section="xml-presentation-slide-create")`）逐页添加 |
-| 已有 PPT 继续追加或插入页面 | 使用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)`（详见 `lark_get_skill(domain="slides", section="xml-presentation-slide-create")`），必要时配合 `before_slide_id` |
+| 复杂 XML（多页、含中文、大段文本、复杂布局、嵌套引号、特殊字符较多） | **两步创建**：先 `lark_slides_create` 创建空白 PPT，再用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="add-slide")`）逐页添加 |
+| 已有 PPT 继续追加或插入页面 | 使用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="add-slide")`），必要时配合 `before_slide_id` |
 
 > [!WARNING]
 > `slides='[...]'` 的风险点主要在一次性提交的 payload 复杂度，而不是单纯页数。即使只有 1 页，只要 XML 足够复杂，也建议使用两步创建法。
@@ -42,7 +42,7 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 - **`images_uploaded`**（integer，可选）：仅 `slides` 中含 `@<本地路径>` 占位符时返回，已上传的去重后图片数量
 
 > [!IMPORTANT]
-> 不传 `slides` 时，`lark_slides_create` 只创建空白演示文稿。创建后需要使用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)` 逐页添加 slide 内容。
+> 不传 `slides` 时，`lark_slides_create` 只创建空白演示文稿。创建后用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加 slide 内容。
 >
 > 传了 `slides` 时，先创建空白演示文稿，再逐页添加页面。如果某一页添加失败，已创建的演示文稿和已添加的页面会保留。
 
@@ -54,7 +54,7 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `title` | 否 | 演示文稿标题（不传则默认 "Untitled"） |
-| `slides` | 否 | slide 内容 JSON 数组，每个元素是一个 `<slide>` XML 字符串（最多 10 个；超过 10 页请先创建空白 PPT，再逐页添加） |
+| `slides` | 否 | slide 内容 JSON 数组，每个元素是一个 `<slide>` XML 字符串（最多 10 个；超过 10 页请先创建空白 PPT，再用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加） |
 
 ## `slides` 参数格式
 
@@ -78,22 +78,8 @@ JSON string 数组，每个元素是一页 slide 的完整 XML。
 - `src` 不以 `@` 开头的会原样保留，但**只允许写 `lark_slides_media_upload` 拿到的 `file_token`**；**禁止写 http(s) 外链 URL**
 - 单张图片最大 20 MB
 - 校验阶段就会检查所有占位符文件存在及大小；缺文件或超限直接报错，不会创建空白 PPT 占位
-
-### 给已有 PPT 加带图新页
-
-`lark_slides_create` 的 `slides` 参数只在新建 PPT 时使用 `@` 占位符。给已有 PPT 加带图新页要分两步：
-
-```
-# 1) 上传图片
-lark_slides_media_upload(file="./pic.png", presentation="<PRES_ID>")
-# 从返回结果中获取 file_token
-
-# 2) 用返回的 file_token 创建带图新页
-lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", args={
-  params: {"xml_presentation_id": "<PRES_ID>"},
-  data: {"slide": {"content": "<slide xmlns=\"http://www.larkoffice.com/sml/2.0\"><data><img src=\"<file_token>\" topLeftX=\"100\" topLeftY=\"100\" width=\"200\" height=\"200\"/></data></slide>"}}
-})
-```
+- 顺序固定：创空白 PPT → 上传所有图 → 替换 token → 逐页创建 slide
+- 绝对路径（`@/abs/path/x.png`）和向上跳出 CWD（`@../up/x.png`）会被拒绝，报 `unsafe file path`
 
 ## 创建后续步骤
 
@@ -104,11 +90,8 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", args={
 lark_slides_create(title="项目汇报")
 # 获取返回的 xml_presentation_id
 
-# 第 2 步：添加页面
-lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", args={
-  params: {"xml_presentation_id": "<PRES_ID>"},
-  data: {"slide": {"content": "<slide xmlns=\"http://www.larkoffice.com/sml/2.0\">...</slide>"}}
-})
+# 第 2 步：逐页添加
+lark_slides_add_slide(presentation="<PRES_ID>", slide="<slide xmlns=\"http://www.larkoffice.com/sml/2.0\">...</slide>")
 ```
 
 ## 常见错误
@@ -120,5 +103,5 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", args={
 
 ## 相关命令
 
-- `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")`（`lark_get_skill(domain="slides", section="xml-presentation-slide-create")`） — 添加幻灯片页面
+- `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`） — 追加/插入单页（两步创建的第二步）
 - `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） — 读取 PPT 内容并保存到本地文件

@@ -75,7 +75,7 @@ lark_im_messages_search(query="test", page_limit="5", format="json")
 | `start` | No | Start time with local timezone offset required (e.g. `2026-03-24T00:00:00+08:00`) |
 | `end` | No | End time with local timezone offset required (e.g. `2026-03-25T23:59:59+08:00`) |
 | `page_size` | No | Page size (default 20, range 1-50) |
-| `page_token` | No | Pagination token for the next page |
+| `page_token` | No | Starting cursor, normally returned by a previous response |
 | `page_all` | No | Automatically paginate through all result pages (up to 40 pages) |
 | `page_limit` | No | Max pages to fetch when auto-pagination is enabled (default 20, max 40). Setting it explicitly also enables auto-pagination |
 | `format` | No | Output format: `json` (default) / `pretty` / `table` / `ndjson` / `csv` |
@@ -128,6 +128,7 @@ Each message in JSON output contains:
 - Default behavior is still **single-page**.
 - `page_token` is the manual continuation mechanism when you already have a token from a previous response.
 - `page_all` enables auto-pagination and uses a default cap of **40 pages**.
+- With both parameters, auto-pagination starts at `page_token` and continues from that cursor.
 - `page_limit` enables auto-pagination with an explicit cap. If you pass `page_limit` without `page_all`, auto-pagination is still enabled.
 - When auto-pagination stops because of the configured page cap, the response still includes the last `has_more` / `page_token` so you can continue manually.
 
@@ -222,5 +223,5 @@ lark_im_messages_search(query="", chat_id="oc_xxx", sender="ou_me", start="2026-
 
 ## References
 
-- [lark-im](../SKILL.md) - all message-related commands
+- `lark_get_skill(domain="im")` - all message-related commands
 - `lark_get_skill(domain="im", section="threads-messages-list")` - inspect thread replies

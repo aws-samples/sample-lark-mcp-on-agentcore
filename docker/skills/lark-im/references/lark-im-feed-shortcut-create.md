@@ -22,9 +22,6 @@ lark_im_feed_shortcut_create(chat_id="oc_a,oc_b,oc_c")
 
 # Append at the bottom of the shortcut list instead of the top
 lark_im_feed_shortcut_create(chat_id="oc_xxx", tail=true)
-
-# Preview the request without sending
-lark_im_feed_shortcut_create(chat_id="oc_xxx", dry_run=true)
 ```
 
 ## Parameters

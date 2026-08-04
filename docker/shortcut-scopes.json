@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.80",
-    "extracted_at": "2026-07-30",
+    "lark_cli_version": "1.0.82",
+    "extracted_at": "2026-08-04",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -97,6 +97,27 @@
       "command": "+automation-update",
       "scopes": [
         "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+cache-clear",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+cache-delete",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+cache-get",
+      "scopes": [
+        "spark:app:read"
       ]
     },
     {
@@ -1043,6 +1064,7 @@
       "service": "base",
       "command": "+url-resolve",
       "scopes": [
+        "base:block:read",
         "base:field:read",
         "base:record:read",
         "wiki:node:retrieve"
@@ -1289,6 +1311,13 @@
     },
     {
       "service": "contact",
+      "command": "+search-bot",
+      "scopes": [
+        "search:bot"
+      ]
+    },
+    {
+      "service": "contact",
       "command": "+search-user",
       "scopes": [
         "contact:user:search"
@@ -1419,9 +1448,25 @@
     },
     {
       "service": "drive",
+      "command": "+add-reply",
+      "scopes": [
+        "docs:document.comment:create",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "drive",
       "command": "+apply-permission",
       "scopes": [
         "docs:permission.member:apply"
+      ]
+    },
+    {
+      "service": "drive",
+      "command": "+batch-query-comments",
+      "scopes": [
+        "docs:document.comment:read",
+        "wiki:node:read"
       ]
     },
     {
@@ -1455,9 +1500,18 @@
     },
     {
       "service": "drive",
+      "command": "+delete-reply",
+      "scopes": [
+        "docs:document.comment:write_only",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "drive",
       "command": "+download",
       "scopes": [
-        "drive:file:download"
+        "drive:file:download",
+        "drive:drive.metadata:readonly"
       ]
     },
     {
@@ -1501,6 +1555,14 @@
       "scopes": [
         "docs:document.comment:read",
         "wiki:node:retrieve"
+      ]
+    },
+    {
+      "service": "drive",
+      "command": "+list-replies",
+      "scopes": [
+        "docs:document.comment:read",
+        "wiki:node:read"
       ]
     },
     {
@@ -1557,6 +1619,30 @@
     },
     {
       "service": "drive",
+      "command": "+react-reply",
+      "scopes": [
+        "docs:document.comment:write_only",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "command": "+resolve-comment",
+      "scopes": [
+        "docs:document.comment:write_only",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "command": "+restore-comment",
+      "scopes": [
+        "docs:document.comment:write_only",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "drive",
       "command": "+search",
       "scopes": [
         "search:docs:read"
@@ -1598,6 +1684,14 @@
       "service": "drive",
       "command": "+task_result",
       "scopes": []
+    },
+    {
+      "service": "drive",
+      "command": "+update-reply",
+      "scopes": [
+        "docs:document.comment:write_only",
+        "wiki:node:read"
+      ]
     },
     {
       "service": "drive",
@@ -3139,11 +3233,30 @@
     },
     {
       "service": "slides",
+      "command": "+add-slide",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only",
+        "wiki:node:read",
+        "docs:document.media:upload"
+      ]
+    },
+    {
+      "service": "slides",
       "command": "+create",
       "scopes": [
         "slides:presentation:create",
         "slides:presentation:write_only",
         "docs:document.media:upload"
+      ]
+    },
+    {
+      "service": "slides",
+      "command": "+delete-slide",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only",
+        "wiki:node:read"
       ]
     },
     {

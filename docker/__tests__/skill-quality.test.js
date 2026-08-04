@@ -118,6 +118,26 @@ describe.skipIf(skipIfNoSkills)('skill quality', () => {
     expect(violations, `Files with ../lark-* dead links:\n${violations.map(v => `  ${v.file}:${v.line}`).join('\n')}`).toEqual([]);
   });
 
+  // Sibling of the two checks above, for the ](../SKILL.md) form — a link from a
+  // reference file back to its own domain's SKILL.md. Rule 4 maps it to
+  // lark_get_skill(domain="<current>"). It slipped past both: the path starts
+  // neither with `references/` nor with `../lark-`. 26 of these survived the
+  // 1.0.82 re-adaptation (upstream's adjacent ../../lark-shared/SKILL.md link WAS
+  // stripped, so the transform saw the footer and converted only half of it).
+  it('no same-skill dead links ](../SKILL.md)', () => {
+    const violations = [];
+    for (const file of allFiles) {
+      const content = readFileSync(file, 'utf8');
+      const lines = content.split('\n');
+      for (let i = 0; i < lines.length; i++) {
+        if (/\]\(\.\.\/SKILL\.md\)/.test(lines[i])) {
+          violations.push({ file: file.replace(SKILLS_DIR + '/', ''), line: i + 1 });
+        }
+      }
+    }
+    expect(violations, `Files with ](../SKILL.md) dead links:\n${violations.map(v => `  ${v.file}:${v.line}`).join('\n')}`).toEqual([]);
+  });
+
   it('no --as user/bot in code blocks', () => {
     const violations = [];
     for (const file of allFiles) {
@@ -196,16 +216,39 @@ describe.skipIf(skipIfNoSkills)('skill quality', () => {
   });
 
   it('all resource files are reachable from at least one file in the same skill (except known orphans from upstream)', () => {
-    // Known upstream orphan files that are not referenced by any other file
-    const knownOrphans = new Set(['lark-slides/references/slide-templates.md']);
+    // Known orphan files no skill points at. The lark-whiteboard scenes/ set is a
+    // pre-existing upstream orphan family (14 files, zero pointers anywhere) —
+    // surfaced when this check was tightened during the 1.0.82 bump, and left for a
+    // dedicated cleanup rather than widening that bump's diff into untouched domains.
+    const knownOrphans = new Set([
+      'lark-slides/references/slide-templates.md',
+      ...[
+        'architecture', 'bar-chart', 'comparison', 'fishbone', 'flowchart',
+        'flywheel', 'funnel', 'line-chart', 'mermaid', 'milestone',
+        'organization', 'photo-showcase', 'pyramid', 'swimlane', 'treemap',
+      ].map(s => `lark-whiteboard/scenes/${s}.md`),
+      // Same story in lark-wiki: five reference files with zero section pointers
+      // repo-wide. Also pre-existing and also outside the 1.0.82 bump's diff.
+      ...[
+        'delete-space', 'member-remove', 'node-copy', 'space-create', 'space-list',
+      ].map(s => `lark-wiki/references/lark-wiki-${s}.md`),
+    ]);
     const violations = [];
+    // Pointers are resolved against EVERY skill, not just the owning one: a section
+    // can legitimately be referenced across domains (lark-minutes points at
+    // lark-vc's "recording"), and a same-skill-only search reports those as orphans.
+    const allSkillContent = readdirSync(SKILLS_DIR)
+      .map(s => join(SKILLS_DIR, s))
+      .filter(d => existsSync(join(d, 'SKILL.md')))
+      .flatMap(d => getAllMdFiles(d))
+      .map(f => readFileSync(f, 'utf8'))
+      .join('\n');
     for (const skillName of readdirSync(SKILLS_DIR)) {
       const skillDir = join(SKILLS_DIR, skillName);
       if (!existsSync(join(skillDir, 'SKILL.md'))) continue;
 
       const domain = skillName.replace('lark-', '');
-      // Concatenate all .md content in this skill
-      const allContent = getAllMdFiles(skillDir).map(f => readFileSync(f, 'utf8')).join('\n');
+      const allContent = allSkillContent;
 
       // Check every .md file (except SKILL.md itself) is referenced somewhere
       for (const file of getAllMdFiles(skillDir)) {
@@ -213,11 +256,25 @@ describe.skipIf(skipIfNoSkills)('skill quality', () => {
         const fname = file.split('/').pop().replace('.md', '');
         const section = fname.replace(`lark-${domain}-`, '');
         const sectionUnderscore = section.replace(/-/g, '_');
+        // Require a real section pointer, not a bare substring. A plain
+        // includes(section) is satisfied by coincidence — "meeting" matches
+        // "schedule-meeting" and "rsvp" matches the tool name
+        // `lark_calendar_rsvp`, which is how two genuinely orphaned calendar
+        // reference files passed this check until the 1.0.82 bump.
+        //
+        // Files in a subdirectory are pointed at by their path relative to
+        // references/ (section="style/lark-doc-style"), and whole families are
+        // addressed by a placeholder (section="card/components/<tag>"), so accept
+        // a pointer at the containing directory too.
+        const relFromRefs = file.replace(join(skillDir, 'references') + '/', '')
+                                .replace(skillDir + '/', '')
+                                .replace(/\.md$/, '');
+        const dir = relFromRefs.includes('/') ? relFromRefs.replace(/\/[^/]+$/, '') : '';
         const mentioned = allContent.includes(`section="${section}"`) ||
                           allContent.includes(`section="${fname}"`) ||
-                          allContent.includes(fname) ||
-                          allContent.includes(section) ||
-                          allContent.includes(sectionUnderscore);
+                          allContent.includes(`section="${sectionUnderscore}"`) ||
+                          allContent.includes(`section="${relFromRefs}"`) ||
+                          (dir !== '' && allContent.includes(`section="${dir}/`));
         if (!mentioned) {
           const relPath = `${skillName}/${file.replace(skillDir + '/', '')}`;
           if (!knownOrphans.has(relPath)) {

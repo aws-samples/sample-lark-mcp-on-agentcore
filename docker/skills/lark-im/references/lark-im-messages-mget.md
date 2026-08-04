@@ -90,4 +90,4 @@ lark_im_messages_mget(message_ids="om_aaa,om_bbb")
 
 ## References
 
-- [lark-im](../SKILL.md) - all IM commands
+- `lark_get_skill(domain="im")` - all IM commands

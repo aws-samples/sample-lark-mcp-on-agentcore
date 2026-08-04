@@ -6,6 +6,7 @@ This guide is the entry point for Base advanced permissions and roles. Use it to
 
 | Goal | Tool | Notes |
 |------|------|-------|
+| Check advanced permission status | `lark_base_base_get()` | Read `data.base.is_advanced`. There is no advanced-permission "get" tool. |
 | Enable advanced permissions | `lark_base_advperm_enable()` | Required before creating or updating roles. Caller must be a Base admin. |
 | Disable advanced permissions | `lark_base_advperm_disable()` | High-risk write. Disabling invalidates existing custom roles. |
 | Locate roles | `lark_base_role_list()` | Returns role summaries. Use `lark_base_role_get()` for full config. |
@@ -13,6 +14,16 @@ This guide is the entry point for Base advanced permissions and roles. Use it to
 | Create a custom role | `lark_base_role_create()` | Supports `custom_role` only. Read `lark_get_skill(domain="base", section="role-config")` before constructing `json`. |
 | Update a role | `lark_base_role_update()` | Delta merge. Read current config first, then send only intended changes. |
 | Delete a role | `lark_base_role_delete()` | Custom roles only. System roles cannot be deleted. |
+
+## Required order
+
+At the start of a role workflow, before the first `lark_base_role_list()`, `lark_base_role_get()`, `lark_base_role_create()`, `lark_base_role_update()`, or `lark_base_role_delete()` call:
+
+1. Call `lark_base_base_get(base_token="<base_token>")` and inspect `data.base.is_advanced`.
+2. If `is_advanced` is `false`, call `lark_base_advperm_enable()` before the role tool. If the user did not authorize enabling advanced permissions, stop and explain the required precondition.
+3. Run the requested role tools only after `is_advanced` is `true` or `lark_base_advperm_enable()` succeeds. Reuse that confirmed status for later role calls in the same workflow.
+
+Do not probe for an advanced-permission "get" tool: none exists. Do not use an empty `lark_base_role_list()` response to infer the advanced permission status; a disabled Base can also return an empty list.
 
 ## Safety boundaries
 

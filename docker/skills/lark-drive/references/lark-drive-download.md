@@ -9,7 +9,7 @@
 # 下载到指定路径
 lark_drive_download(file_token="boxbc_xxx", output="./report.pdf")
 
-# 只提供 token，默认保存为当前目录下同名文件
+# 只提供 token，默认保存到当前目录
 lark_drive_download(file_token="boxbc_xxx")
 ```
 
@@ -23,6 +23,10 @@ https://xxx.feishu.cn/drive/file/boxbc_xxx
                                   file_token
 ```
 
+## 排障
+
+- 如果返回 `HTTP 403`，可以使用 `lark_get_skill(domain="drive", section="preview")` 里的 `lark_drive_preview` 下载源文件产物。
+
 ## 参考
 
-- [lark-drive](../SKILL.md) -- 云空间（云盘/云存储）全部命令
+- `lark_get_skill(domain="drive")` -- 云空间（云盘/云存储）全部命令

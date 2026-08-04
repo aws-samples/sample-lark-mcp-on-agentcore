@@ -173,6 +173,7 @@ export const SCOPE_ALLOWLIST: ReadonlySet<string> = new Set([
   "okr:okr.progress:writeonly",
   "okr:okr.setting:read",
   "profile:user_profile:read",
+  "search:bot",
   "search:docs:read",
   "search:message",
   "sheets:spreadsheet",

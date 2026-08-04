@@ -27,6 +27,9 @@ lark_im_chat_messages_list(chat_id="oc_xxx", order="asc", page_size="20")
 # Pagination
 lark_im_chat_messages_list(chat_id="oc_xxx", page_token="xxx")
 
+# Fetch multiple pages automatically, up to 10 pages by default
+lark_im_chat_messages_list(chat_id="oc_xxx", page_all=true)
+
 # JSON output
 lark_im_chat_messages_list(chat_id="oc_xxx", format="json")
 ```
@@ -41,7 +44,9 @@ lark_im_chat_messages_list(chat_id="oc_xxx", format="json")
 | `end` | No | End time (ISO 8601 or date only) |
 | `order` | No | Sort order: `asc` / `desc` (default `desc`) |
 | `page_size` | No | Page size (default 50, max 50) |
-| `page_token` | No | Pagination token |
+| `page_token` | No | Starting cursor, normally returned by a previous response |
+| `page_all` | No | Automatically fetch and merge subsequent pages; capped by `page_limit` |
+| `page_limit` | No | Maximum pages fetched by `page_all` (default 10, range 1-1000) |
 | `no_reactions` | No | Skip auto-fetching the `reactions` block |
 | `download_resources` | No | Download message resources (image/file/audio/video/media + post-embedded, excluding stickers) into `./lark-im-resources/` and attach a `resources` block. Off by default; no extra requests when omitted |
 
@@ -104,11 +109,13 @@ Each message contains:
 
 ## Pagination (`has_more` / `page_token`)
 
-`lark_im_chat_messages_list` returns `has_more` and `page_token` when more data is available. Use `page_token` to continue:
+By default, `lark_im_chat_messages_list` fetches one page. It returns `has_more` and `page_token` when more data is available. Use `page_token` to continue:
 
 ```
 lark_im_chat_messages_list(chat_id="oc_xxx", page_token="<PAGE_TOKEN>")
 ```
+
+With `page_all=true`, `page_token` sets the starting cursor. If `meta.pagination.complete=false`, resume from `meta.pagination.next_token` or raise `page_limit`.
 
 ## Common Errors and Troubleshooting
 
@@ -144,4 +151,4 @@ lark_im_chat_messages_list(chat_id="oc_xxx", page_token="<PAGE_TOKEN>")
 
 ## References
 
-- [lark-im](../SKILL.md) - all IM commands
+- `lark_get_skill(domain="im")` - all IM commands

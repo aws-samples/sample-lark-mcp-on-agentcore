@@ -1,6 +1,6 @@
 # XML Schema 快速参考
 
-本文档是 `slides_xml_schema_definition.xml`（skill 内置 XSD，完整协议来源）的精简版摘要，并合并了常用 XML 格式写法；如果两者不一致，以 XSD 原文为准。
+本文档是 `slides_xml_schema_definition.xml`（skill 内置 XSD）的精简版摘要，并合并了常用 XML 格式写法。⚠️ 那份 XSD 与 `slides_chart_demo.xml` 随镜像打包但无法通过 `lark_get_skill` 获取（只支持 `.html` / `.txt` / `.csv`），所以本文档就是本环境里可用的协议依据；摘要没覆盖到的字段用 `lark_discover(query="slides.<resource>.<method>")` 查。
 
 ## 最重要的规则
 
@@ -226,17 +226,17 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 ### img
 
 ```xml
-<img src="file_token_or_url" topLeftX="80" topLeftY="120" width="320" height="180"/>
+<img src="file_token_或_@本地路径" topLeftX="80" topLeftY="120" width="320" height="180"/>
 ```
 
 `img` 使用 `topLeftX` / `topLeftY`，不是 `x` / `y`。
 
-`src` 只支持：`lark_slides_media_upload` 返回的 `file_token`，或 `@<本地路径>` 占位符（仅 `lark_slides_create` 的 `slides` 参数自动上传并替换）。**禁止使用 http(s) 外链 URL**——飞书 slides 渲染端不会代理外链图，外链 src 在 PPT 里通常不显示。本地图片详见 `lark_get_skill(domain="slides", section="create")` / `lark_get_skill(domain="slides", section="media-upload")`。
+`src` 只支持：`lark_slides_media_upload` 返回的 `file_token`，或 `@<本地路径>` 占位符（`lark_slides_create` 的 `slides` 和 `lark_slides_add_slide` 的 `slide` 会自动上传并替换）。**禁止使用 http(s) 外链 URL**——飞书 slides 渲染端不会代理外链图，外链 src 在 PPT 里通常不显示。本地图片详见 `lark_get_skill(domain="slides", section="create")` / `lark_get_skill(domain="slides", section="media-upload")`。
 
 本地图片的两种姿势：
 
 - 新建带图 PPT：`lark_slides_create` 的 `slides` 参数里直接写 `src="@./pic.png"`，系统在创空白 PPT 后、加 slides 前自动上传并替换 token
-- 给已有 PPT 加带图新页：先用 `lark_slides_media_upload(file="./pic.png", presentation="<PID>")` 拿 token，再用 token 写进 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` 的 XML
+- 给已有 PPT 加带图新页：`lark_slides_add_slide` 的 `slide` XML 里直接写 `src="@./pic.png"`，上传后替换 token 再提交页面
 
 > **注意**：`width`/`height` 是**裁剪后**的显示尺寸。比例和原图不一致时会自动裁剪（无法靠属性关闭），想避免裁剪就让 `width:height` 对齐原图比例。
 
@@ -315,7 +315,7 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 
 ### chart
 
-图表语法十分复杂，必须阅读 `slides_chart_demo.xml`，直接照抄其中的柱状、条形、折线、面积、饼（环）、雷达、组合图。
+图表语法十分复杂，直接照抄下方的柱状、条形、折线、面积、饼（环）、雷达、组合图写法。⚠️ 上游示例文件 `slides_chart_demo.xml` 随镜像打包但无法通过 `lark_get_skill` 获取（只支持 `.html` / `.txt` / `.csv`），本节即是可用的图表 XML 依据。
 
 `<chart>` 直接子元素必须有 `<chartPlotArea>`（绘图区）和 `<chartData>`（数据）；`<chartTitle>`、`<chartSubTitle>`、`<chartStyle>`、`<chartLegend>`、`<chartTooltip>` 可选，如果想不展示标题、副标题、图例或悬浮提示，省略相应元素标签即可。
 
@@ -351,7 +351,7 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 
 隐藏 `<chart>` 的图例只能通过不写或删除 `<chartLegend>` 实现，`<chartLegend>` 不支持 `position="none"`。
 
-详细用法见 `slides_xml_schema_definition.xml`。
+摘要未覆盖的字段用 `lark_discover(query="slides.<resource>.<method>")` 查。
 
 ## 颜色与样式
 
@@ -473,8 +473,8 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 
 ## 详细参考
 
-- `slides_xml_schema_definition.xml`（skill 内置 XSD，完整协议来源）
-- `slides_chart_demo.xml`（图表 XML 示例）
+- `slides_xml_schema_definition.xml`（skill 内置 XSD）、`slides_chart_demo.xml`（图表 XML 示例）——两者随镜像打包，但 `lark_get_skill` 无法获取，此处仅作溯源
+- 字段级细节：`lark_discover(query="slides.<resource>.<method>")`
 
 ## Schema 版本信息
 

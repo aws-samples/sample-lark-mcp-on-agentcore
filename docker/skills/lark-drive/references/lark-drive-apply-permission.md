@@ -28,8 +28,8 @@ lark_drive_apply_permission(token="doxcnxxxxxxxxx", type="docx", perm="edit")
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `token` | 是 | 目标文档 token 或完整 URL（`/docx/`、`/sheets/`、`/base/`、`/bitable/`、`/file/`、`/wiki/`、`/doc/`、`/mindnote/`、`/slides/` 路径里的 token 会被自动提取） |
-| `type` | 否 | 目标类型，可选值 `doc` / `sheet` / `file` / `wiki` / `bitable` / `docx` / `mindnote` / `slides`。传 URL 时可由 shortcut 自动推断；bare token 必须显式传 |
+| `token` | 是 | 目标文档 token 或完整 URL（`/docx/`、`/sheets/`、`/base/`、`/bitable/`、`/file/`、`/wiki/`、`/doc/`、`/mindnote/`、`/slides/`、`/page/` 路径里的 token 会被自动提取） |
+| `type` | 否 | 目标类型，可选值 `doc` / `sheet` / `file` / `wiki` / `bitable` / `docx` / `mindnote` / `slides` / `apps`。传 URL 时由 shortcut 自动推断；如显式传入，必须与 URL 路径类型一致。bare token 必须显式传 |
 | `perm` | 是 | 申请的权限，仅支持 `view` 或 `edit`（**不支持 `full_access`**，工具侧会直接拒绝） |
 | `remark` | 否 | 备注，会显示在权限申请卡片上 |
 

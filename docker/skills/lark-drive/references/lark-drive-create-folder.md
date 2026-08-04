@@ -44,4 +44,4 @@ lark_drive_create_folder(folder_token="<PARENT_FOLDER_TOKEN>", name="2026-W16")
 
 ## 参考
 
-- [lark-drive](../SKILL.md) -- 云空间（云盘/云存储）全部命令
+- `lark_get_skill(domain="drive")` -- 云空间（云盘/云存储）全部命令

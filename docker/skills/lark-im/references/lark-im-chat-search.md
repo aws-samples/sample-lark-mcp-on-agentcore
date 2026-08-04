@@ -31,6 +31,9 @@ lark_im_chat_search(query="project", page_size="10")
 # Pagination
 lark_im_chat_search(query="project", page_token="xxx")
 
+# Fetch multiple pages automatically, up to 10 pages by default
+lark_im_chat_search(query="project", page_all=true)
+
 # JSON output
 lark_im_chat_search(query="project", format="json")
 ```
@@ -47,11 +50,15 @@ lark_im_chat_search(query="project", format="json")
 | `disable_search_by_user` | No | - | Disable member-name-based matching and search by group name only |
 | `sort` | No | `create_time`, `update_time`, `member_count` | Sort field (always descending) |
 | `page_size` | No | 1-100, default 20 | Number of results per page |
-| `page_token` | No | - | Pagination token from the previous response |
+| `page_token` | No | - | Starting cursor, normally returned by a previous response |
+| `page_all` | No | - | Automatically fetch and merge subsequent pages; capped by `page_limit` |
+| `page_limit` | No | 1-1000, default 10 | Maximum pages fetched by `page_all` |
 | `exclude_muted` | No | User identity only | Drop chats the current user has muted (do-not-disturb). Under bot identity, the flag is silently inactive (mute is a per-user setting); see "Filtering muted chats" below |
 | `format` | No | - | Output as JSON |
 
 > **Note:** Supports both user identity (default) and bot identity. When using bot identity, the app must have bot capability enabled.
+
+With `page_all=true`, `page_token` sets the starting cursor. If `meta.pagination.complete=false`, resume from `meta.pagination.next_token` or raise `page_limit`.
 
 > **CAUTION:** `sort` is **always descending** — the search API only ranks the chosen field high-to-low (e.g. `member_count` = most members first). There is no ascending option. If the user asks for "fewest first / ascending / 从少到多", tell them the search API does not support ascending order; any low-to-high view requires re-sorting the fetched page client-side and is not an upstream sort. Do **not** invent values like `member_count_asc` or pass `asc` (they are rejected).
 
@@ -121,7 +128,7 @@ lark_im_messages_send(chat_id="<chat_id>", text="Today's progress update")
 |---------|---------|---------|
 | `query and member_ids cannot both be empty` | Both were omitted | Provide at least `query` or `member_ids` |
 | Empty results | No visible chats matched the keyword or filters | Relax the keyword or filters and try again |
-| `page_size must be an integer between 1 and 100` | page_size is out of range or not an integer | Use an integer between 1 and 100 |
+| `invalid page_size 101: must be between 1 and 100` | page_size is out of range | Use an integer between 1 and 100 |
 | Permission denied (99991672) | The bot app does not have `im:chat:read` TAT permission enabled | Enable the permission for the app in the Open Platform console |
 | Permission denied (99991679) with user identity | UAT is not authorized for `im:chat:read` | Ensure the scope is authorized |
 | `Bot ability is not activated` (232025) | The app does not have bot capability enabled | Enable bot capability in the Open Platform console |
@@ -138,4 +145,4 @@ When the user asks to search chats, follow these rules:
 
 ## References
 
-- [lark-im](../SKILL.md) - all IM commands
+- `lark_get_skill(domain="im")` - all IM commands

@@ -30,13 +30,13 @@ lark_im_feed_group_list(page_all=true, start_time="1767196800000", end_time="176
 | Parameter | Required | Description |
 |---|---|---|
 | `page_size` | No | Records per page, 1-50 (default 50). Caps the combined `groups` + `deleted_groups` count, so a page may hold fewer live groups than the size suggests |
-| `page_token` | No | Continuation token for a specific page |
+| `page_token` | No | Starting cursor, normally returned by a previous response |
 | `page_all` | No | Auto-paginate and merge all pages (both lists) |
 | `page_limit` | No | Max pages when `page_all` is set, 1-1000 (default 20) |
 | `start_time` | No | Update-time window start (Unix milliseconds as a decimal string) |
 | `end_time` | No | Update-time window end (Unix milliseconds as a decimal string) |
 
-When `page_token` is set explicitly, it wins over `page_all` (you get exactly that page).
+When `page_token` and `page_all` are supplied together, automatic pagination starts at that cursor and continues until exhaustion or `page_limit`.
 
 ## Output
 

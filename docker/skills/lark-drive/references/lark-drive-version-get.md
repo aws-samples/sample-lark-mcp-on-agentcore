@@ -46,4 +46,4 @@ lark_drive_version_get(file_token="boxcnxxxxxxxx", version="7633658129540910621"
 
 ## 参考
 
-- [lark-drive](../SKILL.md) -- 云空间（云盘/云存储）全部命令
+- `lark_get_skill(domain="drive")` -- 云空间（云盘/云存储）全部命令

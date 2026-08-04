@@ -6,7 +6,7 @@ This tool maps to: `lark_im_flag_list`. Underlying API: `GET /open-apis/im/v1/fl
 
 The API returns data sorted by `update_time` in **ascending order**, meaning **oldest first, newest last**. When `has_more=true`, continue pagination until `has_more=false`; only then is the last item in the merged result authoritative as the newest flag. If pagination stops while `has_more=true`, the last item is only the newest observed flag.
 
-`page_all=true` enables automatic pagination but is still capped by `page_limit`. The default cap is 20 pages; **20 is not the hard maximum**. Set `page_limit` between 1 and 1000 when a larger scan is required. A response with `has_more=true` is incomplete, even when `flag_items` is empty; increase the limit or resume from the returned `page_token` before reporting an authoritative latest item or count.
+`page_all=true` enables automatic pagination but is still capped by `page_limit`. When `page_token` is also supplied, it sets the starting cursor and pagination continues from there. The default cap is 20 pages; **20 is not the hard maximum**. Set `page_limit` between 1 and 1000 when a larger scan is required. A response with `has_more=true` is incomplete, even when `flag_items` is empty; increase the limit or resume from the returned `page_token` before reporting an authoritative latest item or count.
 
 ## Commands
 
@@ -32,7 +32,7 @@ lark_im_flag_list(page_all=true, page_limit="1000")
 | Parameter | Default | Description |
 |------|------|------|
 | `page_size` | 50 | Range 1-50 (server max is 50) |
-| `page_token` | empty | Pagination token from previous page; empty string must still be provided |
+| `page_token` | empty | Starting cursor from a previous response; an empty cursor still selects the first page |
 | `page_all` | false | Auto-paginate and merge results, capped by `page_limit` |
 | `page_limit` | 20 | Max pages in `page_all` mode; configurable range 1-1000 (20 is only the default) |
 | `enrich_feed_thread` | true | Auto-enrich feed-layer thread entries with message content (calls `im.messages.mget`) |

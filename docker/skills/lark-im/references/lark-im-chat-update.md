@@ -70,4 +70,4 @@ Identity choice should follow Group Chat Identity Rules (`lark_get_skill(domain=
 
 ## References
 
-- [lark-im](../SKILL.md) - all IM commands
+- `lark_get_skill(domain="im")` - all IM commands

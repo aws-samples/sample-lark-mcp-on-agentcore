@@ -443,4 +443,4 @@ The three read methods are shortcut-only:
 
 ## References
 
-- [lark-im](../SKILL.md) — all IM commands
+- `lark_get_skill(domain="im")` — all IM commands

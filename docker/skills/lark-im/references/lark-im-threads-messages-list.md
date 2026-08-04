@@ -21,6 +21,9 @@ lark_im_threads_messages_list(thread="omt_xxx", page_size="20")
 # Pagination
 lark_im_threads_messages_list(thread="omt_xxx", page_token="<PAGE_TOKEN>")
 
+# Fetch multiple pages automatically, up to 10 pages by default
+lark_im_threads_messages_list(thread="omt_xxx", page_all=true)
+
 # Output format options
 lark_im_threads_messages_list(thread="omt_xxx", format="pretty")
 lark_im_threads_messages_list(thread="omt_xxx", format="table")
@@ -35,8 +38,10 @@ lark_im_threads_messages_list(thread="omt_xxx", format="csv")
 | `no_reactions` | No | Skip auto-fetching the `reactions` block |
 | `download_resources` | No | Download message resources (image/file/audio/video/media + post-embedded, excluding stickers) into `./lark-im-resources/` and attach a `resources` block. Off by default |
 | `order` | No | Sort order: `asc` (default) / `desc` |
-| `page_size` | No | Number of items per page (default 50, range 1-500) |
-| `page_token` | No | Pagination token for the next page |
+| `page_size` | No | Number of items per page (default 50, range 1-50) |
+| `page_token` | No | Starting cursor, normally returned by a previous response |
+| `page_all` | No | Automatically fetch and merge subsequent pages; capped by `page_limit` |
+| `page_limit` | No | Maximum pages fetched by `page_all` (default 10, range 1-1000) |
 | `format` | No | Output format: `json` (default) / `pretty` / `table` / `ndjson` / `csv` |
 
 ## Core Constraints
@@ -51,8 +56,7 @@ Thread messages do not support `start_time` / `end_time` filtering because of Fe
 
 ### 3. Pagination (`has_more` / `page_token`)
 
-- When the result includes `has_more=true`, use `page_token` to fetch the next page
-- If you need the complete thread, keep paginating; if you only need an overview, the first page is often enough
+Default is one page. With `page_all=true`, `page_token` sets the starting cursor; if `meta.pagination.complete=false`, resume from `meta.pagination.next_token` or raise `page_limit`.
 
 ### 4. Recommended expansion strategy
 
@@ -100,5 +104,5 @@ Pass `download_resources=true` to download every eligible resource (image/file/a
 
 ## References
 
-- [lark-im](../SKILL.md) - all message-related commands
+- `lark_get_skill(domain="im")` - all message-related commands
 - `lark_get_skill(domain="im", section="chat-messages-list")` - fetch conversation messages (source of `thread_id`)

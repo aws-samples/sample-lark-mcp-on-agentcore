@@ -19,9 +19,6 @@ lark_im_feed_shortcut_remove(chat_id="oc_xxx")
 
 # Remove multiple feed shortcuts in one call
 lark_im_feed_shortcut_remove(chat_id="oc_a,oc_b")
-
-# Preview the request
-lark_im_feed_shortcut_remove(chat_id="oc_xxx", dry_run=true)
 ```
 
 ## Parameters

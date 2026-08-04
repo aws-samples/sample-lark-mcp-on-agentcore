@@ -1,6 +1,6 @@
 # Troubleshooting
 
-本文件覆盖 lark-slides 的通用创建前自检、XML 排障和常见失败处理。命令专属问题优先看对应 reference，例如 `lark_slides_replace_slide`、`lark_slides_media_upload`、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")`。
+本文件覆盖 lark-slides 的通用创建前自检、XML 排障和常见失败处理。工具专属问题优先看对应 reference，例如 `lark_slides_replace_slide`、`lark_slides_media_upload`、`lark_slides_add_slide`。
 
 ## XML Preflight
 
@@ -9,7 +9,7 @@
 - 特殊字符已转义：正文和标题里的 `&`、`<`、`>` 不能裸写；属性值里的裸 `&` 也必须写成 `&amp;`。
 - 属性引号安全：XML 属性、JSON 字符串包装之间没有互相打断。
 - 结构合法：`<slide>` 下只放 `<style>`、`<data>`、`<note>`，文本都在 `<content>` 内。
-- 图片路径正确：`<img src="@...">` 只在 `lark_slides_create` 的 `slides` 参数支持链路中使用；直接调用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` 必须先拿到 `file_token`。
+- 图片路径正确：`<img src="@...">` 只在 `lark_slides_create` 的 `slides` 和 `lark_slides_add_slide` 的 `slide` 参数支持链路中使用；直接调原生 `xml_presentation.slide.create` 必须先拿到 `file_token`。
 
 ## Failure Order
 
@@ -20,8 +20,8 @@
 3. 检查失败页是否含未转义字符：`Q&A -> Q&amp;A`，文本 `<` / `>` 写成 `&lt;` / `&gt;`，属性 URL `a=1&b=2 -> a=1&amp;b=2`。
 4. 检查标签闭合、属性引号、`<content>` 结构，以及 `<slide>` 直接子元素。
 5. 页面空白、溢出、重叠或越界时，按 `lark_get_skill(domain="slides", section="validation-checklist")` 运行 `xml_text_overlap_lint.py`；先修复所有 `error`，再对 `warning` 指向的页面和元素做截图复核。
-6. 如果使用 `slides` 参数一次性建多页失败，直接切到两步创建：先 `lark_slides_create`，再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create", ...)` 逐页添加。
-7. 局部问题用 `lark_slides_replace_slide` 块级修正；整页结构要改时再用 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_delete")` 删旧页 + `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` 建新页。
+6. 如果使用 `slides` 参数一次性建多页失败，直接切到两步创建：先 `lark_slides_create`，再用 `lark_slides_add_slide` 逐页添加。
+7. 局部问题用 `lark_slides_replace_slide` 块级修正；整页结构要改时再用 `lark_slides_add_slide` 建新页 + `lark_slides_delete_slide` 删旧页（多页整页重建优先用 `lark_slides_replace_pages`）。
 
 ## Symptom Fixes
 
@@ -34,7 +34,7 @@
 | 表格列宽不合理 | 调整 `colgroup` 中 `col` 的 `width` 值 |
 | 图表没有显示 | 检查 `chartPlotArea` 和 `chartData` 是否都包含，`dim1` / `dim2` 数据数量是否匹配 |
 | 图片被裁掉一部分 | `<img>` 的 `width` / `height` 是裁剪后尺寸；要整图显示就让 `width:height` 对齐原图比例 |
-| 图片不显示 / `<img src>` 仍是 `@path` | `@` 占位符只在 `lark_slides_create` 的 `slides` 参数中替换；直接调 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` 必须先用 `lark_slides_media_upload` 拿 `file_token` |
+| 图片不显示 / `<img src>` 仍是 `@path` | `@` 占位符只在 `lark_slides_create` 的 `slides` 和 `lark_slides_add_slide` 的 `slide` 参数中替换；直接调原生 `xml_presentation.slide.create` 必须先用 `lark_slides_media_upload` 拿 `file_token` |
 | 新插入的 `<img>` 挡住原有元素 | `slide.get` 读原页，对照已有块坐标挑空白位置；空间不够就在同一批 `parts` 里先移动/缩小现有块再插图 |
 | 渐变背景变成白色 | 渐变必须用 `rgba()` 格式 + 百分比停靠点，如 `linear-gradient(135deg,rgba(30,60,114,1) 0%,rgba(59,130,246,1) 100%)` |
 | 整体风格不统一 | 封面页和结尾页用同一背景，内容页保持一致的配色和字号体系 |
@@ -49,7 +49,6 @@
 | 403 权限不足 | scope 或文档权限不匹配 | 确认 scope 和文档权限；无权限时根据错误响应引导用户解决 |
 | 404 演示文稿不存在 | `xml_presentation_id` 不正确或无权限 | 检查 token；wiki URL 需先解析真实 `obj_token` |
 | 404 幻灯片不存在 | `slide_id` 不正确 | 重新读取 presentation 或 slide，确认最新 ID |
-| 400 无法删除唯一幻灯片 | 演示文稿至少保留一页 | 先创建新页，再删除旧页 |
 | 1061002 媒体上传 params error | slides 媒体上传参数不符合约定 | 用 `lark_slides_media_upload`，不要手拼原生 `medias/upload_all`；slides 唯一可用 `parent_type` 是 `slide_file` |
 | 1061004 forbidden | 当前用户对演示文稿无编辑权限 | 确认当前用户对目标 PPT 有编辑权限 |
 | 3350001 | XML 非 well-formed、XML 结构不符合服务端要求，或 replace 片段问题 | 优先检查未转义字符；replace 场景再看 `block_id` 和 `<content/>` |
@@ -60,4 +59,4 @@
 
 - 图片上传、`@path` 占位符、`file_token`：见 `lark_get_skill(domain="slides", section="media-upload")` 和 `lark_get_skill(domain="slides", section="create")`。
 - 块级替换、`block_id`、3350001 replace 细节：见 `lark_get_skill(domain="slides", section="replace-slide")`。
-- 原生 `slide.create` 包装、`before_slide_id` 和批量追加：见 `lark_get_skill(domain="slides", section="xml-presentation-slide-create")`。
+- 追加/插入单页、`before_slide_id`：见 `lark_get_skill(domain="slides", section="add-slide")`；删除单页见 `lark_get_skill(domain="slides", section="delete-slide")`。
