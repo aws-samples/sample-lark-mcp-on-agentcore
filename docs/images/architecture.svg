@@ -9,7 +9,7 @@
   <text x="980" y="22" text-anchor="end" fill="#aaa" font-size="10">tag: project=lark-mcp-on-agentcore</text>
 
   <!-- Layer labels (vertically aligned with each layer's content) -->
-  <text x="22" y="64" fill="#aaa" font-size="11">客户端</text>
+  <text x="22" y="54" fill="#aaa" font-size="11">客户端</text>
   <text x="22" y="148" fill="#aaa" font-size="11">入口</text>
   <text x="22" y="274" fill="#aaa" font-size="11">计算</text>
   <text x="22" y="424" fill="#aaa" font-size="11">运行时</text>
@@ -40,11 +40,18 @@
   <text x="890" y="348" text-anchor="middle" font-size="9" fill="#666">CloudWatch · SNS</text>
   <text x="890" y="362" text-anchor="middle" font-size="9" fill="#666">TokenLost / RefreshFailed</text>
 
-  <!-- ===== Layer 1: Quick Desktop ===== -->
-  <rect x="506" y="38" width="160" height="44" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
-  <text x="586" y="64" text-anchor="middle" font-size="13" font-weight="500">Quick Desktop</text>
-  <line x1="586" y1="82" x2="586" y2="100" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
-  <text x="594" y="96" fill="#666" font-size="10">HTTPS</text>
+  <!-- ===== Layer 1: 客户端（两条接入路径） ===== -->
+  <rect x="300" y="26" width="230" height="48" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="415" y="46" text-anchor="middle" font-size="13" font-weight="500">Kiro · Claude Code · Codex</text>
+  <text x="415" y="63" text-anchor="middle" font-size="9" fill="#666">自注册 (DCR) + PKCE · 无需 Secret</text>
+
+  <rect x="560" y="26" width="180" height="48" rx="6" fill="#fff" stroke="#333" stroke-width="1.5"/>
+  <text x="650" y="46" text-anchor="middle" font-size="13" font-weight="500">Amazon Quick</text>
+  <text x="650" y="63" text-anchor="middle" font-size="9" fill="#666">共享 Client ID + Secret</text>
+
+  <line x1="415" y1="74" x2="415" y2="100" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <line x1="650" y1="74" x2="650" y2="100" stroke="#333" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="533" y="90" text-anchor="middle" fill="#666" font-size="10">HTTPS</text>
 
   <!-- ===== Layer 2: Edge ===== -->
   <rect x="80" y="100" width="700" height="88" rx="8" fill="#f8f9fa" stroke="#bbb" stroke-width="1"/>
