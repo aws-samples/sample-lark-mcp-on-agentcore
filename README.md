@@ -73,7 +73,7 @@ Save and authorize in the browser when prompted. See [Connect clients](docs/conn
 
 ## Architecture
 
-Requests from a remote MCP client (e.g., Quick Desktop) → CloudFront → API Gateway → Middleware Lambda (MCP token verification + SigV4 signing) → AgentCore Runtime (MCP service container handles Feishu API calls). OAuth Lambda manages user authorization and auto-refreshes tokens every 30 minutes via EventBridge. All tokens encrypted in Secrets Manager (a dedicated KMS key only this service can decrypt).
+Requests from a remote MCP client (Kiro / Claude Code / Codex, which self-register via DCR, or Amazon Quick with a shared Client Secret) → CloudFront → API Gateway → Middleware Lambda (MCP token verification + SigV4 signing) → AgentCore Runtime (MCP service container handles Feishu API calls). OAuth Lambda manages user authorization and auto-refreshes tokens every 30 minutes via EventBridge. All tokens encrypted in Secrets Manager (a dedicated KMS key only this service can decrypt).
 
 <p align="center">
   <img src="docs/images/architecture-en.svg" alt="Architecture" width="720">
@@ -307,7 +307,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/aws-samples/sample-lark-mcp-
 
 ## 架构
 
-支持远程 MCP 的客户端（如 Quick Desktop）发起请求 → CloudFront → API Gateway → Middleware Lambda（验证 MCP Token + SigV4 签名）→ AgentCore Runtime（MCP 服务容器处理飞书 API 调用）。OAuth Lambda 负责用户授权和 Token 自动刷新（每 30 分钟），EventBridge 定时触发。所有 Token 加密存储在 Secrets Manager 中（专用 KMS 密钥，仅本服务可解密）。
+支持远程 MCP 的客户端（Kiro / Claude Code / Codex 走 DCR 自注册，Amazon Quick 用共享 Client Secret）发起请求 → CloudFront → API Gateway → Middleware Lambda（验证 MCP Token + SigV4 签名）→ AgentCore Runtime（MCP 服务容器处理飞书 API 调用）。OAuth Lambda 负责用户授权和 Token 自动刷新（每 30 分钟），EventBridge 定时触发。所有 Token 加密存储在 Secrets Manager 中（专用 KMS 密钥，仅本服务可解密）。
 
 <p align="center">
   <img src="docs/images/architecture.svg" alt="Architecture" width="720">

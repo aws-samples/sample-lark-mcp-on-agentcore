@@ -10,7 +10,7 @@ rather than trusting line numbers.
 
 ## Request lifecycle (one tool call)
 
-Client (remote-MCP, e.g. Quick Desktop)
+Client (remote-MCP: Kiro / Claude Code / Codex via DCR, or Amazon Quick)
   → CloudFront (HTTPS edge, optional WAFv2 rate limiting)
   → API Gateway
   → Middleware Lambda  (`lambda/mcp-middleware/index.ts`)
