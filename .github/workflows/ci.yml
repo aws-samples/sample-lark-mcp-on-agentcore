@@ -142,7 +142,7 @@ jobs:
           # CVE-2026-14257) because Dependency Review doesn't read that file.
           #   GHSA-3jxr-9vmj-r5cp — ReDoS; drop when the bundle ships >= 5.0.7
           #   GHSA-mh99-v99m-4gvg — OOM DoS; drop when the bundle ships >= 5.0.8
-          allow-ghsas: GHSA-3jxr-9vmj-r5cp, GHSA-mh99-v99m-4gvg
+          allow-ghsas: GHSA-3jxr-9vmj-r5cp, GHSA-mh99-v99m-4gvg, GHSA-rgw5-rvv9-x895
 
       - name: Gitleaks (secret detection)
         uses: gitleaks/gitleaks-action@v2
