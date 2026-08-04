@@ -24,7 +24,14 @@ export interface OAuthStackProps extends cdk.StackProps {
   /** Per-app slug; empty = default sentinel (byte-identical names). */
   slug?: string;
   runtimeArn?: string;
-  customDomain?: string;
+  /**
+   * Extra hosts allowed as OAuth *client* redirect_uri hosts (comma-separated).
+   * NOT a CloudFront alternate domain — this service is only reachable at its
+   * CloudFront domain. Loopback and QuickSight hosts are allowed unconditionally,
+   * so current clients need nothing here. deploy.sh re-threads this on every
+   * deploy (update-function-configuration replaces the whole env).
+   */
+  allowedRedirectHosts?: string;
   webAclArn?: string;
   domainVerification?: string;
   /** Endpoint cluster for the OAuth flow: "feishu" (China) or "lark" (international). Default "feishu". */
@@ -171,7 +178,7 @@ export class OAuthStack extends cdk.Stack {
         STATE_SECRET_PARAM: stateSecretParam,
         OAUTH_CLIENT_ID: oauthClientId,
         OAUTH_CLIENT_SECRET: "SET_AFTER_DEPLOY",
-        ALLOWED_DOMAINS: props.customDomain || "",
+        ALLOWED_DOMAINS: props.allowedRedirectHosts || "",
         DOMAIN_VERIFICATION: props.domainVerification || "",
         // Selects the OAuth endpoint cluster (feishu.cn vs larksuite.com). deploy.sh
         // re-threads this on every deploy (update-function-configuration replaces

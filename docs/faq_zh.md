@@ -20,6 +20,8 @@ A: 检查部署输出的 Redirect URL 是否注册到了正确的开发者后台
 
 请使用与 `LARKSUITE_CLI_BRAND` 设置对应的控制台。飞书和 Lark 的开发者后台相互独立，在一边注册不会自动同步到另一边。
 
+要填的就是部署输出里那个 CloudFront 地址，一字不差（`https://<id>.cloudfront.net/callback`）。这是唯一可用的值：发给飞书的重定向 URL 始终由 CloudFront 域名推导而来，填自己的 DNS 名一样报 20029。改完白名单记得发布新版本。
+
 **Q: 用户 30 天没使用，token 过期了？**
 
 A: 下次连接时会自动重新触发飞书授权。
@@ -132,7 +134,20 @@ A: 取决于 AWS Bedrock AgentCore 的可用区域。部署脚本提供了常用
 
 **Q: 支持自定义域名吗？**
 
-A: 支持。部署时脚本会提示输入自定义域名，或设置环境变量 `CUSTOM_DOMAIN=mcp.company.com`。
+A: 开箱不支持。服务只能通过它自己的 CloudFront 域名访问：distribution 没有配备用域名
+（alternate domain name）和 ACM 证书，把自己的 DNS 指过去会得到 `403 Bad request`
+（CloudFront 按 Host 头路由）。注册到飞书的重定向 URL 也始终是
+`<CloudFront 域名>/callback`。
+
+如果想把 MCP 端点放到自己域名上：只需要迁 `/mcp`，OAuth 可以留在 CloudFront——
+客户端是从 401 响应的 `WWW-Authenticate` 头发现授权服务器的，不会去改写你给的 URL。
+两条路，本项目都没内置：
+
+- 给 distribution 加备用域名 + us-east-1 的 ACM 证书，再把域名 CNAME 过去。在控制台手工
+  改是可行的，但这属于 CloudFormation 漂移：之后某次更新到 distribution 的部署会静默把它
+  抹掉，唯一症状是客户端开始 403。
+- 自己在前面放反向代理（ALB / nginx / 自建 CloudFront），把 Host 头改写成 CloudFront
+  域名。这样本项目零改动。
 
 **Q: 支持国际版 Lark 吗？**
 

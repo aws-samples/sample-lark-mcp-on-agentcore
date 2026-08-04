@@ -62,9 +62,15 @@ See also [faq_en.md](faq_en.md).
 <summary>ALLOWED_DOMAINS (no action needed for current clients)</summary>
 
 Registration requires the redirect URI host to be in the allowlist. Loopback
-(`localhost`/`127.0.0.1`) is always allowed — all current clients use loopback.
+(`localhost`/`127.0.0.1`) and `quicksight.aws.amazon.com` are always allowed —
+Kiro / Claude Code / Codex use loopback and Amazon Quick uses the QuickSight
+host, so no current client needs anything here.
 
-To add a non-loopback host in the future:
+To add another host in the future:
 `EXTRA_ALLOWED_DOMAINS=<host> ./scripts/deploy.sh --yes`
+
+This allowlist governs the *client's* callback URL, not a domain for this
+service. The service is only reachable at its own CloudFront domain, and the
+redirect URL sent to Feishu is always `<CloudFront domain>/callback`.
 
 </details>

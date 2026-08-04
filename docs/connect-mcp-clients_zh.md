@@ -58,10 +58,14 @@
 <details>
 <summary>ALLOWED_DOMAINS（当前客户端无需操作）</summary>
 
-注册要求重定向 URI 的 host 在白名单中。loopback（`localhost`/`127.0.0.1`）始终放行
-——当前所有客户端均走 loopback。
+注册要求重定向 URI 的 host 在白名单中。loopback（`localhost`/`127.0.0.1`）和
+`quicksight.aws.amazon.com` 始终放行——Kiro / Claude Code / Codex 走 loopback，
+Amazon Quick 走 QuickSight host，所以当前客户端都不需要配置。
 
-未来如需放行非 loopback host：
+未来如需放行其他 host：
 `EXTRA_ALLOWED_DOMAINS=<host> ./scripts/deploy.sh --yes`
+
+这份白名单管的是**客户端**的回调地址，不是本服务的域名。本服务只能通过它自己的
+CloudFront 域名访问，发给飞书的重定向 URL 始终是 `<CloudFront 域名>/callback`。
 
 </details>

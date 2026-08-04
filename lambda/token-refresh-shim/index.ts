@@ -111,14 +111,21 @@ interface LambdaEvent {
   source?: string;
 }
 
+// Extra hosts allowed as an OAuth *client's* redirect_uri (see /register and
+// /authorize below). This has NOTHING to do with the redirect_uri this service
+// sends to Feishu — that one is always CALLBACK_URL, i.e. the CloudFront domain.
 const ALLOWED_DOMAINS = (process.env.ALLOWED_DOMAINS || '').split(',').map(d => d.trim()).filter(Boolean);
 
+// The redirect_uri handed to Feishu/Lark. deploy.sh pins CALLBACK_URL to
+// <CloudFront>/callback, so the Host-header fallback only ever fires on a bare
+// `cdk deploy` (which leaves the SET_AFTER_DEPLOY placeholder). ALLOWED_DOMAINS
+// is deliberately NOT consulted here: this service has no CloudFront alternate
+// domain name, so a request can only legitimately arrive on an AWS-owned host.
 function getCallbackUrl(event: LambdaEvent): string {
   if (CALLBACK_URL_ENV && CALLBACK_URL_ENV !== 'SET_AFTER_DEPLOY') return CALLBACK_URL_ENV;
   const host = event.headers?.host || event.headers?.Host || event.requestContext?.domainName || '';
   if (!host) return '';
   if (/\.(cloudfront\.net|amazonaws\.com)$/.test(host)) return `https://${host}/callback`;
-  if (ALLOWED_DOMAINS.some(d => host === d || host.endsWith(`.${d}`))) return `https://${host}/callback`;
   return '';
 }
 

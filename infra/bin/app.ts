@@ -18,7 +18,9 @@ const slug = slugFromContext(app);
 const names = resolveSlug(slug);
 
 const runtimeArn = app.node.tryGetContext("runtimeArn") || process.env.RUNTIME_ARN || "";
-const customDomain = process.env.CUSTOM_DOMAIN || "";
+// Extra OAuth client redirect_uri hosts — NOT a domain for this service.
+// See OAuthStackProps.allowedRedirectHosts.
+const allowedRedirectHosts = process.env.EXTRA_ALLOWED_DOMAINS || "";
 const domainVerification = process.env.DOMAIN_VERIFICATION || "";
 // OAuth endpoint cluster: "lark" (larksuite.com) or "feishu" (feishu.cn, default).
 const larkBrand = process.env.LARKSUITE_CLI_BRAND === "lark" ? "lark" : "feishu";
@@ -37,7 +39,7 @@ const oauth = new OAuthStack(app, names.oauthStack, {
   env,
   slug,
   runtimeArn,
-  customDomain,
+  allowedRedirectHosts,
   domainVerification,
   larkBrand,
   webAclArn: waf?.webAclArn,

@@ -32,7 +32,7 @@ describe("CDK Snapshot Tests", () => {
     const stack = new OAuthStack(app, "TestOAuthStack", {
       env: TEST_ENV,
       runtimeArn: "arn:aws:bedrock-agentcore:us-west-2:123456789012:runtime/test-runtime",
-      customDomain: "mcp.example.com",
+      allowedRedirectHosts: "cb.example.com",
       webAclArn: "arn:aws:wafv2:us-east-1:123456789012:global/webacl/test-acl/abc123",
     });
 
