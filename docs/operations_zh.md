@@ -34,7 +34,7 @@ deploy.sh 是一个交互式部署脚本，完成从环境检查到端到端验�
 1c. 版本选择（飞书中国 / Lark 国际版）：设置 `LARKSUITE_CLI_BRAND`，同时驱动 OAuth 流程端点与 lark-cli 的 API 网关。可通过环境变量 `LARK_BRAND`/`LARKSUITE_CLI_BRAND` 覆盖；重复部署时复用上次选择；缺省为 `feishu`（非交互/CI）。
 2. 飞书 App ID + App Secret（支持环境变量 `FEISHU_APP_ID`/`FEISHU_APP_SECRET`，支持检测已有凭证复用）
 3. 调用飞书 API 验证凭证有效性
-4. 自定义域名（可选）
+4. 客户端 OAuth 回调 host 白名单（可选；不是本服务的域名——详见 [connect-mcp-clients_zh.md](connect-mcp-clients_zh.md)）
 5. WAF 启用/禁用
 6. 日志保留天数（30/90/180/365/永不过期）
 7. AgentCore Runtime 空闲回收时长（5/10/15/30 分钟，默认 10 分钟）

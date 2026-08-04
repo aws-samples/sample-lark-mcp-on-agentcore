@@ -295,5 +295,5 @@ GoGoGo, ThanksFace, SaluteFace, Shrug, ClownFace, HappyDragon
 
 ## References
 
-- [lark-im](../SKILL.md) - all IM commands
+- `lark_get_skill(domain="im")` - all IM commands
 - Official emoji doc: `https://open.feishu.cn/document/uAjLw4CM/ukTMukTMukTM/reference/im-v1/message-reaction/emojis-introduce`

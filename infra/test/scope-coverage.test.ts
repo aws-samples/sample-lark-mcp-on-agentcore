@@ -86,16 +86,28 @@ describe("scope coverage", () => {
       "schema", "update", "event", "skill",
     ]);
 
+    // Service list from the top-level --help. lark-cli renames this section
+    // between releases ("Available Commands" pre-1.0.8x, "Lark domains" after),
+    // so accept either heading — matching neither yields an EMPTY service list,
+    // which would make every assertion below vacuously pass and silently stop
+    // guarding extraction completeness. The count assertion catches that.
     const helpText = run("lark-cli", "--help");
     const services: string[] = [];
     let inCommands = false;
     for (const line of helpText.split("\n")) {
-      if (line.includes("Available Commands")) { inCommands = true; continue; }
+      if (/^(Available Commands|Lark domains):/.test(line.trim())) { inCommands = true; continue; }
       if (inCommands && line.trim() === "") break;
+      // A non-indented line starts the next section (e.g. "Flags:").
+      if (inCommands && /^\S/.test(line)) break;
       if (!inCommands) continue;
       const m = line.match(/^\s{2,4}(\w+)\s/);
       if (m && !skipServices.has(m[1])) services.push(m[1]);
     }
+    expect(
+      services.length,
+      "parsed 0 services from `lark-cli --help` — the section heading changed again; " +
+        "fix the parser, otherwise this test silently stops checking anything",
+    ).toBeGreaterThan(10);
 
     const runtimeTools = new Set<string>();
     for (const svc of [...new Set(services)]) {

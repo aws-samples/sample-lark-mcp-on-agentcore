@@ -33,13 +33,13 @@ lark_im_feed_group_list_item(feed_group_id="ofg_xxx", page_all=true, start_time=
 |---|---|---|
 | `feed_group_id` | Yes | Feed group ID (`ofg_xxx`); path parameter |
 | `page_size` | No | Records per page, 1-50 (default 50) |
-| `page_token` | No | Continuation token for a specific page |
+| `page_token` | No | Starting cursor, normally returned by a previous response |
 | `page_all` | No | Auto-paginate and merge all pages |
 | `page_limit` | No | Max pages when `page_all` is set, 1-1000 (default 20) |
 | `start_time` | No | Update-time window start (Unix milliseconds as a decimal string) |
 | `end_time` | No | Update-time window end (Unix milliseconds as a decimal string) |
 
-When `page_token` is set explicitly, it wins over `page_all` (you get exactly that page).
+When `page_token` and `page_all` are supplied together, automatic pagination starts at that cursor and continues until exhaustion or `page_limit`.
 
 ## Output
 

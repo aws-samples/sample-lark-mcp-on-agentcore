@@ -80,4 +80,4 @@ lark_im_messages_resources_download(message_id="om_xxx", file_key="img_v3_xxx", 
 
 ## References
 
-- [lark-im](../SKILL.md) - all message-related commands
+- `lark_get_skill(domain="im")` - all message-related commands

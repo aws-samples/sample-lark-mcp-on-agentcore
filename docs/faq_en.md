@@ -20,6 +20,8 @@ A: Verify the Redirect URL from deploy output is registered in the correct devel
 
 Use the console matching your `LARKSUITE_CLI_BRAND` setting. The Feishu and Lark consoles are independent — registering in one does not apply to the other.
 
+Register the CloudFront URL exactly as printed (`https://<id>.cloudfront.net/callback`). This is the only value that works: the redirect URL sent to Feishu is always derived from the CloudFront domain, so registering your own DNS name instead still fails with 20029. Remember to publish a new app version after editing the list.
+
 **Q: User token expired after 30 days of inactivity?**
 
 A: Next connection automatically triggers Feishu re-authorization.
@@ -132,7 +134,23 @@ A: Depends on AWS Bedrock AgentCore availability. The deploy script offers commo
 
 **Q: Custom domain support?**
 
-A: Yes. Set `CUSTOM_DOMAIN=mcp.company.com` or follow the deploy script prompt.
+A: Not out of the box. The service is only reachable at its CloudFront domain:
+the distribution has no alternate domain name / ACM certificate, so pointing
+your own DNS name at it gets a `403 Bad request` (CloudFront routes on the Host
+header). The redirect URL registered with Feishu is always
+`<CloudFront domain>/callback`.
+
+If you want the MCP endpoint on your own domain, only `/mcp` has to move — OAuth
+can stay on CloudFront, because clients discover the authorization server from
+the `WWW-Authenticate` header on the 401 rather than by rewriting your URL. Two
+ways to get there, neither shipped here:
+
+- Add the alternate domain name + a us-east-1 ACM certificate to the
+  distribution and CNAME your domain to it. Doing this by hand in the console
+  works, but it is CloudFormation drift: a later deploy that updates the
+  distribution silently drops it, and the only symptom is clients getting 403.
+- Put your own reverse proxy (ALB / nginx / your own CloudFront) in front and
+  rewrite the Host header to the CloudFront domain. Nothing here changes.
 
 **Q: Lark (international) support?**
 

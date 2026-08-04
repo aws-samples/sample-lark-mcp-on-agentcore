@@ -21,6 +21,9 @@ lark_im_chat_list(page_size="50")
 # Pagination
 lark_im_chat_list(page_token="xxx")
 
+# Fetch multiple pages automatically, up to 10 pages by default
+lark_im_chat_list(page_all=true)
+
 # Drop muted chats (user identity only)
 lark_im_chat_list(exclude_muted=true)
 
@@ -42,11 +45,15 @@ lark_im_chat_list(types="p2p")
 | `types` | No | `group`, `p2p` (comma-separated) | Chat types to include. Omitted = groups only (backward compatible). `p2p` requires user identity; under bot identity, `types="p2p"` alone is rejected and `types="p2p,group"` is silently downgraded to `group` |
 | `sort` | No | `create_time` (default, ascending), `active_time` (descending) | Result ordering |
 | `page_size` | No | 1-100, default 20 | Number of results per page |
-| `page_token` | No | - | Pagination token from the previous response |
+| `page_token` | No | - | Starting cursor, normally returned by a previous response |
+| `page_all` | No | - | Automatically fetch and merge subsequent pages; capped by `page_limit` |
+| `page_limit` | No | 1-1000, default 10 | Maximum pages fetched by `page_all` |
 | `exclude_muted` | No | User identity only | Drop chats the current user has muted (do-not-disturb). Under bot identity, the flag is silently inactive; see "Filtering muted chats" below |
 | `format` | No | - | Output as JSON |
 
 > **Note:** Supports both user identity (default) and bot identity. When using bot identity, the app must have bot capability enabled.
+
+With `page_all=true`, `page_token` sets the starting cursor. If `meta.pagination.complete=false`, resume from `meta.pagination.next_token` or raise `page_limit`.
 
 ## Output Fields
 
@@ -140,7 +147,7 @@ lark_im_chat_list(page_size="100", page_token="xxx")
 
 | Symptom | Root Cause | Solution |
 |---------|---------|---------|
-| `page_size must be an integer between 1 and 100` | page-size is out of range or not an integer | Use an integer between 1 and 100 |
+| `invalid page_size 101: must be between 1 and 100` | page_size is out of range | Use an integer between 1 and 100 |
 | Permission denied (99991672) | The bot app does not have `im:chat:read` TAT permission enabled | Enable the permission for the app in the Open Platform console |
 | Permission denied (99991679) with user identity | UAT is not authorized for `im:chat:read` | Ensure the scope is authorized |
 | `Bot ability is not activated` (232025) | The app does not have bot capability enabled | Enable bot capability in the Open Platform console |

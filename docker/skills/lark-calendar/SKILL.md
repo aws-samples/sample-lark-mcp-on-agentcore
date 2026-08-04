@@ -18,12 +18,12 @@ description: "飞书日历：管理日历日程和会议室。查看/搜索日�
 | Shortcut | 说明 |
 |----------|------|
 | `lark_calendar_agenda` | 查看日程安排（默认今天） |
-| `lark_calendar_meeting` | 通过日程事件 ID 获取关联的视频会议信息（meeting_id、meeting_note），日程开过视频会议才会有meeting_id |
+| `lark_calendar_meeting` | 通过日程事件 ID 获取关联的视频会议信息（meeting_id、meeting_note），日程开过视频会议才会有meeting_id（详见 lark_get_skill(domain="calendar", section="meeting")） |
 | `lark_calendar_create` | 创建日程并邀请参会人（ISO 8601 时间） |
 | `lark_calendar_update` | 更新既有日程字段，或独立增量添加/移除参会人和会议室 |
 | `lark_calendar_freebusy` | 查询用户主日历的忙闲信息和 RSVP 状态（纯查询场景；预约场景走 `lark_calendar_suggestion`） |
 | `lark_calendar_room_find` | 针对一个或多个**明确的**时间块查找可用会议室（无明确时间时禁止直接调用，需先走 lark_calendar_suggestion） |
-| `lark_calendar_rsvp` | 回复日程（接受/拒绝/待定） |
+| `lark_calendar_rsvp` | 回复日程（接受/拒绝/待定）（详见 lark_get_skill(domain="calendar", section="rsvp")） |
 | `lark_calendar_suggestion` | 根据非明确时间或一段时间范围，推荐多个可用时间块方案 |
 
 ### `lark_calendar_get` — 单日程详情
@@ -81,12 +81,12 @@ lark_calendar_freebusy(start="2026-03-11", end="2026-03-12", user_id="ou_xxx")
 
 ## 前置条件路由
 
+> **先判断是否重复性日程**：若操作对象是重复性日程，必须先调用 lark_get_skill(domain="calendar", section="recurring") 读取重复性日程操作规范，并在用户未明确范围时先确认「仅此次/全部/此次及后续」（不要默认仅此次），再按下表进入具体操作流程。
+
 | 场景 | 前置要求 |
 |------|----------|
 | 预约日程/会议、调整时间、查会议室 | 先调用 lark_get_skill(domain="calendar", section="schedule-meeting") |
 | 仅编辑字段（标题/描述）或增删参会人 | 先定位 `event_id`，再调用 lark_get_skill(domain="calendar", section="update") |
-| 编辑已有日程（涉及时间或会议室） | 先定位目标日程 `event_id`；若是重复性日程，必须定位到具体实例的 `event_id`（禁止使用原重复日程 ID） |
-| 编辑/删除重复性日程 | 先调用 lark_get_skill(domain="calendar", section="recurring")，按操作范围（仅此次/全部/此次及后续）执行 |
 | 调用任何 Shortcut | 先调用 lark_get_skill(domain="calendar", section="...") 读取其对应说明文档 |
 
 ## 写操作反馈
@@ -184,4 +184,4 @@ lark_im_chat_search(query="<query>")
 - 会议室物理设施管理 → 管理员后台
 
 **注意（强制性）：**
-- 涉及日期（时间）字符串与时间戳的相互转换时，务必调用系统命令或脚本代码等外部工具进行处理，以确保转换的绝对准确。违者将导致严重的逻辑错误！
+- 涉及日期（时间）字符串与时间戳的相互转换时，务必调用系统命令或脚本代码等外部工具进行处理，以确保转换的绝对准确；换算**禁止依赖容器默认时区**（常为 UTC，会导致 8 小时偏移），必须显式指定目标时区。违者将导致严重的逻辑错误！

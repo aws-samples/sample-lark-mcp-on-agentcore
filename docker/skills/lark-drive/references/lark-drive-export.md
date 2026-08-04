@@ -108,4 +108,4 @@ lark_drive_export_download(file_token="<EXPORTED_FILE_TOKEN>", file_name="weekly
 
 ## 参考
 
-- [lark-drive](../SKILL.md) -- 云空间（云盘/云存储）全部命令
+- `lark_get_skill(domain="drive")` -- 云空间（云盘/云存储）全部命令

@@ -147,4 +147,4 @@ lark_im_messages_send(chat_id="<chat_id>", text="Welcome, everyone!")
 
 ## References
 
-- [lark-im](../SKILL.md) - all IM commands
+- `lark_get_skill(domain="im")` - all IM commands

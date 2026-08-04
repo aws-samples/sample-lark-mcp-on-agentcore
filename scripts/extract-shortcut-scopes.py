@@ -229,6 +229,50 @@ def main():
                 results.append({"service": "sheets", "command": cmd, "scopes": ["sheets:spreadsheet:write_only"]})
                 extracted_keys.add(("sheets", cmd))
 
+    # 3d: Config-struct factories — a `common.Shortcut{}` returned from inside a
+    # helper whose Command comes from a config field (`Command: cfg.Command`),
+    # with the actual command names in sibling config-struct literals:
+    #
+    #   var DriveResolveComment = newDriveCommentSolvedShortcut(driveCommentSolvedConfig{
+    #       Command: "+resolve-comment", ...})
+    #   func newDriveCommentSolvedShortcut(cfg ...) common.Shortcut {
+    #       return common.Shortcut{Service: "drive", Command: cfg.Command,
+    #                              Scopes: [...], ConditionalScopes: [...]}}
+    #
+    # Phase 1 skips these: `cfg.Command` is not a literal, so `command` is empty.
+    # Service and the scope fields ARE literals in the factory body, so read them
+    # from there and pair them with every command literal in the same file —
+    # unlike 3a-3c this needs no hardcoded service/scope guesses.
+    #
+    # The factory's `common.Shortcut{` closes at an INDENTED brace, so
+    # shortcut_pattern (which anchors `\n}` at column 0) swallows the rest of the
+    # function into one match. That is harmless here: the fields are read by name.
+    config_cmd_pattern = re.compile(r'^\s*Command\s*:\s*"(\+[^"]+)"\s*,', re.MULTILINE)
+    for gofile in sorted(src.rglob("*.go")):
+        if "_test.go" in gofile.name:
+            continue
+        content = strip_comments(gofile.read_text())
+        for m in shortcut_pattern.finditer(content):
+            body = m.group(1)
+            # Only factories: a Command that is a field selector, not a literal.
+            if not re.search(r'Command\s*:\s*\w+\.\w+\s*,', body):
+                continue
+            service = extract_string_field(body, "Service")
+            if not service:
+                continue
+            user_scopes, has_user = extract_scope_field(body, "UserScopes")
+            generic_scopes, _ = extract_scope_field(body, "Scopes")
+            cond_user, _ = extract_scope_field(body, "ConditionalUserScopes")
+            cond_generic, _ = extract_scope_field(body, "ConditionalScopes")
+            base_scopes = user_scopes if has_user and user_scopes else generic_scopes
+            cond_scopes = cond_user if cond_user else cond_generic
+            all_scopes = list(dict.fromkeys(base_scopes + cond_scopes))
+            for cm in config_cmd_pattern.finditer(content):
+                cmd = cm.group(1)
+                if (service, cmd) not in extracted_keys:
+                    results.append({"service": service, "command": cmd, "scopes": all_scopes})
+                    extracted_keys.add((service, cmd))
+
     results.sort(key=lambda x: (x["service"], x["command"]))
 
     output = {

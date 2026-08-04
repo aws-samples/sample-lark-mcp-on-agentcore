@@ -65,6 +65,14 @@ lark_invoke(tool_name="lark_slides_xml_presentations_get", args={
 }
 ```
 
+### 常见错误
+
+| 错误码 | 含义 | 解决方案 |
+|--------|------|----------|
+| 404 | 演示文稿不存在 | 检查 `xml_presentation_id` 是否正确 |
+| 403 | 权限不足 | 检查是否拥有 `slides:presentation:read` scope，或是否有访问权限 |
+| 400 | 参数格式错误 | 确保 `params` 是合法的 JSON 字符串 |
+
 ## 注意事项
 
 1. lark-slides 工作流默认使用 `lark_slides_xml_get`；只有必须直接调底层 API 时，才使用 `lark_invoke`
@@ -75,5 +83,5 @@ lark_invoke(tool_name="lark_slides_xml_presentations_get", args={
 ## 相关命令
 
 - `lark_get_skill(domain="slides", section="create")` - 创建空白 PPT
-- `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")`（`lark_get_skill(domain="slides", section="xml-presentation-slide-create")`） - 添加幻灯片页面
-- `lark_get_skill(domain="slides", section="xml-presentation-slide-delete")` - 删除幻灯片页面
+- `lark_get_skill(domain="slides", section="add-slide")` - 添加幻灯片页面
+- `lark_get_skill(domain="slides", section="delete-slide")` - 删除幻灯片页面

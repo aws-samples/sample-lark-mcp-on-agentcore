@@ -782,7 +782,11 @@ describe('getCallbackUrl — dynamic host derivation', () => {
     process.env.CALLBACK_URL = origCb;
   });
 
-  it('derives callback from ALLOWED_DOMAINS custom domain', async () => {
+  // ALLOWED_DOMAINS allowlists an OAuth *client's* redirect_uri host — it must
+  // never be used to derive the redirect_uri we hand to Feishu. The service has
+  // no CloudFront alternate domain name, so a request on such a host cannot be
+  // legitimate and a callback derived from it would be rejected as 20029 anyway.
+  it('does NOT derive callback from an ALLOWED_DOMAINS host', async () => {
     const origCb = process.env.CALLBACK_URL;
     const origDomains = process.env.ALLOWED_DOMAINS;
     process.env.CALLBACK_URL = '';
@@ -792,7 +796,8 @@ describe('getCallbackUrl — dynamic host derivation', () => {
       headers: { host: 'mydomain.example.com' },
       queryStringParameters: { redirect_uri: 'https://quicksight.aws.amazon.com/cb', code_challenge: 'c', code_challenge_method: 'S256' },
     });
-    expect(r.statusCode).toBe(302);
+    expect(r.statusCode).toBe(500);
+    expect(r.body).toContain('callback URL cannot be derived');
     process.env.CALLBACK_URL = origCb;
     process.env.ALLOWED_DOMAINS = origDomains;
   });

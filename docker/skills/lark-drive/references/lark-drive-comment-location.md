@@ -1,11 +1,12 @@
 # 文档评论定位字段
 
-当用户需要根据评论定位文档正文位置、对文档做 review、区分多处相同引用文本，或把评论落点映射到 `lark_docs_fetch(detail="with-ids")` 的内容时，优先使用 `lark_drive_list_comments(need_relation=true)` 查询 docx 评论位置。
+当用户需要根据评论定位文档正文位置、对文档做 review、区分多处相同引用文本，或把评论落点映射到 `lark_docs_fetch(detail="with-ids")` 的内容时，优先使用 `lark_drive_list_comments(need_relation=true)` 查询 docx 评论位置；已知评论 ID 时用 `lark_drive_batch_query_comments(need_relation=true)`。
 
 ## 适用范围
 
 - 当前只有 `file_type=docx` 支持通过 `need_relation=true` 查询评论的位置，并返回可用于定位正文 block 的 `relation`、`parent_type`、`parent_token` 等字段。
-- `lark_drive_list_comments()` 会在目标不是 docx 时静默忽略 `need_relation`，避免把无效参数传给 OpenAPI。遇到 sheet、bitable、slides、普通文件等类型的评论时，不要承诺可以用 `need_relation` 精确定位正文位置，应退回普通评论字段、对应资源能力下钻或人工确认。
+- `lark_drive_list_comments()` 和 `lark_drive_batch_query_comments()` 都会在目标不是 docx 时静默忽略 `need_relation`，避免把无效参数传给 OpenAPI。遇到 sheet、bitable、slides、普通文件等类型的评论时，不要承诺可以用 `need_relation` 精确定位正文位置，应退回普通评论字段、对应资源能力下钻或人工确认。
+- 注意参数位置差异：list 的 `need_relation` 在 query params，batch_query 的在请求 body（直接调原生 OpenAPI 时才需要关心；两个 shortcut 已各自处理）。
 
 ## 调用方式
 
@@ -21,17 +22,13 @@ lark_drive_list_comments(url="<docx_or_wiki_url>", need_relation=true)
 lark_drive_list_comments(token="<wiki_token>", type="wiki", need_relation=true)
 ```
 
-只有在需要未被 shortcut 暴露的底层参数时，才直接调用原生 OpenAPI。此时把 `need_relation` 放在 params：
+已知评论 ID 时，用 `lark_drive_batch_query_comments(need_relation=true)` 直接按 ID 取：
 
 ```
-lark_invoke(tool_name="lark_drive_file_comments_list", args={params: {"file_token": "<doc_token>", "file_type": "docx", "is_solved": false, "need_relation": true}})
+lark_drive_batch_query_comments(url="<docx_or_wiki_url>", comment_ids="<comment_id>", need_relation=true)
 ```
 
-已知评论 ID 批量查询时，把 `need_relation` 放在 data 里：
-
-```
-lark_invoke(tool_name="lark_drive_file_comments_batch_query", args={params: {"file_token": "<doc_token>", "file_type": "docx"}, data: {"comment_ids": ["<comment_id>"], "need_relation": true}})
-```
+只有在需要 shortcut 未暴露的底层参数时，才直接调原生 OpenAPI（两个 shortcut 已各自处理 `need_relation` 的位置差异：list 在 query params，batch_query 在请求 body）。
 
 同时获取文档内容，并要求返回 block id：
 
@@ -135,7 +132,7 @@ lark_docs_fetch(doc="<doc_token_or_url>", detail="with-ids")
 ## 定位流程
 
 1. 确认目标是 `file_type=docx`；只有 docx 文档支持通过 `need_relation` 查询评论位置。
-2. 用 `lark_drive_list_comments(need_relation=true)` 获取评论；已知评论 ID 且需要批量查询时，可用 `lark_invoke(tool_name="lark_drive_file_comments_batch_query", ...)` 并带 `need_relation=true`。原生 `lark_invoke(tool_name="lark_drive_file_comments_list", ...)` 仅作为低层参数兜底。
+2. 用 `lark_drive_list_comments(need_relation=true)` 获取评论；已知评论 ID 且需要批量查询时，用 `lark_drive_batch_query_comments(need_relation=true)`。原生 `lark_invoke(tool_name="lark_drive_file_comments_list", ...)` / `lark_invoke(tool_name="lark_drive_file_comments_batch_query", ...)` 仅在需要 shortcut 未暴露的底层参数时兜底。
 3. 用 `lark_docs_fetch(detail="with-ids")` 获取文档内容。
 4. 对每条评论先看 `relation`：
    - 如果存在 `relation.relation`，解析这个 JSON 字符串。

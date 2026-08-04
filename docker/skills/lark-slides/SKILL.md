@@ -34,7 +34,7 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 - `<shape type="rect">` 只是形状不是容器，`<icon>`、`<img>`、`<shape type="text">` 和其他 `<shape>` 必须与它平级靠坐标叠放。
 - 填充渐变颜色必须用 `<fill><fillColor color="linear-gradient(135deg, rgba(R,G,B,A) 0%, rgba(R,G,B,A) 100%)"/></fill>`。
 - 编辑页面前必须阅读 `lark_get_skill(domain="slides", section="edit-workflows")`。
-- 绘制图表前必须阅读 `slides_chart_demo.xml`。
+- 绘制图表前必须阅读 `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` 的图表章节（上游 `slides_chart_demo.xml` 本环境不可获取）。
 - 当用户要求无损复述历史上下文时，必须无损复述以上权威经验、必读的技能文档（需要重新阅读）和易错元素语法（尤其是 `<table>` 和 `<chart>`）。
 
 ## 豆包设计原则
@@ -74,14 +74,16 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 
 | 用户需求 | 优先动作 | 关键文档 / 工具 |
 |----------|----------|-----------------|
-| 新建 PPT | 先规划 `slide_plan.json`，再按复杂度选择一步或两步创建 | `planning-layer.md`、`visual-planning.md`、`asset-planning.md`、`lark-slides-create.md`、`lark_slides_create` |
+| 新建 PPT | 先规划 `slide_plan.json`，再按复杂度选择一步或两步创建 | `planning-layer.md`、`visual-planning.md`、`asset-planning.md`、`lark-slides-create.md`、`lark_slides_create`、`lark_slides_add_slide`、`lark-slides-add-slide.md`（两步创建逐页添加） |
 | 用户要求使用模板，或提供 PPTX 文件要求修改、美化 | 将模板导入为 Slides 再编辑 | `lark-slides-pptx-template-workflows.md` |
 | 编辑单个标题、文本块、图片或局部元素 | 优先块级替换/插入，不改页序 | `lark_slides_replace_slide`、`lark-slides-replace-slide.md` |
+| 给已有 PPT 追加或插入页面 | 一次一页，`slide` 收一整页 `<slide>` XML | `lark_slides_add_slide`、`lark-slides-add-slide.md` |
+| 删除页面 | 按 `slide_id` 单页删除，删前先回读确认 | `lark_slides_delete_slide`、`lark-slides-delete-slide.md` |
 | 读取或分析已有 PPT | 解析 slides/wiki token，用 shortcut 回读全文 XML 或读取单页 XML，保存 `xml_presentation_id`、`slide_id`、`revision_id` | `lark_slides_xml_get`、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_get")`、`lark-slides-xml-presentations-get.md` |
 | 查看或回滚历史版本 | 先用 `lark_slides_history_list` 找 `history_version_id`，再 `lark_slides_history_revert`，必要时 `lark_slides_history_revert_status` 轮询 | `lark_slides_history_list`、`lark-slides-history.md` |
 | 获取幻灯片页面截图 | 用 `slide_id` 或页号指定页面，一次不超过 10 页 | `lark_slides_screenshot`、`lark-slides-screenshot.md` |
-| 上传或使用图片 | 先上传为 `file_token`，禁止直接写 http(s) 外链 | `lark_slides_media_upload`、`lark-slides-media-upload.md`，或 `lark_slides_create` 的 `slides` XML 里写 `<img src="@./path">` 占位符 |
-| 绘制图表 | 原生图表（柱状、条形、折线、面积、饼（环）、雷达、组合图）用 `<chart>`，其他（漏斗图、金字塔图、象限图、矩阵图等）用 `<shape>` + `<line>` 模拟 | `xml-schema-quick-ref.md`、`slides_chart_demo.xml` |
+| 上传或使用图片 | 先上传为 `file_token`，禁止直接写 http(s) 外链 | `lark_slides_media_upload`、`lark-slides-media-upload.md`，或 `lark_slides_create` 的 `slides` / `lark_slides_add_slide` 的 `slide` XML 里写 `<img src="@./path">` 占位符 |
+| 绘制图表 | 原生图表（柱状、条形、折线、面积、饼（环）、雷达、组合图）用 `<chart>`，其他（漏斗图、金字塔图、象限图、矩阵图等）用 `<shape>` + `<line>` 模拟 | `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` 的图表章节 |
 | 绘制表格 | 优先用 `rect` 和 `text` 模拟，其他用 `<table>` | `xml-schema-quick-ref.md` |
 | 使用图标 | 禁止盲猜 iconType，必须先检索 IconPark，再写 `<icon iconType="...">`，图标必须填充颜色并和背景有足够对比，禁止使用 emoji 图标 | `lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", args=["search", ...])`、`lark_get_skill(domain="slides", section="iconpark")` |
 | 创建失败、空白页、3350001、布局异常 | 先回读状态，再按排障清单修复，不假设原操作原子成功 | `troubleshooting.md`、`validation-checklist.md` |
@@ -96,7 +98,7 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 
 **CRITICAL — 新建演示文稿或大幅改写页面时，规划 `asset_need` MUST 遵循 `lark_get_skill(domain="slides", section="asset-planning")`：只做元数据规划，必须有 `fallback_if_missing`，不得要求真实搜索、下载或上传素材。**
 
-**CRITICAL — 将完整 `<slide>` XML 提交给 `lark_slides_create` 的 `slides` 参数、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` 或 `lark_slides_replace_pages` 之前，MUST 先运行唯一版式准出入口 `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`；`summary.error_count` 必须为 0 才能调用接口，`summary.warning_count > 0` 时必须先做对应页面的截图复核。**
+**CRITICAL — 将完整 `<slide>` XML 提交给 `lark_slides_create` 的 `slides` 参数、`lark_slides_add_slide`、原生 `xml_presentation.slide.create`（通过 `lark_invoke`）或 `lark_slides_replace_pages` 之前，MUST 先运行唯一版式准出入口 `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`；`summary.error_count` 必须为 0 才能调用接口。**
 
 **CRITICAL — 创建或大幅改写后，MUST 按 `lark_get_skill(domain="slides", section="validation-checklist")` 做显式验证：回读全文 XML、核对页数和关键元素，并使用 `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待提交 XML>")` 统一检查 XML、越界、重叠、空白页和内容稀疏风险。**
 
@@ -112,7 +114,7 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 
 ## 执行前必做
 
-> **重要**：`references/slides_xml_schema_definition.xml` 是此 skill 唯一正确的 XML 协议来源；其他 md 仅是对它的摘要。
+> **重要**：XML 协议以上游 `references/slides_xml_schema_definition.xml` 为准，其他 md 是对它的摘要。⚠️ 该 `.xml` 无法通过 `lark_get_skill` 获取（只支持 `.html` / `.txt` / `.csv`），本环境里请以 `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` 为实际依据；摘要没覆盖到的字段用 `lark_discover(query="slides.<resource>.<method>")` 查。
 
 高频只读：
 
@@ -124,21 +126,96 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 
 调用相关工具前必须读取相关的文档以了解工具的使用方式：
 
-- 创建：`lark_get_skill(domain="slides", section="create")`、`lark_get_skill(domain="slides", section="xml-presentation-slide-create")`（逐页添加）
+- 创建：`lark_get_skill(domain="slides", section="create")`、`lark_get_skill(domain="slides", section="add-slide")`（逐页添加 / 给已有 PPT 追加页面）
+- 删除页面：`lark_get_skill(domain="slides", section="delete-slide")`
 - 从模板创建或编辑已有本地 PPTX：`lark_get_skill(domain="slides", section="pptx-template-workflows")`
 - 阅读：`lark_get_skill(domain="slides", section="xml-presentations-get")`
 - 编辑：`lark_get_skill(domain="slides", section="edit-workflows")`、`lark_get_skill(domain="slides", section="replace-slide")`、`lark_get_skill(domain="slides", section="replace-pages")`
 - 历史版本：`lark_get_skill(domain="slides", section="history")`
 - 截图：`lark_get_skill(domain="slides", section="screenshot")`
 - 图片：`lark_get_skill(domain="slides", section="media-upload")`
-- 图表：`slides_chart_demo.xml`
+- 图表：`lark_get_skill(domain="slides", section="xml-schema-quick-ref")` 的图表章节
 - 图标：`lark_get_skill(domain="slides", section="iconpark")`、`lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", ...)`
 - 排障：`lark_get_skill(domain="slides", section="troubleshooting")`
-- 完整协议：`slides_xml_schema_definition.xml`
+- 完整协议：`lark_get_skill(domain="slides", section="xml-schema-quick-ref")`；摘要未覆盖的字段用 `lark_discover(query="slides.<resource>.<method>")` 查
 
 ## Workflow
 
-> **这是演示文稿，不是文档。** 每页 slide 是独立的视觉画面，信息密度要适当，排版要留白。
+### Design Ideas
+
+不要生成无设计感的幻灯片。纯白背景 + 标题 + bullets 只能作为极简临时稿，不能作为正式交付。
+
+开始写 XML 前，先在 `slide_plan.json` 里确定 deck 级视觉策略：
+
+- **主题化配色**：配色必须服务本次主题、行业和受众，不要默认蓝色商务风。如果把同一套颜色换到另一个完全不同主题仍然成立，说明配色不够具体。
+- **主次比例**：选择 1 个主色承担约 60-70% 视觉权重，1 个辅助色承担结构和分区，1 个强调色只用于关键数字、结论或行动点。不要让所有颜色权重相同。
+- **背景一致性**：先确定全 deck 的背景策略，默认保持同一明暗基调和底色体系；无论深浅，都要保证内容和背景对比充足。
+- **统一 motif**：选择一个可复用视觉母题贯穿全文，例如编号节点、卡片处理方式、半出血图片区域、标题、页脚。不要每页换一套装饰语言。
+
+每页至少要有一个视觉元素：图片、图标、图表、表格、流程、对比结构或大号数字。文本框本身不算主视觉。
+
+常见页面形态：
+
+- **双栏结构**：左文右图或左图右文，视觉区域占 35-45% 宽度。
+- **图标行**：图标在色块或圆形底中，右侧是短标题和一句解释。
+- **网格**：适合能力、模块、风险、行动项，每格内容保持同等层级。
+- **半出血视觉**：图片占据左/右半屏，文字覆盖或贴边排布。
+- **大数字卡片**：核心指标用大数字，下面配标签与简短解读。
+- **对比列**：before/after、方案 A/B、问题/解法用左右并列，标题和基线严格对齐。
+- **时间线/流程图**：步骤用节点和箭头表达，流程方向必须一眼可见。
+
+常见错误必须避免：
+
+- 不要所有页面复用同一种标题 + 三 bullets 版式。
+- 不要用低对比文字或低对比图标，例如浅灰字压在浅色背景上。
+- 不要让装饰线穿过文字，或让页脚、来源、编号挤压主体内容。
+- 不要把素材缺失表现为空白图片框；必须按 `fallback_if_missing` 生成替代图片。
+- 不要在任何位置使用 emoji 图标。
+
+### 生成流程
+
+```text
+Step 1: 需求分析 & 读取知识
+  - 分析主题、受众、页数、风格；
+  - 若用户要求使用模板，按 pptx-template-workflows 处理
+  - 读取 xml-schema-quick-ref；新建 / 大幅改写时还要读取 planning-layer、visual-planning、asset-planning
+  - 涉及图表读取 xml-schema-quick-ref 的图表章节（上游 `slides_chart_demo.xml` 本环境不可获取）
+
+Step 2: 生成大纲 → 写入 slide_plan.json
+  - 生成结构化大纲
+  - 新建 / 大幅改写必须先创建目录并写入 `slide_plan.json`
+  - plan 字段、路径命名和 `asset_need` 结构按 planning-layer / asset-planning 执行
+
+Step 3: 按 slide_plan.json 生成 XML → 创建
+  - 逐页消费 plan：key_message 定主结论，layout_type 定几何，visual_focus 定主视觉，text_density 定文本量
+  - 缺少真实素材时必须用 `fallback_if_missing` 生成替代图片，不要留空
+  - 读 create 文档定一步创建还是两步创建，并据此构造 lark_slides_create；两步创建再读 add-slide 文档用 lark_slides_add_slide 逐页添加
+  - 图片按 media-upload 处理；复杂 XML、转义和 3350001 排查按 troubleshooting 执行
+
+Step 4: 审查 & 交付
+  - 创建完成后，必须用 lark_slides_xml_get 读取全文 XML，并按 validation-checklist 做显式验证记录，包括 XML 文本重叠检查
+  - 失败或部分成功按 troubleshooting 处理；局部问题优先用 lark_slides_replace_slide 修正
+  - 没问题 → 交付 PPT 链接
+```
+
+> 渐变色必须使用 `rgba()` 格式并带百分比停靠点，如 `linear-gradient(135deg,rgba(15,23,42,1) 0%,rgba(56,97,140,1) 100%)`。使用 `rgb()` 或省略停靠点会导致服务端回退为白色。
+
+### 大纲模板
+
+生成大纲时使用以下格式：
+
+```text
+[PPT 标题] — [定位描述]，面向 [目标受众]
+
+页面结构（N 页）：
+1. 封面页：[标题文案]
+2. [页面主题]：[要点1]、[要点2]、[要点3]
+3. [页面主题]：[要点描述]
+...
+N. 结尾页：[结尾文案]
+
+风格：[配色方案]，[排版风格]
+```
 
 ### 核心概念
 
@@ -149,7 +226,7 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 | `/slides/` | `https://example.larkoffice.com/slides/xxxxxxxxxxxxx` | `xml_presentation_id` | URL 路径中的 token 直接作为 `xml_presentation_id` 使用 |
 | `/wiki/` | `https://example.larkoffice.com/wiki/wikcnxxxxxxxxx` | `wiki_token` | 需要先查询获取真实的 `obj_token` |
 
-> `lark_slides_replace_slide` 和 `lark_slides_media_upload` 会自动解析以上两种 URL；直接调用原生 API 时仍需手动解析 wiki 链接。
+> 带 `presentation` 参数的 slides 工具都会自动解析以上两种 URL；直接调用原生 API 时仍需手动解析 wiki 链接。
 
 #### Wiki 链接特殊处理
 
@@ -159,11 +236,31 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 lark_invoke(tool_name="lark_wiki_spaces_get_node", args={params: {"token": "wiki_token"}})
 ```
 
+带 `presentation` 参数的 slides 工具都会自动解析 `/wiki/` URL 并校验 `obj_type`；手动调用 `xml_presentations.*` / `xml_presentation.slide.*` 时才需要自己做这一步。
+
+#### 资源关系
+
+```text
+Wiki Space (知识空间)
+└── Wiki Node (知识库节点, obj_type: slides)
+    └── obj_token → xml_presentation_id
+
+Slides (演示文稿)
+├── xml_presentation_id (演示文稿唯一标识)
+├── revision_id (版本号)
+└── Slide (幻灯片页面)
+    └── slide_id (页面唯一标识)
+```
+
 ## Shortcuts 与 API
+
+Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用。
 
 | Shortcut | 说明 |
 |----------|------|
 | `lark_slides_create`（`lark_get_skill(domain="slides", section="create")`） | 创建 PPT，可选一步添加页面 |
+| `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`） | 向已有演示文稿追加或插入**一页**（`before_slide_id` 控制位置），`<img src="@./path">` 占位符自动上传 |
+| `lark_slides_delete_slide`（`lark_get_skill(domain="slides", section="delete-slide")`） | 按 `slide_id` 删除**一页** |
 | `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） | 读取全文 XML，用 `presentation` 指定演示文稿的 `xml_presentation_id`，用 `output` 把 XML 存到本地文件（必须是当前目录内的相对路径，如 `.lark-slides/plan/<deck>/readback.xml`） |
 | `lark_slides_screenshot`（`lark_get_skill(domain="slides", section="screenshot")`） | 把幻灯片页面截图保存为本地图片，用 `slide_number` 指定页号（从 1 开始，多页用逗号分隔，一次最多 10 页），用 `output_dir` 指定保存目录（必须是当前目录内的相对路径，默认 `.lark-slides/screenshots`），失败时降级到 XML 回读等非截图检查 |
 | `lark_slides_media_upload`（`lark_get_skill(domain="slides", section="media-upload")`） | 上传本地图片到指定演示文稿，返回 `file_token`（用作 `<img src="...">`），最大 20 MB |
@@ -184,6 +281,8 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={params: {"
 3. **`<slide>` 直接子元素只有 `<style>`、`<data>`、`<note>`**：文本和图形必须放在 `<data>` 内
 4. **文本通过 `<content>` 表达**：必须用 `<content><p>...</p></content>`，不能把文字直接写在 shape 内
 5. **保存关键 ID**：后续操作需要 `xml_presentation_id`、`slide_id`、`revision_id`
-6. **删除谨慎**：删除操作不可逆，且至少保留一页幻灯片
-7. **编辑已有页面优先原链接更新**：修改单个 shape/img 用 `lark_slides_replace_slide`（`block_replace` / `block_insert`），不要整页重建；已有 Slides 的多页整页重建用 `lark_slides_replace_pages`，不要用 `lark_slides_create` 新建整份 PPT；只有没有 shortcut 覆盖的特殊单页整页操作才手动 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` + `lark_invoke(tool_name="lark_slides_xml_presentation_slide_delete")`
-8. **`<img src>` 只能用上传到飞书 drive 的 `file_token`，禁止使用 http(s) 外链 URL**
+6. **删除谨慎**：删除不可逆，删前先回读确认 `slide_id`
+7. **编辑已有页面优先原链接更新**：修改单个 shape/img 用 `lark_slides_replace_slide`（`block_replace` / `block_insert`），不要整页重建；已有 Slides 的多页整页重建用 `lark_slides_replace_pages`，不要用 `lark_slides_create` 新建整份 PPT；追加/插入单页用 `lark_slides_add_slide`、删除单页用 `lark_slides_delete_slide`，只有这些 shortcut 未覆盖的参数才手动调 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_create")` / `lark_invoke(tool_name="lark_slides_xml_presentation_slide_delete")`
+8. **`<img src>` 只能用上传到飞书 drive 的 `file_token`，禁止使用 http(s) 外链 URL**：飞书 slides 渲染端不会代理外链图片，外链 src 在 PPT 里通常不显示或显示破图。流程必须是「先把图存到本地 → 用 `lark_slides_media_upload` 上传，或在 `lark_slides_create` 的 `slides` / `lark_slides_add_slide` 的 `slide` XML 里写 `<img src="@./path">` 占位符自动上传 → 拿 `file_token` 写进 `<img src>`」。**图片最大 20 MB**（slides upload API 不支持分片上传）。
+
+> **注意**：如果 md 内容与 `lark_discover(query="slides.<resource>.<method>")` 输出不一致，以 `lark_discover` 为准（上游还有一份 `slides_xml_schema_definition.xml`，但本环境无法通过 `lark_get_skill` 获取）。

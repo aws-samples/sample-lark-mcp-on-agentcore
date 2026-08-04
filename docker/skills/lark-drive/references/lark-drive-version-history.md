@@ -52,4 +52,4 @@ lark_drive_version_history(file_token="boxcnxxxxxxxx", limit="50", cursor="17770
 
 ## 参考
 
-- [lark-drive](../SKILL.md) -- 云空间（云盘/云存储）全部命令
+- `lark_get_skill(domain="drive")` -- 云空间（云盘/云存储）全部命令

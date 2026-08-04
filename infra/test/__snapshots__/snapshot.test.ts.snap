@@ -2108,11 +2108,11 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
       "Properties": {
         "Code": {
           "S3Bucket": "cdk-hnb659fds-assets-123456789012-us-west-2",
-          "S3Key": "146cdc5ffe5122ca310f29b27a37a90b1c28762116cdf8a438336fe3859cdd0e.zip",
+          "S3Key": "1d926a9196bbbeff295d9fa3bb8f9df7c7ad45e39c8bffe636d7f1bb4d5de002.zip",
         },
         "Environment": {
           "Variables": {
-            "ALLOWED_DOMAINS": "mcp.example.com",
+            "ALLOWED_DOMAINS": "cb.example.com",
             "APP_SECRET_ID": "lark-mcp-on-agentcore/feishu-app",
             "CALLBACK_URL": "SET_AFTER_DEPLOY",
             "CODE_TABLE": {

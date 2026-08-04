@@ -12,6 +12,8 @@ lark_mail_triage()
 
 # 查看收件箱未读
 lark_mail_triage(filter="{\"folder\":\"inbox\",\"is_unread\":true}")
+lark_mail_triage(folder="INBOX", is_unread=true)
+lark_mail_triage(filter="is_unread")
 
 # 全文搜索
 lark_mail_triage(query="合同审批")
@@ -24,6 +26,8 @@ lark_mail_triage(query="项目评审", filter="{\"time_range\":{\"start_time\":\
 
 # 指定文件夹
 lark_mail_triage(filter="{\"folder\":\"sent\"}")
+lark_mail_triage(filter="folder=sent")
+lark_mail_triage(folder="sent")
 
 # 系统标签（可通过 folder 或 label 传入，搜索时自动转为 folder）
 lark_mail_triage(filter="{\"folder\":\"flagged\"}")
@@ -37,25 +41,32 @@ lark_mail_triage(format="json")
 lark_mail_triage(max="10", format="json")
 # 输出中包含 page_token，传入下一次请求
 lark_mail_triage(page_token="list:FfccvoqPd...", max="10", format="json")
-
-# page_size 是 max 的别名
-lark_mail_triage(page_size="10")
 ```
 
 ## 参数
 
 | 参数 | 默认 | 说明 |
 |------|------|------|
-| `filter` | — | 筛选条件 JSON 字符串（见下方字段说明） |
+| `filter` | — | 筛选条件（见下方字段说明） |
+| `folder` | — | 文件夹名称或系统文件夹 ID 筛选；等价于设置 `filter.folder` |
+| `folder_id` | — | 明确的文件夹 ID 筛选；等价于设置 `filter.folder_id` |
+| `is_unread` | — | 只看未读（boolean）；等价于设置 `filter.is_unread=true` |
 | `query` | — | 全文搜索关键词 |
 | `format` | `table` | `table` / `json` / `data`（`json` 和 `data` 均输出含分页信息的对象） |
 | `max` | `20` | 最大返回条数（1-400），内部自动分页拉取 |
-| `page_size` | — | `max` 的别名，两者含义相同；同时指定时 `page_size` 优先 |
 | `page_token` | — | 上一次响应返回的分页令牌，传入后从该位置继续拉取。令牌带 `search:` 或 `list:` 前缀，标识来源路径，不可混用 |
 | `labels` | — | table 格式时额外显示 labels 列 |
 | `mailbox` | `me` | 邮箱地址 |
 
 ### `filter` 支持的字段
+
+`filter` 有三种写法：
+
+- JSON 对象字符串：`filter="{\"folder\":\"INBOX\",\"is_unread\":true}"`，用于组合多个字段或传数组/对象字段
+- 单个 `key=value`：`filter="folder=INBOX"`、`filter="is_unread=true"`
+- 裸未读快捷写法：`filter="is_unread"`
+
+多个筛选条件请使用 JSON 对象，`folder=INBOX,is_unread=true` 这种逗号拼接的 key=value 不支持。
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
@@ -72,7 +83,7 @@ lark_mail_triage(page_size="10")
 
 > **系统标签说明**：`IMPORTANT`/`FLAGGED`/`OTHER` 可通过 `folder` 或 `label` 传入（也支持中文别名 `重要邮件`/`已加旗标`/`其他邮件`、搜索名 `priority`/`flagged`/`other`）。搜索时自动转为 folder 字段，列表时自动转为 label_id。label list 接口不返回这三个系统标签。
 >
-> **注意**：查询未读请用 `"is_unread":true`。
+> **注意**：查询未读可用 `is_unread=true`、`filter="is_unread"`、`filter="is_unread=true"` 或 JSON 写法 `"is_unread":true`。
 
 ## 输出
 
@@ -106,7 +117,7 @@ lark_mail_triage(page_size="10")
 
 ### `table` 格式
 
-`page_token` 信息输出在 stderr，自动携带 `query`/`filter`/`mailbox` 参数方便续页：
+`page_token` 信息输出在 stderr，自动携带 `query`/`filter`/`folder`/`folder_id`/`is_unread`/`mailbox` 参数方便续页：
 ```text
 15 message(s)
 next page: lark_mail_triage(query="合同审批", page_token="search:abc123...")

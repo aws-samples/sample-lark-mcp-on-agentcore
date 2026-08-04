@@ -51,4 +51,4 @@ If a bot creates a group and `users` includes users who are mutually invisible t
 
 ## References
 
-- [lark-im](../SKILL.md) - all IM commands
+- `lark_get_skill(domain="im")` - all IM commands

@@ -34,7 +34,7 @@ deploy.sh is an interactive deployment script handling the full flow from enviro
 1c. Edition selection (Feishu China / Lark International): sets `LARKSUITE_CLI_BRAND`, which drives both the OAuth flow endpoints and lark-cli's API gateway. Overridable via env `LARK_BRAND`/`LARKSUITE_CLI_BRAND`; reuses the saved choice on re-deploy; defaults to `feishu` (non-interactive/CI).
 2. Feishu App ID + App Secret (supports env vars `FEISHU_APP_ID`/`FEISHU_APP_SECRET`, detects and reuses existing credentials)
 3. Validates credentials against Feishu API
-4. Custom domain (optional)
+4. Allowed client OAuth callback hosts (optional; not a domain for this service — see [connect-mcp-clients_en.md](connect-mcp-clients_en.md))
 5. WAF enable/disable
 6. Log retention days (30/90/180/365/never expire)
 7. AgentCore Runtime idle session timeout (5/10/15/30 min, default 10 min)

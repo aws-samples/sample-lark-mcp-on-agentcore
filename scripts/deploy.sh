@@ -723,37 +723,14 @@ done
 
 step configure_deploy
 
-# 自定义域名（可选）— remember previous choice
-PREV_DOMAIN=""
-if [ -f "$DEPLOY_CONFIG" ]; then
-  PREV_DOMAIN=$(grep '^CUSTOM_DOMAIN=' "$DEPLOY_CONFIG" 2>/dev/null | cut -d= -f2- || echo "")
-fi
-if [ -z "${CUSTOM_DOMAIN+x}" ]; then
-  if [ -n "$PREV_DOMAIN" ] && [ -t 0 ]; then
-    echo ""
-    info "$(t custom_domain_existing "$PREV_DOMAIN")"
-    pick _DOMAIN_ACT "${L[keep]}" "${L[change]}" "${L[clear]}"
-    case "$_DOMAIN_ACT" in
-      "${L[clear]}") CUSTOM_DOMAIN="" ;;
-      "${L[change]}") prompt "${L[custom_domain]}" CUSTOM_DOMAIN ;;
-      *) CUSTOM_DOMAIN="$PREV_DOMAIN" ;;
-    esac
-  else
-    echo ""
-    prompt "${L[custom_domain]}" CUSTOM_DOMAIN
-  fi
-fi
-if [ -n "$CUSTOM_DOMAIN" ]; then
-  if [[ ! "$CUSTOM_DOMAIN" =~ ^[a-zA-Z0-9._-]+$ ]]; then
-    err "Invalid domain: ${CUSTOM_DOMAIN}"
-    exit 1
-  fi
-  info "Custom domain: ${CUSTOM_DOMAIN}"
-fi
-
-# Extra OAuth redirect hosts (comma-separated), for non-loopback clients whose
-# callback host needs allowlisting. Current clients (Kiro/Claude Code/Codex) all
-# use loopback so this is typically empty. Merged with CUSTOM_DOMAIN.
+# Extra allowed OAuth *client* redirect_uri hosts (comma-separated) — for a
+# client whose callback host is neither loopback nor QuickSight. Kiro/Claude
+# Code/Codex use loopback and Amazon Quick uses quicksight.aws.amazon.com, both
+# allowed unconditionally, so this is normally empty.
+#
+# This is NOT a domain for this service: the service is only reachable at its
+# CloudFront domain and the redirect_uri sent to Feishu is always
+# <CloudFront>/callback.
 PREV_EXTRA=""
 if [ -f "$DEPLOY_CONFIG" ]; then
   PREV_EXTRA=$(grep '^EXTRA_ALLOWED_DOMAINS=' "$DEPLOY_CONFIG" 2>/dev/null | cut -d= -f2- || echo "")
@@ -1415,7 +1392,6 @@ npm install --silent 2>/dev/null
 ( cd "${PROJECT_DIR}/docker" && npm install --omit=dev --silent --no-audit --no-fund 2>/dev/null )
 cd "${PROJECT_DIR}/infra"
 npm install --silent 2>/dev/null
-export CUSTOM_DOMAIN="${CUSTOM_DOMAIN:-}"
 export EXTRA_ALLOWED_DOMAINS="${EXTRA_ALLOWED_DOMAINS:-}"
 export DOMAIN_VERIFICATION="${DOMAIN_VERIFICATION:-}"
 CDK_STACKS=("$RUNTIME_STACK" "$OAUTH_STACK")
@@ -1488,7 +1464,6 @@ if [ -n "$OAUTH_FN" ] && [ -n "$OAUTH_ENDPOINT" ]; then
   CALLBACK_URL="${OAUTH_ENDPOINT}/callback" \
     OAUTH_SECRET_VAL="$OAUTH_SECRET_VAL" \
     FEISHU_SCOPES="$FEISHU_SCOPES" \
-    CUSTOM_DOMAIN="${CUSTOM_DOMAIN:-}" \
     EXTRA_ALLOWED_DOMAINS="${EXTRA_ALLOWED_DOMAINS:-}" \
     DOMAIN_VERIFICATION="${DOMAIN_VERIFICATION:-}" \
     SECRET_USERS_PREFIX="$SECRET_USERS_PREFIX" \
@@ -1522,12 +1497,11 @@ vars = {
 # behavior — CreateSecret omits KmsKeyId and the refresh loop skips key swaps.
 if os.environ.get("USER_SECRET_KMS_KEY_ARN"):
   vars["USER_SECRET_KMS_KEY_ARN"] = os.environ["USER_SECRET_KMS_KEY_ARN"]
-# ALLOWED_DOMAINS = the custom domain (if any) + any extra OAuth redirect hosts
-# (for non-loopback clients), comma-joined. Emitted unconditionally so the value
-# is explicit. See docs/connect-mcp-clients.
+# ALLOWED_DOMAINS = extra allowed OAuth *client* redirect_uri hosts (for clients
+# whose callback is neither loopback nor QuickSight), comma-joined. Emitted
+# unconditionally so the value is explicit. NOT a domain for this service — see
+# docs/connect-mcp-clients.
 _allowed = []
-if os.environ.get("CUSTOM_DOMAIN"):
-  _allowed.append(os.environ["CUSTOM_DOMAIN"])
 for _d in os.environ.get("EXTRA_ALLOWED_DOMAINS", "").replace(" ", "").split(","):
   if _d and _d not in _allowed:
     _allowed.append(_d)
@@ -1745,7 +1719,6 @@ cat > "$DEPLOY_CONFIG" << CFGEOF
 LARK_LANG=${LARK_LANG}
 REGION=${REGION}
 LARK_BRAND=${LARK_BRAND}
-CUSTOM_DOMAIN=${CUSTOM_DOMAIN:-}
 EXTRA_ALLOWED_DOMAINS=${EXTRA_ALLOWED_DOMAINS:-}
 DOMAIN_VERIFICATION_TOKENS=${DOMAIN_VERIFICATION_TOKENS:-}
 SKIP_WAF=${SKIP_WAF}
