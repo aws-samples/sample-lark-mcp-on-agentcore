@@ -259,6 +259,50 @@ describe('validatePayload', () => {
   it('returns null when there is no schema to check against', () => {
     expect(validatePayload('anything', undefined)).toBeNull();
   });
+
+  // Regression: `--print-schema` describes the INNER array for sheets
+  // --sheets/--styles, but lark-cli's parser requires the documented
+  // `{"sheets":[...]}` / `{"styles":[...]}` envelope at the top level. Checking
+  // the envelope against the inner schema inverted the gate — the correct
+  // payload was rejected pre-spawn while a bare array (which lark-cli refuses
+  // with "top level must be the object") sailed through.
+  const SHEETS_SCHEMA = {
+    description: 'typed sub-sheet payloads',
+    type: 'array',
+    items: { type: 'object' },
+  };
+
+  it('accepts the documented {"<flag>":[...]} envelope for an inner-array schema', () => {
+    const payload = '{"sheets":[{"name":"S1","columns":["a"],"data":[[1]]}]}';
+    expect(validatePayload(payload, SHEETS_SCHEMA, 'sheets')).toBeNull();
+    expect(validatePayload('{"styles":[{"name":"S1"}]}', SHEETS_SCHEMA, 'styles')).toBeNull();
+  });
+
+  it('still accepts a bare array (lark-cli tolerates it for non-enveloped flags)', () => {
+    expect(validatePayload('[{"name":"S1"}]', SHEETS_SCHEMA, 'sheets')).toBeNull();
+  });
+
+  it('only unwraps the envelope key matching the flag name', () => {
+    // A wrong key is a real mistake and must still be reported.
+    expect(validatePayload('{"tables":[{"name":"S1"}]}', SHEETS_SCHEMA, 'sheets')).toBeTruthy();
+    // Extra sibling keys mean it is not the envelope shape → no unwrap.
+    expect(validatePayload('{"sheets":[],"oops":1}', SHEETS_SCHEMA, 'sheets')).toBeTruthy();
+  });
+
+  it('validates the unwrapped value, not the envelope (2D check still fires)', () => {
+    const err = validatePayload('{"cells":[{"value":1}]}', CELLS_SCHEMA, 'cells');
+    expect(err).toMatch(/array of arrays|2D|nested/i);
+  });
+
+  // generate-tools.js stamps `x-envelope` on flags whose --help demands the
+  // wrapper; the validator must prefer it over the flag name so the build-time
+  // contract and the runtime gate cannot drift apart.
+  it('honours the build-time x-envelope annotation over the flag name', () => {
+    const annotated = { ...SHEETS_SCHEMA, 'x-envelope': 'sheets' };
+    // Annotation names the key, so the envelope unwraps even when the caller
+    // passes a different flag name (e.g. an alias).
+    expect(validatePayload('{"sheets":[{"name":"S1"}]}', annotated, 'anything')).toBeNull();
+  });
 });
 
 // lark-cli's structured validation errors speak CLI ("--values: trailing data
