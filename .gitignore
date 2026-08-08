@@ -32,3 +32,6 @@ Thumbs.db
 
 # Local deploy state (account-specific, not committed)
 .local/
+# Python bytecode from running skill helper scripts locally
+__pycache__/
+*.pyc
