@@ -374,7 +374,7 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     // BEFORE spawning. NOT isError (raw-API params/data precedent): a malformed
     // payload is self-correctable — isError:true makes lenient clients hide the
     // hint behind a generic "unknown error".
-    const shapeError = validatePayload(coerced, def.payloadSchemas?.[flag.name]);
+    const shapeError = validatePayload(coerced, def.payloadSchemas?.[flag.name], flag.name);
     if (shapeError) {
       return { content: [{ type: 'text', text: JSON.stringify({
         error: 'invalid_payload',

@@ -36,6 +36,14 @@ Aggregate only records matching a filter:
 lark_base_data_query(base_token="<base_token>", dsl='{"datasource":{"type":"table","table":{"tableId":"<table_id>"}},"dimensions":[{"field_name":"Owner","alias":"owner"}],"measures":[{"field_name":"Amount","aggregation":"sum","alias":"total_amount"}],"filters":{"type":1,"conjunction":"and","conditions":[{"field_name":"Status","operator":"is","value":["Done"]}]},"shaper":{"format":"flat"}}')
 ```
 
+## Common filter values
+
+Common `Condition.value` shapes: select `is` / `isNot` uses exactly one option
+name; datetime `is` / `isGreater` / `isLess` uses `["Today"]` or
+`["ExactDate","<epoch_ms>"]`; `isEmpty` / `isNotEmpty` uses `[]`.
+Use relative date keywords only for relative requests; see
+`lark_get_skill(domain="base", section="data-query")` for other field types and operators.
+
 Use `tableName` when the table ID is unavailable but the table name is known:
 
 ```

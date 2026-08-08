@@ -173,7 +173,7 @@ lark_contact_search_user(query="<query>")
 lark_im_chat_search(query="<query>")
 ```
 
-> 搜索用户接口不支持 bot 身份，必须以用户身份调用（MCP server 始终为用户身份，自动满足）；搜到的 `ou_` open_id 用于日程参与人操作（如添加日程参与人）。
+> 搜索用户/群不支持 bot 身份，必须以用户身份调用（MCP server 始终为用户身份，自动满足）。**解析不到或类型不明确时，向用户澄清该参会人类型，不要靠名字形态硬猜类型。**
 
 ## 不在本 skill 范围
 

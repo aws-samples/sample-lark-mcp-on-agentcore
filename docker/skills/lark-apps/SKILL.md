@@ -1,6 +1,6 @@
 ---
 name: lark-apps
-description: "妙搭（Spark/Miaoda）应用开发与托管：应用创建、本地全栈开发、云端生成迭代、创意设计（UI mockup / 可交互原型 / 线框图 / 落地页 / 仪表盘 / 幻灯片 deck / 视觉探索）、AI相关能力和飞书平台能力或者其他外部能力集成、日志/Trace/监控指标/PV/UV 查询、环境变量管理、应用角色与成员管理、自动化触发器（定时/记录变更/Webhook/飞书审批）。当用户要开发/新建一个系统·工具·平台·应用，或要本地开发 / 云端开发 / 修改 / 部署 / 发布 / 上线 / 拿可分享链接，或用 HTML 做页面·网站·部署到妙搭，或要设计 / design / mockup / prototype / wireframe / 做 PPT / deck / 视觉探索，或提到妙搭/Spark/Miaoda（应用运行时域名形如 *.aiforce.cloud）、应用数据库、应用文件存储、开放 API Key、可见范围、应用角色/角色成员、线上日志、接口请求量、错误量、延迟、访问量、环境变量、给妙搭应用配自动化任务/定时触发/审批通过后自动触发时使用。不负责普通云盘文件上传（lark-drive）、飞书文档编辑（lark-doc）、原生幻灯片创建（lark-slides）。"
+description: "妙搭（Spark/Miaoda）应用开发与托管：应用创建、本地全栈开发、云端生成迭代、创意设计（UI mockup / 可交互原型 / 线框图 / 落地页 / 仪表盘 / 幻灯片 deck / 视觉探索）、AI相关能力和飞书平台能力或者其他外部能力集成、日志/Trace/监控指标/PV/UV 查询、环境变量管理、应用协作者与协作权限设置、应用角色与成员管理、自动化触发器（定时/记录变更/Webhook/飞书审批）。当用户要开发/新建一个系统·工具·平台·应用，或要本地开发 / 云端开发 / 修改 / 部署 / 发布 / 上线 / 拿可分享链接，或用 HTML 做页面·网站·部署到妙搭，或要设计 / design / mockup / prototype / wireframe / 做 PPT / deck / 视觉探索，或提到妙搭/Spark/Miaoda（应用运行时域名形如 *.aiforce.cloud）、应用数据库、应用文件存储、开放 API Key、可见范围、应用协作者/开发权限、应用角色/角色成员、线上日志、接口请求量、错误量、延迟、访问量、环境变量、给妙搭应用配自动化任务/定时触发/审批通过后自动触发时使用。不负责普通云盘文件上传（lark-drive）、飞书文档编辑（lark-doc）、原生幻灯片创建（lark-slides）。"
 ---
 
 # apps (v1)
@@ -29,6 +29,7 @@ description: "妙搭（Spark/Miaoda）应用开发与托管：应用创建、本
 | 调试应用运行时缓存：查看/删除单个业务 key、清空指定环境缓存 | `lark_apps_cache_get` / `lark_apps_cache_delete` / `lark_apps_cache_clear` | `lark_get_skill(domain="apps", section="cache")` |
 | **部署/上线应用**（"部署""上线""推上去并部署""发布到云端"）；查发布状态/历史 | 本地开发链路先按 `lark_get_skill(domain="apps", section="local-dev")` 确认本次改动已 git commit + git push，再用 `lark_apps_release_create` / `lark_apps_release_get`；查历史用 `lark_apps_release_list` | `lark_get_skill(domain="apps", section="local-dev")`、`lark_get_skill(domain="apps", section="release-create")`、`lark_get_skill(domain="apps", section="release-get")`、`lark_get_skill(domain="apps", section="release-list")` |
 | 设置或查看运行时可见范围 | `lark_apps_access_scope_set`、`lark_apps_access_scope_get` | `lark_get_skill(domain="apps", section="access-scope-set")`、`lark_get_skill(domain="apps", section="access-scope-get")` |
+| 管理应用协作者（列出/添加/改权限/移除）或协作权限设置 | `lark_apps_member_list`、`lark_apps_member_add`、`lark_apps_member_update`、`lark_apps_member_remove`、`lark_apps_member_settings_get`、`lark_apps_member_settings_set` | 本文「应用协作者与协作权限设置」 |
 | 创意模式（html）应用的评论相关操作 | 创意模式应用评论走 lark-drive 文档评论体系，读取 `lark_get_skill(domain="drive")` 了解评论能力 | `lark_get_skill(domain="drive")` |
 | 管理 `app_...` 应用内角色、角色成员，或查询用户匹配角色 | `lark_apps_role_list` / `lark_apps_role_get` / `lark_apps_role_create` / `lark_apps_role_update` / `lark_apps_role_delete`、`lark_apps_role_member_list` / `lark_apps_role_member_add` / `lark_apps_role_member_remove`、`lark_apps_role_match_list` | `lark_get_skill(domain="apps", section="role")` |
 | 云端 Agent 生成/迭代应用（开发方式已定为云端后） | `lark_apps_session_create` -> `lark_apps_chat` -> `lark_apps_session_get` | `lark_get_skill(domain="apps", section="cloud-dev")` |
@@ -45,26 +46,58 @@ description: "妙搭（Spark/Miaoda）应用开发与托管：应用创建、本
 - **设置环境变量**：如果用户只给应用名，仍先 `lark_apps_list(keyword=...)` 解析 app_id；设置 online 环境且用户已经明确说“确认/直接执行”时，调用 `lark_apps_env_set(environment="online", ..., _confirm=true)`，不要再次要求确认。回复和日志摘要里只提 key / env / app，不回显真实 value；需要传复杂值时优先用 `@file` 或 stdin。
 - **删除环境变量**：`lark_apps_env_delete` 是破坏性操作。除非用户在同一轮已经明确确认删除这个 app/env/key，否则先向用户确认应用、环境、key 和删除后果；确认后再带 `_confirm=true`。不要因为认证失败/重登完成就自动继续删除，必须保留确认门槛。
 
+## 应用协作者与协作权限设置
+
+这组工具管理妙搭应用的开发协作者和协作策略，不等同于 `lark_apps_access_scope_*` 的运行时访问范围，也不等同于 `lark_apps_role_*` 的应用内业务角色。所有工具使用 `app_...` 应用 ID。不要读取或判断 `app_type` 来预判支持范围，直接调用对应的协作者工具。
+
+- `lark_apps_member_list`、`lark_apps_member_settings_get` 是只读工具。
+- `lark_apps_member_add`、`lark_apps_member_update`、`lark_apps_member_remove`、`lark_apps_member_settings_set` 是高风险写工具，需要 `_confirm=true`。用户已确认具体应用、成员/设置及影响，或已按下方「高影响动作：确认与预授权」对整条流程明确预授权时，才带 `_confirm=true` 真实执行；否则先说明目标与影响，停下请求确认。批量移除成员仍执行「禁止预授权判定底线」，不能从泛化的"直接做"推导出 `_confirm=true`。
+- 添加、更新、移除成员时必须显式提供匹配的外部 ID 类型，禁止传内部数字 ID、猜测类型或做隐式转换：用户 `member_type="openid"` + `member_id="ou_..."`；群组 `member_type="openchat"` + `member_id="oc_..."`；部门 `member_type="opendepartmentid"` + `member_id="od-..."`。
+- `lark_apps_member_list` 的 `member_type` 筛选枚举是响应对象类型 `user` / `department` / `chat`，与写工具的 ID 类型枚举不同。可再用 `role="view|edit|full_access"` 筛选。
+- `lark_apps_member_list` 一次返回应用的全部直接协作者，不提供分页参数；可用 `member_type` 和 `role` 缩小结果范围。
+- 成员响应不包含应用详情。需要名称、类型或发布状态时单独调用 `lark_apps_get(app_id="<app_id>")`，不要期待成员分页重复返回 `app`。
+- 收到 subtype `feature_not_available`（OpenAPI code `3340005`；直连服务可能为 `40005`）时，立即停止自动化，不切换 `app_type`，也不尝试用 access scope、应用角色或其它成员工具绕过。向用户说明该应用暂不支持通过工具设置协作者，并引导其在妙搭后台的权限设置中操作。
+- `external_invite` 只在 `lark_apps_member_settings_get` 的响应中读取，不能独立设置；它会跟随 `external_access`。工具不提供 `external_invite` 参数，需要改变外部协作能力时只设置 `external_access`。
+- `copy_download_by` 也只在 `lark_apps_member_settings_get` 的响应中读取。CCM 当前明确不支持为妙搭对象写入复制、打印和下载权限，因此工具不提供 `copy_download_by` 参数。保留读取结果，不要尝试写入，也不要改用其它权限字段模拟。
+
+```
+# 读取协作者和当前协作策略
+lark_apps_member_list(app_id="<app_id>")
+lark_apps_member_settings_get(app_id="<app_id>")
+
+# 写操作确认后执行；member_type / member_id 必须成对匹配
+lark_apps_member_add(app_id="<app_id>", member_type="openid", member_id="ou_xxx", perm="view", _confirm=true)
+lark_apps_member_update(app_id="<app_id>", member_type="openchat", member_id="oc_xxx", perm="edit", _confirm=true)
+lark_apps_member_remove(app_id="<app_id>", member_type="opendepartmentid", member_id="od-xxx", _confirm=true)
+lark_apps_member_settings_set(app_id="<app_id>", external_access="disabled", comment_by="viewer", _confirm=true)
+```
+
 ## 选择开发路径（进意图路由前先判这步）
 
 新建必先定 **app_type** 和**开发方式**两件正交的事；修改已有先按「app_id 获取」指认到 app，指认不到就问用户，不擅自 `lark_apps_create`。开发方式（本地 vs 云端）只看用户对"谁来写代码"的偏好，与应用复杂度、要不要数据库无关。
 
+**app_type 三类边界**（先判"要不要把数据存到服务端"，再判"纯展示还是有交互"）：
+
 | 信号 | 判定 |
 |---|---|
-| 静态展示 / 单页 / PPT/deck / demo / 落地页 / 仪表盘 / UI mockup / 可交互原型 / 线框图 / 视觉探索 / 无后端状态 | `app_type=html`，加载 `lark_get_skill(domain="apps", section="creative-design/creative-design")`（含完整开发与发布流程） |
-| 登录 / 数据库 / 持久化 / 多人协作 / 增删改查 / 报名 / 投票 / 站会 / OKR / 泛称"系统·工具" | `app_type=full_stack` |
+| 含数据库 / 后端持久化：登录 / 增删改查 / 报名·投票·站会存记录 / 多人协作 / 泛称"系统·工具"且明确要存数据 | `app_type=full_stack` |
+| 纯静态展示（给人"看"的物料，无 JS 交互）：PPT/deck / demo / 落地页 / 海报 / UI mockup / 线框图 / 静态仪表盘 / 视觉探索 | `app_type=html`，加载 `lark_get_skill(domain="apps", section="creative-design/creative-design")`（含完整开发与发布流程） |
+| 有 JS 交互但无数据库（给人"用"的前端应用）：可交互原型 / SPA / 表单校验 / 动态计算 / 调用外部 API / 泛称"工具·系统"但未明确要存数据 | `app_type=frontend`（**默认倾向**：用户未明确提出数据库需求时默认引导 frontend，不默认 full_stack） |
+| 类型模糊（尤其"要不要存数据"不清） | **追问**，话术偏向 frontend，例："看起来是个前端应用，需要保存数据吗？"；确认要存数据再转 full_stack，确认纯展示再转 html |
 | 用户要自己写 / 本地 IDE·code agent / 拉源码到本地 / 交研发 | 本地开发，读 `lark_get_skill(domain="apps", section="local-dev")` |
 | 让妙搭 AI 云端生成 / 对话式 / 自己不碰代码 | 云端会话，读 `lark_get_skill(domain="apps", section="cloud-dev")` |
 | 未表达"谁来写"偏好 | **必须先问**（本地代码开发 vs 云端 AI 生成）；选定前不擅自选边、不暗示默认，不得以"需求不模糊"为由跳过提问直接 `lark_apps_init` / `git clone` / `lark_apps_session_create` / 首轮 `lark_apps_chat` |
 | 修改已有 + 当前目录是 `.spark/meta.json` 项目 | 直接继续本地按意图路由，不必问也不必判云端 |
 | 修改已有 + 有云端偏好 | 云端会话；未表达偏好且非本地项目 → 默认本地；判不准先问 |
 
+**类型升级**：`frontend` 应用后续需要数据库/后端能力时，本地工具不提供类型升级；引导用户到云端会话（打开 `https://miaoda.feishu.cn/app/{app_id}`），用自然语言描述后端需求（如"给这个应用加登录和数据存储"）即可触发升级，无需特殊指令。
+
 ## 发布态护栏
 
 - **发布意图判定**：用户要"可访问 / 线上 / 分享 / 新链接 / 上线" = 发布意图，先走发布链路、确认完成再给链接。
 - 完成 ≠ 发布：云端会话完成 / `lark_apps_list` 返回 `is_published=true` 都不代表最新内容已部署。
-- 开发态链接 `https://miaoda.feishu.cn/app/{app_id}`（仅 full_stack 应用）：进应用编辑/开发态、管理与继续开发应用的入口。创意模式（html）应用开发态和发布态是同一个链接，无需额外提供开发态链接。
-- 发布态链接来源：`lark_apps_release_get` 轮询 `finished` 给 `online_url` / `failed` 给 `error_logs`（html 和 full_stack 统一走 `lark_apps_release_get`）。
+- 开发态链接 `https://miaoda.feishu.cn/app/{app_id}`（full_stack / frontend 应用）：进应用编辑/开发态、管理与继续开发应用的入口，也是 frontend 升级为 full_stack 的入口（云端会话）。创意模式（html）应用开发态和发布态是同一个链接，无需额外提供开发态链接。
+- 发布态链接来源：`lark_apps_release_get` 轮询 `finished` 给 `online_url` / `failed` 给 `error_logs`（html / frontend / full_stack 统一走 `lark_apps_release_get`）。
 - html 应用的主链路是创意模式开发方式：按 `lark_get_skill(domain="apps", section="local-dev")` 初始化仓库、在仓库内产出 HTML 及关联文件，并通过 git commit / git push / `lark_apps_release_create` / `lark_apps_release_get` 发布部署。任何 git 操作（clone / pull / push）报错时，先用 `lark_apps_git_credential_init(app_id="<app_id>")` 刷新本地 Git 凭证，再重试原 git 命令。如果刷新凭证也失败，**停止并向用户报告**：原始 git 错误、凭证刷新失败原因，以及是否可能是当前环境（操作系统、沙箱）限制导致（如 macOS Keychain 在沙箱中不可用、Linux 加密文件目录不可写等）。不要改走 `lark_apps_html_publish`，也不要把 `lark_apps_html_publish` 当作本地开发链路的 fallback。
 - 创意模式（html）应用的链接格式为 `https://{租户域名}/page/{meta_token}`，**开发态和发布态是同一个链接**（区别于 full_stack 应用两者分开）。此链接形似飞书文档链接。`lark_apps_get(app_id="<meta_token>")` 可获取应用信息（含 `app_id`），`lark_apps_get(app_id="<app_id>")` 可获取 `meta_token`。看到 `/page/xxx` 链接时，它是妙搭创意模式应用，不要当成飞书文档跳过。
 - **可见范围**：发布态链接（`online_url`）默认仅**创建者可见**，发给他人对方会无权限打不开。当可分享链接交付给用户前，先告知当前仅本人可见，再询问是否用 `lark_apps_access_scope_set`（`tenant`/`public`/`specific`）放开（可先 `lark_apps_access_scope_get` 查当前范围）。
@@ -79,7 +112,7 @@ description: "妙搭（Spark/Miaoda）应用开发与托管：应用创建、本
 - 实现领域 SDK 时，以实际包导出的类型和应用内领域 reference 记录的入参、响应路径为准；禁止修改 ambient `.d.ts`、补造宽松类型或强制断言，让猜测的 SDK 结构仅在本地“编译通过”。
 - typecheck/build 成功不等于合同正确。交付前逐项核对每个 SDK 调用的入参、响应取值路径和策略分支；涉及更新、删除等不同动作时，分别验证各自动作所需的完整状态，不能复用更弱的前置判断。
 - 源码任务交付前确认新增页面、Controller、Module 已接入真实 router/bootstrap，并运行项目现有 typecheck/build；只创建未接线文件不算完成。
-- `lark_apps_access_scope_*` 只管运行时可见范围（谁能打开应用），不是角色权限；应用协作者/开发权限仍需使用妙搭 Web。自动化触发器请用 `lark_apps_automation_*`（见「意图路由」）。
+- `lark_apps_access_scope_*` 只管运行时可见范围（谁能打开应用），不是角色权限；应用协作者/开发权限使用 `lark_apps_member_*` 和 `lark_apps_member_settings_*`，应用内业务角色使用 `lark_apps_role_*`。自动化触发器请用 `lark_apps_automation_*`（见「意图路由」）。
 
 ## app_id 获取
 

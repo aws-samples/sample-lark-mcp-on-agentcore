@@ -83,14 +83,32 @@ console.log(`Found ${services.length} services`);
 // dimensionality, per-field types, enums). These are the authoritative payload
 // contracts — the prose description alone reliably loses the shape (e.g. the
 // 2D [[{cell}]] requirement) by the time an agent reads it.
-function extractPayloadSchemas(service, command) {
+// Some flags' `--print-schema` output describes the INNER array while lark-cli's
+// parser requires a `{"<flag>":[…]}` object wrapper at the top level (sheets
+// --sheets/--styles). The schema alone then contradicts the flag's own --help
+// ("top-level {\"sheets\":[...]}"), and an agent that trusts `type: "array"`
+// sends a bare array which lark-cli rejects. Detect the envelope requirement
+// from the help text and record it on the schema so every consumer (lark_discover's
+// payload_schemas, the pre-spawn validator's hint) states the real contract.
+function annotateEnvelope(schema, flagName, helpText) {
+  if (!schema || schema.type !== 'array') return schema;
+  const wantsEnvelope = new RegExp(`top-?level \`?\\{"?${flagName}"?:`, 'i').test(helpText);
+  if (!wantsEnvelope) return schema;
+  return {
+    ...schema,
+    'x-envelope': flagName,
+    description: `${schema.description || ''}\n\nIMPORTANT: this schema describes the INNER array. Pass it wrapped in the object {"${flagName}": [...]} — a bare array is rejected with "top level must be the object".`.trim(),
+  };
+}
+
+function extractPayloadSchemas(service, command, cmdHelp = '') {
   const listRaw = run('lark-cli', service, command, '--print-schema');
   let flagNames;
   try { flagNames = JSON.parse(listRaw).introspectable_flags || []; } catch { return undefined; }
   const schemas = {};
   for (const flagName of flagNames) {
     const schemaRaw = run('lark-cli', service, command, '--print-schema', '--flag-name', flagName);
-    try { schemas[flagName] = JSON.parse(schemaRaw); } catch { /* skip unparseable */ }
+    try { schemas[flagName] = annotateEnvelope(JSON.parse(schemaRaw), flagName, cmdHelp); } catch { /* skip unparseable */ }
   }
   return Object.keys(schemas).length > 0 ? schemas : undefined;
 }
@@ -109,7 +127,7 @@ for (const service of services) {
     const risk = detectRisk(cmdHelp, command);
     const scopes = scopeMap[`${service}:${command}`] || [];
     if (scopes.length > 0) scopeMapped++;
-    const payloadSchemas = supportsPrintSchema ? extractPayloadSchemas(service, command) : undefined;
+    const payloadSchemas = supportsPrintSchema ? extractPayloadSchemas(service, command, cmdHelp) : undefined;
     if (payloadSchemas) schemaExtracted += Object.keys(payloadSchemas).length;
     tools.push({ service, command, description: translateFlagDescription(description), risk, flags, ...(supportsYes && { supportsYes: true }), ...(scopes.length > 0 && { scopes }), ...(payloadSchemas && { payloadSchemas }) });
   }

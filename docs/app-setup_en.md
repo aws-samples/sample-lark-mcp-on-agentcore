@@ -38,7 +38,7 @@ paste the scope list into the import box to enable it all at once. This project 
 **user-identity only** (no app identity), so every scope goes under `user` and `tenant`
 stays empty.
 
-**Enable all scopes at once — recommended.** Across the 200+ tools, first
+**Enable all scopes at once — recommended.** Across the 450+ tools, first
 authorization requests only the high-frequency minimal set; lower-frequency tools
 authorize **incrementally** when first used. But incremental authorization only succeeds
 if the scope is already enabled in the console — if you enable only the minimal set,

@@ -9,12 +9,12 @@ description: "飞书云空间（云盘/云存储）：管理 Drive 文件和文�
 
 > **导入分流规则：** 如果用户要把本地 Excel / CSV / `.base` 快照导入成 Base / 多维表格 / bitable，必须优先使用 `lark_drive_import(type="bitable")`。不要先切到 `lark-base`；`lark-base` 只负责导入完成后的表内操作。
 
-> **副本分流规则：** 如果用户要复制在线文档、创建文档副本、把文档复制到另一个文件夹，必须使用 `lark_invoke(tool_name="lark_drive_files_copy", ...)`。不要用 `lark_drive_export` 下载后再 `lark_drive_import` 上传，也不要用 `lark_docs_fetch` + `lark_docs_create` 重建正文；导出/导入只用于本地文件转换或离线产物。
+> **副本分流规则：** 如果用户要复制在线文档、创建文档副本、把文档复制到另一个文件夹，必须使用 `lark_drive_copy`。不要用 `lark_drive_export` 下载后再 `lark_drive_import` 上传，也不要用 `lark_docs_fetch` + `lark_docs_create` 重建正文；导出/导入只用于本地文件转换或离线产物。
 
 ## 快速决策
 
 - 用户要把**已有 Wiki 节点移出知识库，放到 Drive 文件夹或"我的空间"根目录**：切到 `lark_get_skill(domain="wiki")`，使用 `lark_wiki_move_to_drive`；不要把 Wiki token 直接交给 `lark_drive_move`。这是会改变文档归属和权限继承的写操作，执行前确认源节点与目标位置。
-- 用户要**复制文档 / 创建副本 / 另存为副本**时，使用 `lark_invoke(tool_name="lark_drive_files_copy", ...)`。先用 `lark_discover(query="drive.files.copy")` 确认参数；如果来源是 wiki URL/token，先用 `lark_drive_inspect()` 获取底层 `token` 和 `type`，不要把 wiki token 直接当 `file_token`。`params.file_token` 传源文档 token，`data.folder_token` 传目标文件夹 token，`data.name` 传副本名称，`data.type` 传源文件类型（如 `docx` / `sheet` / `bitable` / `slides`）。示例：`lark_invoke(tool_name="lark_drive_files_copy", args={params: {"file_token":"<DOC_TOKEN>"}, data: {"folder_token":"<FOLDER_TOKEN>","name":"<COPY_NAME>","type":"docx"}})`。如返回需要确认，向用户确认后在调用里加 `_confirm=true` 重试。
+- 用户要**复制文档 / 创建副本 到云盘或者文件夹**时，使用 `lark_drive_copy`，用法见 `lark_get_skill(domain="drive", section="copy")`。如果是要复制文档 / 创建副本到知识库，使用 `lark_wiki_node_copy`（见 `lark_get_skill(domain="wiki", section="node-copy")`）。
 - 用户要**识别飞书 / doubao 云空间 URL 的类型和 token**时，可以先按 URL 路径形态做轻量判断；当路径已明确指向 docx / sheet / bitable / slides / file / folder 等资源时，可直接提取对应 token/type。传入 wiki URL、需要识别标题或 canonical URL、URL/token 有歧义，或后续操作依赖底层真实资源时，再使用 `lark_drive_inspect(url="<url>")` 进行识别；具体用法、失败处理和边界见 `lark_get_skill(domain="drive", section="inspect")`。
 - 高风险写操作（删除、公开权限修改、owner 转移、版本删除/回滚、批量移动/覆盖/同步）必须同时满足三个条件才执行：目标已解析为该操作可直接使用的执行对象，执行细节已明确到可直接调用命令（例如删除的 file-token/type、公开权限修改的共享范围、owner 转移的目标 owner、版本删除/回滚的 version id、移动/覆盖/同步的目标位置和冲突策略），且用户在本轮明确确认执行这些具体目标和执行细节。用户只说"删除没用的文件""开放/共享给大家""改成开放""覆盖/移动这些"只表示目标状态；先只读发现并列出候选、权限档位或执行方案，停止等待用户确认。
 - 用户要**检查 / 治理文档权限、公开范围、链接分享、外部访问、复制下载权限、密级标签、owner 转移**，或要"权限风险报告、收紧权限、申请查看 / 编辑权限、转移 / 批量转移 owner"，必须先调用 `lark_get_skill(domain="drive", section="workflow")`，再按其中 `Workflow Registry` 进入 `permission_governance` workflow（`lark_get_skill(domain="drive", section="workflow-permission-governance")`）。
@@ -44,7 +44,7 @@ description: "飞书云空间（云盘/云存储）：管理 Drive 文件和文�
 - `lark_drive_inspect()` / `lark_drive_upload()` 遇到 `not found`、`permission denied`、`missing scope` 时，默认停止重试；只有 `rate limit` 或临时网络错误才适合有限重试。
 
 ## 修改标题
-- 使用 `lark_invoke(tool_name="lark_drive_files_patch", args={params: {"file_token": "xxx"}, data: {"new_title": "新标题"}})` 可以修改标题，支持 docx、sheet、bitable、file、wiki、folder 类型
+- 用户要**重命名 / 改标题 / 改文件名**，使用 `lark_drive_update_title`，用法见 `lark_get_skill(domain="drive", section="update-title")`。
 
 ## 核心概念
 
@@ -120,6 +120,7 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_drive_sync()` | 双向同步本地目录与 Drive 文件夹：拉取 `new_remote`、推送 `new_local`，`modified` 按 `on_conflict=remote-wins\|local-wins\|keep-both\|ask` 处理；`quick=true` 用修改时间近似比较；`on_duplicate_remote` 支持 `fail` / `newest` / `oldest`；只同步 `type=file`，跳过在线文档和 shortcut，且不会删除两端多余文件。 |
 | `lark_drive_push()`（详见 `lark_get_skill(domain="drive", section="push")`） | 将本地目录推送到 Drive 文件夹，支持 skip / smart / overwrite 与确认后删除远端。 |
 | `lark_drive_create_shortcut()`（详见 `lark_get_skill(domain="drive", section="create-shortcut")`） | 在另一个文件夹里创建现有 Drive 文件的快捷方式。 |
+| `lark_drive_copy()`（详见 `lark_get_skill(domain="drive", section="copy")`） | 复制资源到目标文件夹；如果要复制到知识库，使用 `lark_wiki_node_copy`。 |
 | `lark_drive_add_comment()`（详见 `lark_get_skill(domain="drive", section="add-comment")`） | 给 doc/docx/file/sheet/slides/base(bitable) 添加全文/局部评论；不支持妙搭 apps。 |
 | `lark_drive_list_comments()`（详见 `lark_get_skill(domain="drive", section="list-comments")`） | 分页获取评论列表。 |
 | `lark_drive_batch_query_comments()`（详见 `lark_get_skill(domain="drive", section="batch-query-comments")`） | 按评论 ID 批量获取评论。 |
@@ -138,6 +139,7 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_drive_version_revert()`（详见 `lark_get_skill(domain="drive", section="version-revert")`） | 回滚到指定历史版本。 |
 | `lark_drive_version_delete()`（详见 `lark_get_skill(domain="drive", section="version-delete")`） | 删除指定历史版本。 |
 | `lark_drive_move()`（详见 `lark_get_skill(domain="drive", section="move")`） | 移动 Drive 文件或文件夹；Wiki 层级移动走 `lark-wiki`。 |
+| `lark_drive_update_title()`（详见 `lark_get_skill(domain="drive", section="update-title")`） | 重命名文件、文件夹、在线文档或知识库节点。 |
 | `lark_drive_delete()`（详见 `lark_get_skill(domain="drive", section="delete")`） | 删除 Drive 文件或文件夹，文件夹删除会轮询异步任务。 |
 | `lark_drive_task_result()`（详见 `lark_get_skill(domain="drive", section="task-result")`） | 查询 import/export/move/delete 等异步任务结果。 |
 | `lark_drive_inspect()`（详见 `lark_get_skill(domain="drive", section="inspect")`） | 检视 URL 的类型、标题和 canonical token；wiki URL 会自动解包到底层文档。 |
@@ -161,10 +163,10 @@ lark_invoke(tool_name="lark_drive_<resource>_<method>", args={...}) # 调用 API
 
 ### files
 
-  - `copy` — 复制文件；在线文档创建副本的首选能力，完整参数见上方"快速决策"，不要用 `lark_drive_export` / `lark_drive_import` 绕行复制
+  - `copy` — 复制文件；优先使用 `lark_drive_copy`（见 `lark_get_skill(domain="drive", section="copy")`）
   - `create_folder` — 新建文件夹
   - `list` — 获取文件夹下的清单；使用前调用 `lark_get_skill(domain="drive", section="files-list")`
-  - `patch` — 修改文件标题
+  - `patch` — 修改文件标题；优先使用 `lark_drive_update_title`（见 `lark_get_skill(domain="drive", section="update-title")`）
 
 ### permission.members
 

@@ -7,7 +7,7 @@ Human onboarding docs live in `docs/` (bilingual `_en`/`_zh`).
 ## Project overview
 
 Hosted remote-MCP service on AWS Bedrock AgentCore that wraps **lark-cli** so
-remote-MCP clients can call Feishu's 2500+ APIs via 200+ tools. Identity is
+remote-MCP clients can call Feishu's 2500+ APIs via 450+ tools. Identity is
 **user-only** (each user calls as themselves; no bot identity, no event stream).
 Languages: TypeScript (`lambda/`, `infra/`), JavaScript (`docker/`, no build
 step), Bash (`scripts/`). Node 20, ARM64-only container. AWS CDK builds the image,

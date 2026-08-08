@@ -138,6 +138,12 @@ lark_base_dashboard_arrange(base_token="xxx", dashboard_id="blk_xxx")
 - 想看某个组件的详细 data_config 配置 → 用 **方式 C**
 - 想看某个图表/指标卡实际算出来的数据 → 用 **方式 D**
 
+用户要求读取"全部图表"或"完整仪表盘"时，先用方式 B 分页枚举所有 block：传 `page_size="100"`；若返回 `has_more=true`，继续把本页返回的 `page_token` 传给 `page_token` 参数，直到 `has_more=false`。收齐后再对每个 block 收口，不能只返回 get-data 成功的子集：
+
+1. 图表或指标卡：使用方式 D 读取计算结果。
+2. `text`：使用方式 C，正文位于 `data_config.text`；text 没有计算结果，但属于完整仪表盘内容。
+3. get-data 返回不支持的图表类型：先用方式 C 读取真实 `data_config`，确认 `table_name`、维度、指标、聚合与筛选，再按 `lark_get_skill(domain="base", section="data-analysis-sop")` 使用 `lark_base_data_query()` 重建同口径结果。字段必须来自真实配置和表结构，不得猜测；无法等价重建时明确报告限制，不能静默省略该 block。
+
 ```
 # 第 1 步：列出仪表盘，定位到当前仪表盘
 lark_base_dashboard_list(base_token="xxx")
@@ -148,7 +154,7 @@ lark_base_dashboard_list(base_token="xxx")
 lark_base_dashboard_get(base_token="xxx", dashboard_id="blk_xxx")
 
 # 方式 B：列出所有组件
-lark_base_dashboard_block_list(base_token="xxx", dashboard_id="blk_xxx")
+lark_base_dashboard_block_list(base_token="xxx", dashboard_id="blk_xxx", page_size="100")
 
 # 方式 C：查看某个组件的详细配置
 lark_base_dashboard_block_get(base_token="xxx", dashboard_id="blk_xxx", block_id="chtxxxxxxxx")
@@ -159,7 +165,7 @@ lark_base_dashboard_block_get_data(base_token="xxx", block_id="chtxxxxxxxx")
 # 最后：把获取到的现状信息整理好告诉用户
 ```
 
-需要读取多个组件的计算结果时，先用方式 B 获取真实 `block_id`（传 `page_size="100"`；若 `has_more=true`，继续把返回的 `page_token` 传给 `page_token` 参数，直到 `has_more=false`），再按 `lark_get_skill(domain="base", section="dashboard-block-get-data")` 的多组件范式，在同一轮里连续串行调用逐个读取；不要把每个 block 拆成独立模型轮次。文本组件没有计算结果，应跳过。
+需要读取多个组件的计算结果时，先用方式 B 获取真实 `block_id`（传 `page_size="100"`；若 `has_more=true`，继续把返回的 `page_token` 传给 `page_token` 参数，直到 `has_more=false`），再按 `lark_get_skill(domain="base", section="dashboard-block-get-data")` 的多组件范式，在同一轮里连续串行调用逐个读取；不要把每个 block 拆成独立模型轮次。文本组件没有计算结果，用方式 C 读 `data_config.text`。
 
 ## 组件类型选择
 

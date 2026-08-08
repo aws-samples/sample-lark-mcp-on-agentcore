@@ -147,7 +147,7 @@ With `page_all=true`, `page_token` sets the starting cursor. If `meta.pagination
    lark_im_chat_search(query="<chat name keyword>", format="json")
    lark_im_chat_messages_list(chat_id="<chat_id>", page_size="50", format="json")
    ```
-   Do not use `lark_im_messages_search` with bot identity; `lark_im_messages_search` is user-only. Continue with `page_token` if `has_more=true`.
+   If the request is keyword search across message content, `lark_im_messages_search` also supports bot identity (⚠️ bot identity is not available via the MCP server, which always calls as the user). Continue with `page_token` if `has_more=true`.
 
 ## References
 

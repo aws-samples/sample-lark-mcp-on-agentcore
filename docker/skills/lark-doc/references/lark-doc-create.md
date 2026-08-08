@@ -1,15 +1,10 @@
 # docs +create（创建飞书云文档）
 
-> **前置条件（MUST READ）：** 生成文档内容前，必须先调用以下技能参考，缺一不可：
-> 1. `lark_get_skill(domain="doc", section="xml")` — XML 语法规则（使用 Markdown 格式时改读 `lark_get_skill(domain="doc", section="md")`）
-> 2. `lark_get_skill(domain="doc", section="style/lark-doc-style")` — 写作原则（默认段落、按体裁、组件克制）
-> 3. `lark_get_skill(domain="doc", section="style/lark-doc-create-workflow")` — 从零创作工作流（Code-Act Loop、单 Agent 串行撰写）
->
-> **未读完以上参考就生成内容会导致格式错误。**
+从 XML（默认）或 Markdown 内容创建一个新的飞书云文档；语义创作默认使用 XML，只有用户明确要求或需要保真导入 Markdown 时才用 Markdown。
 
-从 XML（默认）或 Markdown 内容创建一个新的飞书云文档。
+写入前必须按 `doc_format` 读取对应格式参考：`xml` 读取 `lark_get_skill(domain="doc", section="xml")`，`markdown` 读取 `lark_get_skill(domain="doc", section="md")`；Markdown 中使用 XML 扩展标签时还须读取 xml 参考。
 
-> **格式选择规则：** 创建 / 导入场景下 XML 和 Markdown 都可以——用户提供 `.md` 本地文件、或明确说"导入 Markdown"时，直接用 Markdown；没有明确指示时默认 XML（表达能力更强，可承载更丰富的结构化内容）。不要在用户没要求的情况下主动从 XML 切到 Markdown，也不要在用户已给出 Markdown 时强行改成 XML。
+从零创作走 `lark_get_skill(domain="doc", section="create-workflow")`——本参考只负责最后一步的调用形态。
 
 ## 命令
 
@@ -40,7 +35,9 @@ lark_docs_create(doc_format="markdown", title="项目计划", content='## 目标
 }
 ```
 
-- **`document.new_blocks`**：本次操作新增的 block 列表（如画板）。`block_id` 可用于 `lark_docs_update` 的 `block_id` 做精确编辑；`block_token` 是资源块（如画板）的 token，可交给 `lark-whiteboard` 等 skill 继续操作
+- **`document.new_blocks`**：本次操作新增的 block 列表（如画板）。`block_id` 可用于 `lark_docs_update` 的 `block_id` 做精确编辑；`block_token` 是资源块（如画板）的 token，可交给 `lark-whiteboard` 等 skill 继续操作。
+- **`warnings`**：服务端返回的警告列表；`ok=true` 时也要检查，按提示确认是否存在降级或未完全处理的内容。
+- **`tips`**：服务端返回的后续处理建议；为空表示没有额外建议，非空本身不表示创建失败。
 
 > \[!IMPORTANT]
 > 如果文档是**以应用身份（bot）创建**的，在文档创建成功后，会**尝试为当前用户自动授予该文档的 `full_access`（可管理权限）**。
@@ -63,19 +60,18 @@ lark_docs_create(doc_format="markdown", title="项目计划", content='## 目标
 | `title`           | 否  | 文档标题，Markdown 导入时使用；XML 创建推荐在 `content` 开头写 `<title>...</title>`；多个标题仅保留第一个并在 `warnings` / `degrade_details` 提示 |
 | `content`         | 视情况 | 文档内容（XML 或 Markdown 格式）；不传 `content` 时必须传 `title` |
 | `reference_map` | 否 | 结构化 `reference_map` JSON object；必须与 `content` 一起使用。普通写入优先把结构写在正文里；该参数主要用于保留或回放已有 `document.reference_map`。 |
-| `doc_format`      | 否  | 内容格式：`xml`（默认，始终优先使用）\| `markdown`（仅用户明确要求时） |
+| `doc_format`      | 否  | 默认 `xml`，建议显式传入；仅用户明确要求 Markdown 或保真导入 Markdown 时用 `markdown`。不要混用完整的 XML 与 Markdown 文档格式；Markdown 中允许使用文档已定义的 XML 扩展标签 |
 | `parent_token`    | 否  | 父文件夹或知识库节点 token（与 `parent_position` 互斥）  |
 | `parent_position` | 否  | 父节点位置，如 `my_library`（与 `parent_token` 互斥） |
 
-## 最佳实践
+## 需要回查文档
 
-- **较长文档**：参考 `lark_get_skill(domain="doc", section="style/lark-doc-create-workflow")` 先建骨架再分段写入；短文档可一次写完整内容
-- **表达形式**：由用户目标和内容决定。需要结构化表达时可参考 `lark_get_skill(domain="doc", section="style/lark-doc-style")`，但不要默认套用固定开头、固定富 block 比例或固定图表
+用 `lark_docs_fetch(doc="<document_id 或文档 URL>", detail="with-ids")` 回查，更多信息见 `lark_get_skill(domain="doc", section="fetch")`。
 
 ## 参考
 
-- `lark_get_skill(domain="doc", section="style/lark-doc-create-workflow")` — 从零创作工作流（Code-Act Loop、单 Agent 串行撰写）
-- `lark_get_skill(domain="doc", section="style/lark-doc-style")` — 文档写作原则（默认段落、按体裁、组件克制）
+- `lark_get_skill(domain="doc", section="create-workflow")` — 从零创作工作流（Philosophy + Step Plan）
+- `lark_get_skill(domain="doc", section="script")` — 写入前的 Draft Profile Check（`lark_docs_script(command="parse", ...)`）
 - `lark_get_skill(domain="doc", section="xml")` — XML 语法规范
 - `lark_get_skill(domain="doc", section="fetch")` — 获取文档
 - `lark_get_skill(domain="doc", section="update")` — 更新文档

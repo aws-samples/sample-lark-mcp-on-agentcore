@@ -2,7 +2,7 @@
 
 ## 用途
 
-读取飞书幻灯片（PPT）演示文稿的完整 XML 内容信息。
+读取飞书幻灯片（PPT）的完整演示文稿 XML，或通过 `slide_id` / `slide_number` 读取指定单页 XML。
 
 ## Shortcut
 
@@ -18,8 +18,21 @@ lark_slides_xml_get(presentation="slides_example_presentation_id", output=".lark
 |------|------|------|------|
 | `presentation` | string | 是 | 演示文稿的唯一标识符 |
 | `revision_id` | integer | 否 | 版本号，`-1` 表示最新版本 |
-| `output` | string | 是 | 本地文件，必须使用相对路径 |
-| `remove_attr_id` | boolean | 否 | 移除 XML id 属性后读取 |
+| `output` | string | 否 | XML 保存路径，必须使用相对路径；省略时 XML 在返回的 JSON 里 |
+| `raw` | boolean | 否 | 直接返回 XML，不包 JSON envelope；不能与 `output` 或非 JSON `format` 同时使用 |
+| `slide_id` | string | 否 | 只读取指定 `slide_id` 的单页 XML；不能与 `slide_number` 或 `remove_attr_id` 同时使用 |
+| `slide_number` | integer | 否 | 只读取指定的 1-based 页码；不能与 `slide_id` 或 `remove_attr_id` 同时使用 |
+| `remove_attr_id` | boolean | 否 | 仅全文读取可用；移除 XML id 属性后读取，不适合后续精确块编辑（尤其不要把它的输出交给 `lark_slides_update_slide`，见 `lark_get_skill(domain="slides", section="update-slide")`）|
+
+### 读取单页
+
+按页面 ID 和按页码二选一：
+
+```
+lark_slides_xml_get(presentation="slides_example_presentation_id", slide_id="slide_example_id")
+
+lark_slides_xml_get(presentation="slides_example_presentation_id", slide_number=1)
+```
 
 ### 指定版本读取
 
@@ -59,7 +72,7 @@ lark_invoke(tool_name="lark_slides_xml_presentations_get", args={
     "xml_presentation": {
       "presentation_id": "slides_example_presentation_id",
       "revision_id": 1,
-      "content": "<presentation xmlns=\"http://www.larkoffice.com/sml/2.0\" height=\"540\" width=\"960\">...</presentation>"
+      "content": "<presentation xmlns=\"https://www.larkoffice.com/sml/2.0\" height=\"540\" width=\"960\">...</presentation>"
     }
   }
 }

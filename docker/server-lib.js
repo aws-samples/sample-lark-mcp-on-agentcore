@@ -228,13 +228,35 @@ function coerceFlagValue(value) {
 // (non-JSON text; 1D array where the contract wants 2D) without reimplementing
 // a JSON-Schema validator. Deeper mistakes still reach lark-cli, whose
 // validation error is translated and passed through.
-function validatePayload(value, schema) {
+//
+// ENVELOPE CAVEAT: for some flags `--print-schema` describes the INNER array
+// while lark-cli's parser requires a `{"<flag>":[…]}` object wrapper at the top
+// level (sheets +table-put/+workbook-create --sheets/--styles, +styles-put
+// --styles — their --help says 'top-level {"sheets":[...]}' and the Go decoder
+// rejects a bare array with "top level must be the object"). Validating the
+// envelope against the inner schema inverted the check: the CORRECT payload was
+// rejected pre-spawn and a bare array would have been waved through. So when the
+// schema wants an array and we get the `{<flag>: [...]}` envelope, unwrap and
+// validate the inner value instead.
+function validatePayload(value, schema, flagName) {
   if (!schema || !schema.type) return null;
   let parsed;
   try {
     parsed = JSON.parse(value);
   } catch {
     return `not valid JSON. This parameter takes a JSON ${schema.type} (as a JSON value or a JSON-encoded string). ${schema.description ? `Contract: ${schema.description}` : ''}`.trim();
+  }
+  // Unwrap the documented `{"<flag>":[…]}` envelope before shape checks. The
+  // key comes from the build-time `x-envelope` annotation when present (set by
+  // generate-tools.js from the flag's --help), falling back to the flag name so
+  // an un-annotated catalog still behaves.
+  const envelopeKey = schema['x-envelope'] || flagName;
+  if (
+    schema.type === 'array' && envelopeKey
+    && parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+    && Array.isArray(parsed[envelopeKey]) && Object.keys(parsed).length === 1
+  ) {
+    parsed = parsed[envelopeKey];
   }
   const rootIsArray = Array.isArray(parsed);
   if (schema.type === 'array' && !rootIsArray) {

@@ -22,7 +22,7 @@
 | 读取目的 | 用这个工具 | 数据去向 | 说明 |
 |---------|----------------|---------|------|
 | 快速查看纯值数据、批量处理 | `lark_sheets_csv_get` | 对话上下文 | 返回 CSV 文本（每行带 `[row=N]` 前缀）；大表请按 `range` 行窗口分批读（截断时看 `has_more`） |
-| 按列类型结构化读出（喂 DataFrame / round-trip 回 `lark_sheets_table_put`） | `lark_sheets_table_get` | 对话上下文 | 返回 typed 协议（`columns:[列名]` + `data` + `dtypes`/`formats` + `range`），输出形状对齐 pandas split；可一行 `pd.DataFrame(sheet["data"], columns=sheet["columns"]).astype(sheet["dtypes"])` 还原 DataFrame，或直接 round-trip 回 `lark_sheets_table_put`。不带 `range` 时读**完整 used range**（跨过表中部空行 / 空列），每个子表回传实际读取范围 `range` 供完整性校验。注意这与下文 `current_region` "遇表中部空行截断"不矛盾：`lark_sheets_table_get` 读的是子表物理 used range（飞书记录的已用矩形，含中间空行），`current_region` 是从锚点连通扩展、遇整行空行就断 |
+| 按列类型结构化读出（喂 DataFrame / round-trip 回 `lark_sheets_table_put`） | `lark_sheets_table_get` | 对话上下文 | 返回 typed 协议（`columns:[列名]` + `data` + `dtypes`/`formats` + `range`），输出形状对齐 pandas split；可一行 `pd.DataFrame(sheet["data"], columns=sheet["columns"]).astype(sheet["dtypes"])` 还原 DataFrame，或直接 round-trip 回 `lark_sheets_table_put`。不带 `range` 时读**完整 used range**（跨过表中部空行 / 空列），每个子表回传实际读取范围 `range` 供完整性校验；被 `max_chars` 裁掉时该子表还会带 `truncated: true` 与 `truncation_warning`，**先看这两个字段再用数据**。注意这与下文 `current_region` "遇表中部空行截断"不矛盾：`lark_sheets_table_get` 读的是子表物理 used range（飞书记录的已用矩形，含中间空行），`current_region` 是从锚点连通扩展、遇整行空行就断 |
 | 查看公式、样式、批注、数据验证 | `lark_sheets_cells_get` | 对话上下文 | 返回单元格完整信息，token 开销较大 |
 | 查看某区域的下拉框（数据验证）选项 | `lark_sheets_dropdown_get` | 对话上下文 | 返回该 A1 范围已配置的下拉列表选项 |
 
@@ -32,7 +32,9 @@
 - 需要公式/样式/批注 → `lark_sheets_cells_get`
 - 只想知道某区域下拉框有哪些选项 → `lark_sheets_dropdown_get`
 
-⚠️ **大数据优先落盘、别灌进上下文**：`lark_sheets_csv_get` / `lark_sheets_cells_get` 都受上下文输出量约束（返回过大会被截断或转存为文件）。纯值分析优先 `lark_sheets_csv_get(format="csv")` 按 `range` 行窗口（`A1:Z500` / `A501:Z1000` …）分批处理 + `lark_sheets_csv_put` 分批回写；若确实要让结果直接进上下文又不想触发转存，给任一工具把 `max_chars`（默认 500000）调小到略低于上限（如 `25000`），改为优雅截断 + `has_more` 分页。
+⚠️ **大数据优先分窗读、别灌进上下文**：`lark_sheets_csv_get` / `lark_sheets_cells_get` 都受上下文输出量约束（返回过大会被截断或转存为文件）。纯值分析优先 `lark_sheets_csv_get` 按 `range` 行窗口（`A1:Z500` / `A501:Z1000` …）分批处理 + `lark_sheets_csv_put` 分批回写；若确实要让结果直接进上下文又不想触发转存，给任一工具把 `max_chars`（默认 500000）调小到略低于上限（如 `25000`），改为优雅截断 + `has_more` 分页。
+
+> ⚠️ **`output_path` 在 MCP 场景下不可用**：容器没有可供 agent 取回的可写文件系统，落盘的文件读不回来。要整表就按 `range` 行窗口分批读，别指望一次落盘。
 
 **`lark_sheets_csv_get` 返回值核心设计**：
 - `annotated_csv` — **CSV 数据唯一入口**。每一逻辑行前加 `[row=N] ` 前缀（N = 真实表格行号）。任何需要行号的下游操作（合并、写入、清空、格式化、插入/删除、条件格式、筛选、图表/透视表范围、搜索替换等），**行号一律直接从 `[row=N]` 读取**。若需要纯 CSV（如喂给本地脚本做解析），去前缀即可：`line.replace(/^\[row=\d+\] /, '')`。
@@ -44,6 +46,7 @@
 
 - `lark_sheets_csv_get` 和 `lark_sheets_cells_get` 支持分页/截断，注意检查 `has_more` / `truncated` 标志；两者在处理返回数据之前都必须先读 `warning_message`（上游 schema 要求先读它再用其它字段，内含定位与截断续读提示），`lark_sheets_cells_get` 还要用每个 range 的 `actual_range` / `row_indices` / `col_indices` 判断真实位置
 - 隐藏行列默认包含在返回结果中（`skip_hidden=false`），如需只看可见数据设为 `true`。读取原语本身不标注哪些行列被隐藏：若要识别隐藏区间（以决定是否过滤、或如何解读混入的隐藏数据），用 `lark_sheets_sheet_info(include="hidden_rows,hidden_cols")` 取隐藏行列集合，再结合 `lark_sheets_csv_get` / `lark_sheets_cells_get` 返回的 `row_indices` / `col_indices` 判断每行 / 每列是否隐藏
+- 要判断单元格内容是否被行高列宽挤到显示不全（排版检查、调整行高列宽前），给 `lark_sheets_cells_get` 加 `include="truncation"`：会按字号 / 自动换行 / 行高列宽估算并返回被截断单元格的 `isRowTruncated` / `isColTruncated`（未返回视为未截断）。有额外计算开销，仅需要时才开
 
 **常见配置错误（必须注意）**：
 - **全量读取导致上下文溢出**：不要对大表（数百行以上）直接用 `lark_sheets_csv_get` 或 `lark_sheets_cells_get` 读取全部数据到上下文。大表场景必须分批读取：用 `range` 切行窗口逐块读（`lark_sheets_csv_get` / `lark_sheets_cells_get` 单次返回量由 `max_chars` 自动兜底，截断时返回 `has_more`）；过大时考虑导出后用脚本处理再分批回写
@@ -99,8 +102,8 @@ _公共四件套_
 | 参数 | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `range` | string | required | A1 范围，如 `A1:F10`（不带 sheet 前缀；用 `sheet_id` / `sheet_name` 指定 sheet） |
-| `include` | string_slice | optional | 要返回的信息类别，逗号分隔多个（可选值：`value` / `formula` / `style` / `comment` / `data_validation`） |
-| `max_chars` | int | optional | 单次返回字符上限，默认 500000（兜底防爆）。大数据通常宜落盘做分析；仅当要让结果直接进上下文、又不触发文件转存时才调小（如 25000），以 has_more 分页 |
+| `include` | string_slice | optional | 要返回的信息类别，逗号分隔多个。`truncation` 会额外按行高列宽 / 字号 / 自动换行估算每个单元格是否被截断显示，返回 `isRowTruncated` / `isColTruncated`（有额外计算开销，仅排版检查 / 调整行高列宽前才开）（可选值：`value` / `formula` / `style` / `comment` / `data_validation` / `truncation`） |
+| `max_chars` | int | optional | 单次返回字符上限，默认 500000（兜底防爆）。仅当要让结果直接进上下文、又不触发文件转存时才调小（如 25000），按 has_more 分页。传 0 表示"不自设上限"，等价于不传（仍是 500000），不会退回底层工具那个更小的默认截断 |
 | `skip_hidden` | bool | optional | 跳过隐藏行列，默认 `false` |
 
 ### `lark_sheets_dropdown_get`
@@ -117,8 +120,8 @@ _公共四件套_
 
 | 参数 | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `range` | string | required | A1 范围，如 `A1:F30`（不带 sheet 前缀；用 `sheet_id` / `sheet_name` 指定 sheet） |
-| `max_chars` | int | optional | 单次返回字符上限，默认 500000（兜底防爆）。大数据通常宜落盘做分析；仅当要让结果直接进上下文、又不触发文件转存时才调小（如 25000），以 has_more 分页 |
+| `range` | string | optional | A1 范围，如 `A1:F30`（不带 sheet 前缀；用 `sheet_id` / `sheet_name` 指定 sheet）。**可省略：缺省读取整个子表**（按表格实际边界裁剪，返回的 `actual_range` 标注实际读取范围），无需先探行列再拼 range；大表仍应显式传 `range` 分窗读并配合 `max_chars` |
+| `max_chars` | int | optional | 单次返回字符上限，默认 500000（兜底防爆）。仅当要让结果直接进上下文、又不触发文件转存时才调小（如 25000），按 has_more 分页。传 0 表示"不自设上限"，等价于不传（仍是 500000），不会退回底层工具那个更小的默认截断 |
 | `include_row_prefix` | bool | optional | 是否在每行前加 `[row=N]` 前缀，默认 `true` |
 | `skip_hidden` | bool | optional | 跳过隐藏行列，默认 `false` |
 
@@ -130,7 +133,8 @@ _公共：URL/token（无 sheet 定位）_
 | --- | --- | --- | --- |
 | `sheet_id` | string | optional | 只读该子表（按 id）；省略则读所有子表 |
 | `sheet_name` | string | optional | 只读该子表（按名）；省略则读所有子表 |
-| `range` | string | optional | 读取的 A1 范围；省略则读每个子表的完整 used range（会跨过表中部的整行空行 / 整列空列，不会被截断） |
+| `range` | string | optional | 读取的 A1 范围；省略则读每个子表的完整 used range（会跨过表中部的整行空行 / 整列空列） |
+| `max_chars` | int | optional | 单次返回字符上限，默认 500000（兜底防爆）。底层工具即使不传也有约 50000 的默认截断，故此处显式发送以放宽；被裁到的子表会带 `truncated: true` + `truncation_warning`。传 0 表示"不自设上限"，等价于不传（仍是 500000） |
 | `no_header` | bool | optional | 把第一行当数据而非表头（列名取 col1/col2 …） |
 
 ## Examples
@@ -174,7 +178,7 @@ lark_sheets_cells_get(url="https://example.feishu.cn/sheets/shtXXX", sheet_name=
 
 `lark_sheets_table_put`（写入侧，见 write-cells reference）的镜像：把表格读回与 `sheets` 完全同构的 typed 协议（`sheets[]` + `columns:[列名]` + `data:[[行]]` + `dtypes:{列名:pandas_dtype}` + `formats?:{列名:number_format}` + `range`），可直接喂回 `lark_sheets_table_put` 或一行还原 DataFrame。
 
-**默认（不带 `range`）读取整张子表的完整 used range**：会跨过表中部的整行空行 / 整列空列，覆盖到真实数据边界。每个子表都回传实际读取的 `range`（如 `A1:F10`）——`lark_sheets_table_get` 不返回分页 / 截断标志，这个 `range` 是判断是否读全的唯一信号：拿它和源 xlsx 行列数、关键末行 / 末日期交叉核对，确认读取完整。仍要精确控制范围时显式传 `range`。
+**默认（不带 `range`）读取整张子表的完整 used range**：会跨过表中部的整行空行 / 整列空列，覆盖到真实数据边界。每个子表都回传实际读取的 `range`（如 `A1:F10`）；被 `max_chars` 裁掉时该子表带 `truncated: true` + `truncation_warning`。除这两个字段外，`range` 是判断是否读全的信号：拿它和源 xlsx 行列数、关键末行 / 末日期交叉核对，确认读取完整。仍要精确控制范围时显式传 `range`。
 
 列类型从每列 `number_format` 推断（日期格式→`date`/`datetime64[ns]`、数值→`number`/`float64`、bool→`bool`），`date` 列的序列号转回 ISO `yyyy-mm-dd`——日期、数字往返不丢类型。**列类型只在该列所有非空值一致时才定（`number` / `date` / `bool`）；一列混了类型（如数字列混入「暂无」、日期列混入裸数字）会降为 `string`（dtypes 输出 `object`），让 `dtypes` 与 `data` 里每个值自洽——能 round-trip 回 `lark_sheets_table_put`、不让 pandas `astype` 崩。降级是无损的（脏值原样保留为文本）；若要把零星脏值转成数值列，交给调用方在 pandas 侧做（`to_numeric(errors='coerce')`），那里原始值仍在、可追溯。** 默认读所有子表、第一行当表头（`no_header` 把首行当数据、列名取 `col1` / `col2` …）。
 

@@ -20,14 +20,14 @@ description: "飞书知识库：管理知识空间、空间成员和文档节点
 - 用户要**按特定主题 / 关键词 / 内容线索查找资料并收集到知识库节点或新建知识库节点下**，必须先调用 `lark_get_skill(domain="drive", section="workflow")`，再按其中 `Workflow Registry` 进入 `topic_move_collector` workflow（调用 `lark_get_skill(domain="drive", section="workflow-topic-move-collector")`）。该 workflow 使用 Drive 全量搜索召回，再按 Wiki 目标解析、确认和移动；不要只用 Wiki 节点列表做局部遍历。
 - 用户要**整理 / 盘点 / 归类 / 重构知识库、个人文档库、文档库目录或 Wiki 节点结构**，或要生成整理方案、目标目录树、移动计划时，不要只使用 Wiki 节点 API。必须先调用 `lark_get_skill(domain="drive", section="workflow")`，再按其中 `Workflow Registry` 进入 `knowledge_organize` workflow（调用 `lark_get_skill(domain="drive", section="workflow-knowledge-organize")`）；该 workflow 负责 Drive / Wiki / 个人文档库的统一入口解析、资源盘点、分类计划、写前确认和结果验证。
 - 用户要把**已有 Wiki 节点移出知识库，放到 Drive 文件夹或"我的空间"根目录**：使用 `lark_wiki_move_to_drive`，不要使用 `lark_wiki_move` 或 `lark_drive_move`。这是会改变节点归属和权限继承的写操作，执行前确认源节点与目标位置。
-- 用户给的是知识库 URL（`.../wiki/<token>`），且后续要查成员/加成员/删成员：先调用 `lark_invoke(tool_name="lark_wiki_spaces_get_node", args={params: {"token": "<wiki_token>"}})` 获取 `space_id`，后续成员接口统一使用 `space_id`。
+- 用户给的是知识库 URL（`.../wiki/<token>`），且后续要查成员/加成员/删成员：先调用 `lark_wiki_node_get(node_token="<wiki_url>", format="json")`，从 `data.space_id` 获取空间 ID，后续成员接口统一使用 `space_id`。节点解析与后续成员操作是同一身份（MCP server 始终为 user identity）。
 - 用户要**删除**知识空间（`lark_wiki_delete_space`）但只给了名称或 URL：**不能**把名称 / URL 原样传给 `space_id`，必须先解析出真实 `space_id`。解析方式：
-  - URL（`.../wiki/<token>`）：`lark_invoke(tool_name="lark_wiki_spaces_get_node", args={params: {"token": "<wiki_token>"}, format: "json"})`，读 `data.node.space_id`。
+  - URL（`.../wiki/<token>`）：`lark_wiki_node_get(node_token="<wiki_url>", format="json")`，读取 `data.space_id`。解析和删除是同一身份（MCP server 始终为 user identity）。
   - 只知名称：`lark_wiki_space_list(format="json")`，边翻页边收集 items 并按 `name` 精确匹配；**一旦任一页累计到至少 1 条精确匹配就停止翻页**。只有当翻完所有页（`has_more=false`）仍无精确匹配时，才对已收集的全量 items 做宽松匹配（`name` trim 空格、大小写不敏感、子串包含）。
   - **关键安全约束**：无论精确还是模糊，**无论命中 1 条还是多条，发起删除前都必须把候选（`name` + `space_id` + `description` + `space_type`）列给用户，由用户明确选定一个 `space_id` 再执行**。不要因为"只命中一条"就自动执行删除。
   - 命中 0 条：停下来问用户是名称拼错了还是调用方无权限；**不要**自行改名字重试。
   - 用户明确选定后再执行 `lark_wiki_delete_space(space_id="<ID>", _confirm=true)`（高风险写操作）。
-  - 反例：不要把 wiki URL / 名称直接当 `space_id`（如 `space_id="https://.../wiki/<wiki_token>"`）；务必先用 `lark_invoke(tool_name="lark_wiki_spaces_get_node", ...)` 解析出 `data.node.space_id` 再传。
+  - 反例：不要把 wiki URL / 名称直接当 `space_id`（如 `space_id="https://.../wiki/<wiki_token>"`）；务必先用 `lark_wiki_node_get` 解析出 `data.space_id` 再传。
 - 用户要在知识库中创建新节点，优先使用 `lark_wiki_node_create`。
 - 用户要列出 Wiki 节点：先用 `lark_wiki_space_list` 拿数字 `space_id`，再用 `lark_wiki_node_list(space_id="<space_id>")`。不要把 wiki URL、node token、doc token、名称直接当 `space_id`。钻子节点时 `parent_node_token` 必须是 wiki node token；如果用户给的是 docx/sheet/base URL，先用 `lark_wiki_node_get(node_token="<url>")` 解析出 `node_token`。
 - `lark_wiki_node_list` 命中 `invalid_parameters`、`not_found`、`permission_denied` 时，不要重复调用同一参数；按 hint 修 `space_id` / `parent_node_token` / 权限。只有 `rate_limit` 才做退避重试。
@@ -40,6 +40,8 @@ description: "飞书知识库：管理知识空间、空间成员和文档节点
 ## Shortcuts（推荐优先使用）
 
 Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用。
+
+获取或解析 Wiki 节点统一优先使用 `lark_wiki_node_get`，包括只为获取 `space_id`、`node_token`、`obj_token` 或 `obj_type` 的中间步骤。只有当该 shortcut 不可用，或任务明确需要它未输出的原始响应字段时，才回退到 `lark_invoke(tool_name="lark_wiki_spaces_get_node", ...)`；回退前先用 `lark_discover(query="wiki.spaces.get_node")` 确认参数。
 
 | Shortcut | 说明 |
 |----------|------|

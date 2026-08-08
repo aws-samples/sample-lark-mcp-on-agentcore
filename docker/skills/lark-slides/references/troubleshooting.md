@@ -9,7 +9,7 @@
 - 特殊字符已转义：正文和标题里的 `&`、`<`、`>` 不能裸写；属性值里的裸 `&` 也必须写成 `&amp;`。
 - 属性引号安全：XML 属性、JSON 字符串包装之间没有互相打断。
 - 结构合法：`<slide>` 下只放 `<style>`、`<data>`、`<note>`，文本都在 `<content>` 内。
-- 图片路径正确：`<img src="@...">` 只在 `lark_slides_create` 的 `slides` 和 `lark_slides_add_slide` 的 `slide` 参数支持链路中使用；直接调原生 `xml_presentation.slide.create` 必须先拿到 `file_token`。
+- 图片路径正确：`<img src="@...">` 占位符由 `lark_slides_create` 和 `lark_slides_add_slide` 处理。
 
 ## Failure Order
 
@@ -20,8 +20,8 @@
 3. 检查失败页是否含未转义字符：`Q&A -> Q&amp;A`，文本 `<` / `>` 写成 `&lt;` / `&gt;`，属性 URL `a=1&b=2 -> a=1&amp;b=2`。
 4. 检查标签闭合、属性引号、`<content>` 结构，以及 `<slide>` 直接子元素。
 5. 页面空白、溢出、重叠或越界时，按 `lark_get_skill(domain="slides", section="validation-checklist")` 运行 `xml_text_overlap_lint.py`；先修复所有 `error`，再对 `warning` 指向的页面和元素做截图复核。
-6. 如果使用 `slides` 参数一次性建多页失败，直接切到两步创建：先 `lark_slides_create`，再用 `lark_slides_add_slide` 逐页添加。
-7. 局部问题用 `lark_slides_replace_slide` 块级修正；整页结构要改时再用 `lark_slides_add_slide` 建新页 + `lark_slides_delete_slide` 删旧页（多页整页重建优先用 `lark_slides_replace_pages`）。
+6. 如果使用 `slides` 参数一次性建多页失败，怀疑转义或截断时改用两步创建：先 `lark_slides_create` 建空白 PPT，再用 `lark_slides_add_slide` 逐页添加。
+7. 局部问题用 `lark_slides_replace_slide` 块级修正；整页结构要改时用 `lark_slides_update_slide` 原地整页覆盖（保 `slide_id` 和页序），多页就每页各跑一次。
 
 ## Symptom Fixes
 
@@ -45,7 +45,7 @@
 |--------------|------|----------|
 | 400 XML 格式错误 | XML 语法错误 | 检查标签闭合、属性引号、特殊字符转义 |
 | 400 请求包装错误 | `data` 未按 schema 包装 | 检查是否传入 `xml_presentation.content` 或 `slide.content` |
-| 创建成功但页面空白 / 内容缺失 / 布局错乱 | 常见于 `slides` 参数传长 XML 时的转义或截断问题 | 改用两步创建，并在创建后立即读取 XML 验证 |
+| 创建成功但页面空白 / 内容缺失 / 布局错乱 | 常见于 `slides` 参数传长 XML 时的转义或截断问题 | 改用两步创建（`lark_slides_create` + 逐页 `lark_slides_add_slide`），并在创建后立即读取 XML 验证 |
 | 403 权限不足 | scope 或文档权限不匹配 | 确认 scope 和文档权限；无权限时根据错误响应引导用户解决 |
 | 404 演示文稿不存在 | `xml_presentation_id` 不正确或无权限 | 检查 token；wiki URL 需先解析真实 `obj_token` |
 | 404 幻灯片不存在 | `slide_id` 不正确 | 重新读取 presentation 或 slide，确认最新 ID |

@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.82",
-    "extracted_at": "2026-08-04",
+    "lark_cli_version": "1.0.85",
+    "extracted_at": "2026-08-08",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -381,6 +381,48 @@
       "command": "+log-list",
       "scopes": [
         "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+member-add",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+member-list",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+member-remove",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+member-settings-get",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+member-settings-set",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+member-update",
+      "scopes": [
+        "spark:app:write"
       ]
     },
     {
@@ -1014,6 +1056,20 @@
     },
     {
       "service": "base",
+      "command": "+table-copy",
+      "scopes": [
+        "base:table:create"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+table-copy-status",
+      "scopes": [
+        "base:table:create"
+      ]
+    },
+    {
+      "service": "base",
       "command": "+table-create",
       "scopes": [
         "base:table:create",
@@ -1327,7 +1383,10 @@
       "service": "docs",
       "command": "+create",
       "scopes": [
-        "docx:document:create"
+        "docx:document:create",
+        "docs:document.media:upload",
+        "docx:document:write_only",
+        "docx:document:readonly"
       ]
     },
     {
@@ -1363,7 +1422,8 @@
       "service": "docs",
       "command": "+media-download",
       "scopes": [
-        "docs:document.media:download"
+        "docs:document.media:download",
+        "docs:permission.member:auth"
       ]
     },
     {
@@ -1416,6 +1476,13 @@
     },
     {
       "service": "docs",
+      "command": "+script",
+      "scopes": [
+        "docx:document:readonly"
+      ]
+    },
+    {
+      "service": "docs",
       "command": "+search",
       "scopes": [
         "search:docs:read"
@@ -1426,7 +1493,9 @@
       "command": "+update",
       "scopes": [
         "docx:document:write_only",
-        "docx:document:readonly"
+        "docx:document:readonly",
+        "docs:document.media:upload",
+        "wiki:node:retrieve"
       ]
     },
     {
@@ -1467,6 +1536,15 @@
       "scopes": [
         "docs:document.comment:read",
         "wiki:node:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "command": "+copy",
+      "scopes": [
+        "docs:document:copy",
+        "drive:drive.metadata:readonly",
+        "wiki:node:retrieve"
       ]
     },
     {
@@ -1691,6 +1769,13 @@
       "scopes": [
         "docs:document.comment:write_only",
         "wiki:node:read"
+      ]
+    },
+    {
+      "service": "drive",
+      "command": "+update-title",
+      "scopes": [
+        "drive:file:upload"
       ]
     },
     {
@@ -3115,6 +3200,13 @@
     },
     {
       "service": "sheets",
+      "command": "+styles-put",
+      "scopes": [
+        "sheets:spreadsheet:write_only"
+      ]
+    },
+    {
+      "service": "sheets",
       "command": "+table-get",
       "scopes": [
         "sheets:spreadsheet:read"
@@ -3315,6 +3407,15 @@
       "command": "+screenshot",
       "scopes": [
         "slides:presentation:screenshot",
+        "wiki:node:read"
+      ]
+    },
+    {
+      "service": "slides",
+      "command": "+update-slide",
+      "scopes": [
+        "slides:presentation:update",
+        "slides:presentation:write_only",
         "wiki:node:read"
       ]
     },

@@ -73,7 +73,7 @@
 
 > 以下是用 `lark_sheets_cells_set`（及 `lark_sheets_cells_set_style`）做富写入时的常用模式与准则；选哪个工具见上方「使用场景」。
 
-`lark_sheets_cells_set` 为一块区域设置值 / 公式 / 批注 / 样式，也支持 `rich_text` 的 `type: "embed-image"` 嵌入单元格图片。**关键：`cells` 二维数组的行列维度必须与 `range`（闭区间）严格一致，否则触发 `InvalidCellRangeError`**——维度计算示例见文末 `## Schemas` 的 `cells`。
+`lark_sheets_cells_set` 为一块区域设置值 / 公式 / 批注 / 样式，也支持 `rich_text` 的 `type: "embed-image"` 嵌入单元格图片。**关键：`cells` 恒为二维数组（行 × 格），单格也是 `[[{"value":…}]]`；且行列维度必须与 `range`（闭区间）严格一致，否则触发 `InvalidCellRangeError`**——维度计算示例见文末 `## Schemas` 的 `cells`。
 
 > **单元格图片 vs 浮动图片（最易选错）**：图若**属于某条记录、要随那行排序 / 筛选 / 增删**（凭证 / 证件照 / 每行配图，话里带「对应 / 每行 / 这列」等绑定词）→ **单元格图片**（本工具）：用 `lark_sheets_cells_set_image`（最短）或 `lark_sheets_cells_set` 的 `rich_text` + `type: "embed-image"`。只是自由摆放的装饰（logo / 水印 / 封面）→ 浮动图片，见 `lark_get_skill(domain="sheets", section="float-image")`。别因「浮动图更好控制 / 更熟」默认选浮动图——它承载"对应某记录"的图会随增删行 / 排序错位。
 
@@ -89,6 +89,17 @@
 
 ⚠️ **逐行写入公式是常见低效写法**：对每一行单独调用 `lark_sheets_cells_set` 写公式（如 26 次）既慢又易错，且不会自动平移公式引用。正确做法是 1 次模板写入 + 1 次 `copy_to_range`（公式引用自动平移）。
 
+💡 **多个不连续区域写入（批量修公式的正解）**：散布多处（可跨 sheet）的值 / 公式写入，用 `writes` 一次批量交付（fail-fast、不回滚）——每项 `{sheet_name, range, cells}`（sheet 定位必须写在每项里），不要为此拼 `lark_sheets_batch_update` 的 `operations`，也不要逐区域多次调用（多次往返、中途失败难恢复）：
+
+```
+lark_sheets_cells_set(url="...", writes=[
+  {"sheet_name":"明细","range":"D5","cells":[[{"formula":"=IFERROR(C5/B5,0)"}]]},
+  {"sheet_name":"汇总","range":"B3","cells":[[{"formula":"=SUM(明细!C:C)"}]]}
+])
+```
+
+范围级统一样式不在 `writes` 里做（cells 逐格 `cell_styles` 仅用于逐格差异化），写完接 `lark_sheets_styles_put`。
+
 💡 **写入公式前先按迁移规则改写**：如果公式来自 Excel 或包含数组场景，先调用 `lark_get_skill(domain="sheets", section="formula-translation")` 读取并遵循其中的规则完成改写，再把最终公式写入 `formula` 字段。
 
 💡 **内容与样式分离写入（推荐）**：当需要同时写入内容和样式时，`cells` 中每个单元格都带上 `cell_styles` / `border_styles` 会导致入参非常冗长。由于同一区域的样式通常高度重复（如整列统一背景色、统一边框），推荐拆成两步：
@@ -102,7 +113,7 @@ Step 2: lark_sheets_cells_set — range="A2", cells 含 value + cell_styles + bo
 ```
 这比在 99 个单元格中都重复写样式 JSON 高效得多。
 
-💡 **样式更新是「部分合并」，不是整体覆盖**：`lark_sheets_cells_set_style` / `lark_sheets_cells_batch_set_style`（以及 `lark_sheets_cells_set` 的 `cell_styles` / `border_styles`）只改你**显式传入**的样式属性，未传的属性保留原值。两个实用推论：
+💡 **样式更新是「部分合并」，不是整体覆盖**：`lark_sheets_cells_set_style` / `lark_sheets_styles_put`（以及 `lark_sheets_cells_set` 的 `cell_styles` / `border_styles`）只改你**显式传入**的样式属性，未传的属性保留原值。两个实用推论：
 - **可分层叠加**：对同一区域先刷字体色、再单独刷背景色、再单独刷边框，后一步不会清掉前一步——美化已有区域时无需一次带齐所有字段，可拆成多次窄调用。
 - **`border_styles` 按边合并**：只传 `{"top":{...}}` 只更新上边框，`bottom` / `left` / `right` 保留原状；不必为了「只改一条边」而把四边全部重传。（例外见上方「新增行的边框/样式禁止用 `{}` 跳过」：**全新行**底子里没有边框，仍需把要显示的边都显式传出。）
 
@@ -227,7 +238,7 @@ lark_sheets_dropdown_set(url="https://...", sheet_id="<id>", range="A2:A100",
 
 > ⚠️ **`source_range` 必须带 sheet 前缀**（即使跟 `range` 同 sheet）。注意一个坑：回读这种 listFromRange 下拉单元格时，`data_validation.range` 看起来不带 sheet 前缀（形如 `$T$1:$T$3`），如果要把读出来的 range 反过来写回 `source_range`，**必须自己重新补上 sheet 前缀**，否则会被拒。
 >
-> ⚠️ **`ranges` 类批量参数的 sheet 前缀必须「裸写」**——`lark_sheets_cells_batch_set_style` / `lark_sheets_cells_batch_clear` / `lark_sheets_dropdown_update` / `lark_sheets_dropdown_delete` 的 `ranges` 解析器不接受引号：表名含点或空格（如 `2025.9`、`一月份`）也直接写 `2025.9!A1`，写成 `'2025.9'!A1` 会被当成表名一部分、报 `sheet not found`。**但 `source_range`、透视表 `source`、`range` 走 A1 标准**：sheet 名带单引号（如 `'Sheet1'!A1:B2`）是标准写法、裸写也接受，回读统一返回带引号形式——别把 `ranges` 的裸写要求套到这些参数上。
+> ⚠️ **`ranges` 类批量参数的 sheet 前缀必须「裸写」**——`lark_sheets_cells_batch_clear` / `lark_sheets_dropdown_update` / `lark_sheets_dropdown_delete` 的 `ranges` 解析器不接受引号：表名含点或空格（如 `2025.9`、`一月份`）也直接写 `2025.9!A1`，写成 `'2025.9'!A1` 会被当成表名一部分、报 `sheet not found`。**但 `source_range`、透视表 `source`、`range` 走 A1 标准**：sheet 名带单引号（如 `'Sheet1'!A1:B2`）是标准写法、裸写也接受，回读统一返回带引号形式——别把 `ranges` 的裸写要求套到这些参数上。
 
 `lark_sheets_dropdown_update`（多 range 批量更新）的所有参数语义与 `lark_sheets_dropdown_set` 完全一致；只是目标 `ranges` 由单值变成 JSON 数组（每项带 sheet 前缀），同一份选项 + 配色应用到所有 range。
 
@@ -250,8 +261,9 @@ _公共四件套_
 
 | 参数 | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `range` | string | required | 写入区域（A1 格式） |
-| `cells` | string（复合 JSON） | required | JSON：2D 数组 `[[{cell},...],...]`，维度与 `range` 完全一致；每个 cell 可含 `value` / `formula` / `cell_styles` / `note` / `rich_text`（含 `type="embed-image"` 单元格嵌图）等，完整字段见 `## Schemas` |
+| `range` | string | xor | 写入区域（A1 格式）。与 `writes` 二选一（单区域用 range+cells，多区域用 writes） |
+| `cells` | string（复合 JSON） | xor | JSON：2D 数组 `[[{cell},...],...]`，维度与 `range` 完全一致；每个 cell 可含 `value` / `formula` / `cell_styles` / `note` / `rich_text`（含 `type="embed-image"` 单元格嵌图）等，完整字段见 `## Schemas` |
+| `writes` | string（复合 JSON） | xor | 多区域写入 JSON 数组（最多 100 项），每项 `{sheet_name\|sheet_id, range, cells}`——**sheet 定位必须写在每项里**（与 batch-update 子操作、styles-put 项同惯例，不认顶层 `sheet_name`），cells 结构同 `cells`（二维数组，可逐格带 cell_styles/border_styles）。整批展开为**单次批量提交**（fail-fast、不回滚），支持跨 sheet；典型场景：批量修复散布多处的公式、跨表同构写入——不要为此拼 batch-update 的 `operations`。与 `range`+`cells` 二选一；范围级统一样式不在此做，写完接 `lark_sheets_styles_put` |
 | `allow_overwrite` | bool | optional | 允许覆盖非空 cell（默认 true）；设为 false 时遇非空 cell 报错 |
 | `max_cells` | int | optional | 防爆，默认 50000 |
 | `copy_to_range` | string | optional | 复制范围（A1 表示法）：把 `range` 中 `cells` 写入的内容（值/公式/样式，取决于实际传入字段）复制到该区域，公式引用自动平移（如 C2=B2 → C3=B3）。适合先写一行/一块模板再扩展填充整列/整区域（如 `range="A1:G1"` 写模板、`copy_to_range="A1:G100"` 填充 100 行）。支持整行 3:6、整列 C:E、到列尾 D3:D、到行尾 D3:3；支持英文逗号分隔多个目标区域，如 C1:D2,E5:F6 |
@@ -274,7 +286,7 @@ _公共四件套_
 | `vertical_alignment` | string | optional | 垂直对齐（可选值：`top` / `middle` / `bottom`） |
 | `word_wrap` | string | optional | 换行策略（可选值：`overflow` / `auto-wrap` / `word-clip`） |
 | `number_format` | string | optional | 数字格式（例：文本 `@`、数字 `0.00`、货币 `$#,##0.00`、日期 `mm/dd/yyyy`） |
-| `border_styles` | string（复合 JSON） | optional | 边框配置 JSON：`{ top: {style,color,weight}, bottom: ..., left: ..., right: ... }`；4 方向结构相同 |
+| `border_styles` | string（复合 JSON） | optional | 边框配置 JSON：`{ top: {style,weight,color}, bottom: ..., left: ..., right: ... }`；4 方向结构相同。style = 线型（solid\|dashed\|dotted\|double\|none）；weight = 粗细（thin\|medium\|thick —— 字符串，不是像素数字）；color = 十六进制如 #000000。`{ all: {...} }` 一次设置四边。边框只有这一个参数：不存在 border_all / border_top / border_color |
 
 ### `lark_sheets_cells_set_image`
 
@@ -337,6 +349,16 @@ _【维度】行列数必须与 range 完全一致：'A1:C2'→[[_,_,_],[_,_,_]]
 - `multiple_values` (array<object>?) — 多值内容，用于支持多选的列表验证单元格 each: { value: oneOf, format?: string }
 - `data_validation` (object?) — 数据验证配置 { type: enum, items?: array<string>, range?: string, operator?: enum, values?: array<oneOf>, …共 9 项 }
 
+### `lark_sheets_cells_set` `writes`
+
+_多区域写入项数组（最多 100 项），整批单次批量提交（fail-fast、不回滚）；支持跨 sheet_
+
+**数组项**（类型 object）：
+- `sheet_id` (string?) — 目标子表 reference_id；与 sheet_name 二选一，必须写在每一项里（不认顶层 sheet 定位）
+- `sheet_name` (string?) — 目标子表名；与 sheet_id 二选一，必须写在每一项里
+- `range` (string) — A1 矩形范围，行列维度必须与 cells 严格一致（同 `range`）
+- `cells` (array) — 二维单元格数组，结构同 `cells`（value / formula / cell_styles / border_styles 等）
+
 ### `lark_sheets_cells_set_style` `border_styles`
 
 _单元格边框配置，含 top/bottom/left/right 四个方向，每个方向的结构相同（见 top）_
@@ -374,10 +396,11 @@ _一个或多个子表的 typed 数据，每个数组元素写入一张子表；
 
 **数组项**（类型 object）：
 - `cell_merges` (array<object>?) — 单元格合并操作数组；range 使用 A1 单元格范围，merge_type 默认 all each: { merge_type?: enum, range: string }
-- `cell_styles` (array<object>?) — 单元格样式操作数组；每项用 A1 单元格 range 指定范围，字段名与 `lark_sheets_cells_set_style` 对齐 each: { background_color?: string, border_styles?: object, font_color?: string, font_family?: string, font_line?: enum, …共 13 项 }
-- `col_sizes` (array<object>?) — 列宽操作数组；range 使用列范围如 A:C，type 为 pixel/standard，pixel 需要 size each: { range: string, size?: number, type: enum }
+- `cell_styles` (array<object>?) — 单元格样式操作数组；每项用 A1 单元格 range 指定范围，字段名与 `lark_sheets_cells_set_style` 对齐 each: { background_color?: string, border?: object, border_styles?: object, font_color?: string, font_family?: string, …共 14 项 }
+- `col_sizes` (array<object>?) — 列宽操作数组；range 使用列范围如 A:C，给 size（px）即像素列宽（type 可省略）；type 为 standard 时不带 size each: { range: string, size?: number, type?: enum }
+- `freeze` (object?) — 冻结行列：rows = 冻结前 N 行，cols = 冻结前 N 列（0 或省略 = 该维度不冻结） { cols?: integer, rows?: integer }
 - `name` (string) — 子表名
-- `row_sizes` (array<object>?) — 行高操作数组；range 使用行范围如 1:3，type 为 pixel/standard/auto，pixel 需要 size each: { range: string, size?: number, type: enum }
+- `row_sizes` (array<object>?) — 行高操作数组；range 使用行范围如 1:3，给 size（px）即像素行高（type 可省略）；type 为 standard/auto 时不带 size each: { range: string, size?: number, type?: enum }
 
 ## Examples
 
@@ -391,8 +414,8 @@ _一个或多个子表的 typed 数据，每个数组元素写入一张子表；
 |---------|--------|--------|
 | 只改**已有 cell 的样式**，不动 value/formula | `lark_sheets_cells_set_style` | `lark_sheets_cells_set`（会触发不必要的值写入） |
 | 把**单张图片嵌入**到某个 cell | `lark_sheets_cells_set_image` | `lark_sheets_cells_set`（参数更繁琐） |
-| **插行/列 + 写入** 这种多步组合，且要原子 | `lark_sheets_batch_update`（见 `lark_get_skill(domain="sheets", section="batch-update")`） | 多次独立 `lark_sheets_cells_set`（非原子；插入会扰动后续 range） |
-| 在**多个不连续 range** 上应用同一组样式 | `lark_sheets_cells_batch_set_style`（见 `lark_get_skill(domain="sheets", section="batch-update")`） | 多次 `lark_sheets_cells_set_style`（非原子） |
+| **插行/列 + 写入** 这种多步组合，且要一次交付 | `lark_sheets_batch_update`（见 `lark_get_skill(domain="sheets", section="batch-update")`） | 多次独立 `lark_sheets_cells_set`（插入会扰动后续调用的 range） |
+| 在**多个不连续 range** 上应用同一组样式 | `lark_sheets_styles_put`（cell_styles 多项即多区域，见 `lark_get_skill(domain="sheets", section="styles-put")`） | 多次 `lark_sheets_cells_set_style`（多次往返） |
 
 ### `lark_sheets_cells_set`
 
@@ -413,7 +436,7 @@ lark_sheets_cells_set(spreadsheet_token="shtXXX", sheet_id="<SID>", range="C2:C1
 
 > 中间想跳过的 cell 用空对象 `{}` 占位（底层语义为"保留原值不变"），`cells` 维度仍须与 `range` 完全一致。例：`range="A1:A5"`, `cells=[[{"value":1}],[{}],[{}],[{}],[{"value":5}]]` 只写 A1 和 A5。
 >
-> 跨多个不连续区域散点写入（如 `D2` + `F7` + `J15`）不属于 `lark_sheets_cells_set` 的能力范围——请用 `lark_sheets_batch_update` 把多次 `lark_sheets_cells_set` 打包成单次原子请求。
+> 跨多个不连续区域散点写入（如 `D2` + `F7` + `J15`）超出单次 `range` + `cells` 的范围，但**仍在 `lark_sheets_cells_set` 之内**：用本工具的 `writes` 复数形态一次批量交付（每项 `{sheet_name, range, cells}`，可跨 sheet，见上方「多个不连续区域写入」）。**不要为此拼 `lark_sheets_batch_update` 的 `operations`**——那是给跨类型、有顺序依赖的操作链用的。
 
 ### `lark_sheets_cells_set_style`
 
@@ -520,6 +543,7 @@ payload = {"sheets": [df_to_sheet(df1, "销售"),
 >                        **json.loads(df.to_json(orient="split", date_format="iso"))}]}
 > ```
 > **别把 `to_json + json.loads` 换成 `df.to_dict(orient="split")`**：会留 `numpy.int64` 让 `json.dumps` 后续报 "not serializable"——这一步是清洗的关键。
+> **列名必须是字符串**：整数列名（如未指定表头时 pandas 默认的 0/1/2）会以 JSON 数字进入 `columns` 被拒收；inline 写法要先 `df.columns = df.columns.map(str)`。`df_to_sheet` 已自动完成这一步。
 
 不用 pandas 也行——typed 协议就是纯 JSON。手写场景：
 

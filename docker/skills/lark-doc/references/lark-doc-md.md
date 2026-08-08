@@ -57,6 +57,10 @@ Markdown 格式支持通过 URL 插入网络图片，图片将自动从 HTTP 下
 - URL 支持 `http://` 和 `https://` 协议
 - 对应的 XML 格式为：`<img href="https://example.com/photo.png"/>`
 
+⚠️ **本地图片路径（`![alt](@./images/photo.png)`）在 MCP server 上不可用**：容器里没有 agent 可写的文件系统。本地图片改用 `lark_docs_media_insert` 在文档创建后插入（见 `lark_get_skill(domain="doc", section="media-insert")`）。
+
+目前不支持将 Base64 Data URI（如 `data:image/png;base64,...`）直接作为 Markdown 图片地址传入。
+
 ## Markdown 不支持的 Block 类型
 
 非原生 Markdown 语法的内容（如下划线、高亮框(Callout)、勾选框、多维表格、画板、思维导图、电子表格、网格布局、引用(@文档/@人)、按钮、日期提醒、行内文件、文字颜色/背景色、同步块等）采用 XML 语法表示，详见 `lark_get_skill(domain="doc", section="xml")`。
