@@ -25,7 +25,8 @@ https://xxx.feishu.cn/drive/file/boxbc_xxx
 
 ## 排障
 
-- 如果返回 `HTTP 403`，可以使用 `lark_get_skill(domain="drive", section="preview")` 里的 `lark_drive_preview` 下载源文件产物。
+- 如果返回 `permission_denied`，或最终下载返回 `HTTP 403`，按错误 `hint` 使用 `lark_drive_preview(file_token="<FILE_TOKEN>", type="source_file", output="<path>")` 获取预览产物（见 `lark_get_skill(domain="drive", section="preview")`）。
+- 如果返回限流错误，停止立即重试，稍后按指数退避重试。
 
 ## 参考
 

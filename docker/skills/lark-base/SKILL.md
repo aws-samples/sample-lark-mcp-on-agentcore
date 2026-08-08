@@ -25,6 +25,7 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 
 - Base 业务操作只使用 `lark_base_*` 工具，不使用旧聚合式命令。
 - 执行 update 前必须先查当前工具的 schema（`lark_discover`）或对应 reference。若工具要求完整配置，首次请求必须基于可信的当前配置执行 read-modify-write：只修改用户明确指定的内容，保留其他仍适用的可写配置，并按工具要求的结构提交。若工具支持局部／delta update，按其契约提交最小合法 payload；不得以不完整请求试错补参。
+- Base 工具当前不支持视图行高、冻结列、列宽等 UI-only 外观设置。遇到这类需求，说明能力边界并停止，不要猜测未文档化参数或改走 `lark_invoke` 裸 API。
 - 本地文件与 Base 之间的导入/导出转 `lark_get_skill(domain="drive")`，具体格式、参数、路径限制和仅结构导出规则由 drive skill 负责；导入完成后再回到 Base 工具。
 - 在线复制 Base 使用 `lark_base_base_copy()`，不要绕行导出/导入。
 - 认证由 MCP server 自动处理；Base 文档只保留会影响 Base 路径选择的权限规则。
@@ -49,8 +50,9 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 | 查看 Base 内资源目录 | `lark_base_base_block_list()` | 想先了解一个 Base 里有哪些 table/docx/dashboard/workflow/folder 时优先用它；返回 ID 关系和 fewshot 看 `lark_discover(query="base.base-block.list")` |
 | 管理 Base 内资源目录 | `lark_base_base_block_create/move/rename/delete` | 创建或整理 Base 直接管理的 folder/table/docx/dashboard/workflow；资源内容继续用对应工具 |
 | 管理数据表 | `lark_base_table_list/get/create/update/delete` | 处理 table 的列出、详情、创建、重命名和删除 |
+| 复制 Base 内单张数据表 | `lark_base_table_copy()` / `lark_base_table_copy_status()` | 默认只复制结构；只有用户明确要求复制全表、数据、行或记录时才传 `range="all"`；异步任务按返回的 `task_id` 查询或续等 |
 | 列/查/删字段 | `lark_base_field_list/get/delete/search_options` | 写入前用 list/get 确认字段类型、选项、ID；删除前确认目标字段 |
-| 创建/更新字段 | `lark_base_field_create()` / `lark_base_field_update()` | 必读 `lark_get_skill(domain="base", section="field-json")`；公式读 `lark_get_skill(domain="base", section="formula-field-guide")`；lookup 读 `lark_get_skill(domain="base", section="lookup-field-guide")`；命令细节读 `lark_get_skill(domain="base", section="field-create")` / `lark_get_skill(domain="base", section="field-update")` |
+| 创建/更新字段 | `lark_base_field_create()` / `lark_base_field_update()` | 同一表创建多个字段时，默认一次向 `lark_base_field_create()` 的 `json` 传字段对象数组；预计串行运行时间超过调用方超时时按时间预算拆分，不按固定条数切块；仅创建一个或多个只含 `name` + `type:text` 的简单字段时看工具 schema 即可，其他类型或属性必读 `lark_get_skill(domain="base", section="field-json")`；公式读 `lark_get_skill(domain="base", section="formula-field-guide")`，lookup 读 `lark_get_skill(domain="base", section="lookup-field-guide")`；仍需逐项恢复或工具细节时读 `lark_get_skill(domain="base", section="field-create")`，更新细节读 `lark_get_skill(domain="base", section="field-update")` |
 | 读记录明细 | `lark_base_record_get()` / `lark_base_record_list()` / `lark_base_record_search()` | 涉及筛选、排序、Top/Bottom N、聚合、多表关联、全局结论时读 `lark_get_skill(domain="base", section="data-analysis-sop")` |
 | 写记录 | `lark_base_record_upsert()` / `lark_base_record_batch_create()` / `lark_base_record_batch_update()` | 必读 `lark_get_skill(domain="base", section="record-upsert")` / `lark_get_skill(domain="base", section="record-batch-create")` / `lark_get_skill(domain="base", section="record-batch-update")` 和 `lark_get_skill(domain="base", section="cell-value")` |
 | 附件字段 | `lark_base_record_upload_attachment()` / `lark_base_record_download_attachment()` / `lark_base_record_remove_attachment()` | 附件不要伪造成普通 CellValue；上传走本地文件，下载/删除按 file token 或字段定位 |
@@ -63,7 +65,7 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 | 表单题目创建/更新 | `lark_base_form_questions_create()` / `lark_base_form_questions_update()` | Base 内表单按 table 管理；先确定并复用真实 `table_id`。读 `lark_get_skill(domain="base", section="form-questions-create")` / `lark_get_skill(domain="base", section="form-questions-update")`；题目显隐条件 `visible_rule` 结构见公共协议 `lark_get_skill(domain="base", section="filter-condition")` |
 | Base 内表单管理 | `lark_base_form_list/get/create/update/delete` / `lark_base_form_questions_list/delete` | 缺少或不确定归属时，先用 `lark_base_table_list()` 或 `lark_base_base_block_list()` 取得真实 `table_id`；这些工具使用 `base_token` + `table_id` 并在整个工作流中复用同一 `table_id`，删除前确认目标表单 |
 | 分享表单详情 | `lark_base_form_detail(share_token="<share_token>")` | 只接受表单分享链接里的 `share_token`，不要传 `base_token` / `form_id`；提交前读 `lark_get_skill(domain="base", section="form-detail")` |
-| 仪表盘与组件 | `lark_base_dashboard_*` / `lark_base_dashboard_block_*` | 提到图表/看板/block 时先读 `lark_get_skill(domain="base", section="dashboard")`；组件 `data_config` 读 `lark_get_skill(domain="base", section="dashboard-block-data-config")`；读取一个或多个图表计算结果用 `lark_base_dashboard_block_get_data()` |
+| 仪表盘与组件 | `lark_base_dashboard_*` / `lark_base_dashboard_block_*` | 提到图表/看板/block 时先读 `lark_get_skill(domain="base", section="dashboard")`；组件 `data_config` 读 `lark_get_skill(domain="base", section="dashboard-block-data-config")`；读取一个或多个图表计算结果用 `lark_base_dashboard_block_get_data()`；读取完整仪表盘时按 block 类型分流，文本和不支持直接取数的图表按 reference 恢复 |
 | Workflow | `lark_base_workflow_*` | 创建/更新或理解 steps 时读入口 `lark_get_skill(domain="base", section="workflow-guide")` 和 steps JSON SSOT `lark_get_skill(domain="base", section="workflow-schema")`；list/get/enable/disable 只处理 workflow ID 与启停状态 |
 | 高级权限与角色 | `lark_base_advperm_*` / `lark_base_role_*` | 角色操作先读入口 `lark_get_skill(domain="base", section="role-guide")`；角色 create/update 或解读完整配置再读权限 JSON SSOT `lark_get_skill(domain="base", section="role-config")`；系统角色不可删除；关闭高级权限会影响自定义角色 |
 
@@ -74,6 +76,8 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 - `lark_base_base_block_*` 只负责资源目录管理，包括创建资源、移动到 folder、重命名和删除；具体资源内容仍走 table/dashboard/workflow 工具。
 - 新建 Base 时，强烈推荐一次性执行 `lark_base_base_create(name="<base>", table_name="<table>", fields='<field-json-array>')`，同时配置新 Base 里唯一一个初始数据表的 name 和 schema；使用 `fields` 前先读 `lark_get_skill(domain="base", section="field-json")` 或复用 `lark_base_field_create()` 的字段 JSON 形状，不要猜字段属性。
 - `lark_base_base_create()` 不传 `table_name` 和 `fields` 时，会创建一个默认 schema 的初始数据表。
+- `lark_base_table_copy()` 的安全默认值是只复制表结构；用户没有明确要求记录时省略 `range`，明确要求包含记录时才传 `range="all"`。`table_id` 可直接使用当前 Base 中的表 ID 或表名。
+- `lark_base_table_copy(wait=true)` 会阻塞等待复制任务完成；调用超时或中断后不要重新提交复制，先用返回或上一次结果里的 `task_id` 执行 `lark_base_table_copy_status(task_id="<TASK_ID>")` 续查。
 - 表、字段、视图、workflow、dashboard block 的名称和 ID 必须来自真实返回，不要凭用户口述猜。
 - 存储字段可写；系统字段、`formula`、`lookup` 只读；附件字段走专用 attachment 命令。
 - 一次性原始记录查询优先用 `lark_base_record_list()` / `lark_base_record_search()` 的 filter/sort；聚合分析优先用 `lark_base_data_query()`；需要长期显示在表中时，才新增 `formula` / `lookup` 字段。
@@ -102,12 +106,13 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 ## 写入前置规则
 
 - 优先用写入返回确认结果；返回信息不足或任务明确要求核验时，再读回。
+- 严格区分动作语义：用户要求"新增/创建"时，必须用本轮 create 返回的对象、ID 或数量确认完成，不能把已有资源算作本轮新增；目标已存在时按具体工具或 guide 的同名契约处理，不得自行改写用户语义。复合创建任务对每类资源只做一次必要盘点；只有工具明确返回逐项结果时才优先使用批量创建，并继续配置本轮返回的 ID。
 - 写记录前先读字段结构；只写存储字段。系统字段、附件字段、`formula`、`lookup` 不作为普通记录写入目标。
 - 附件上传、下载、删除走专用 `lark_base_record_*_attachment` 命令。
-- 写字段前先读 `lark_get_skill(domain="base", section="field-json")`；涉及 `formula` / `lookup` 时必须读 `lark_get_skill(domain="base", section="formula-field-guide")` / `lark_get_skill(domain="base", section="lookup-field-guide")`。
+- 除上述简单 text fast path 外，写字段前先读 `lark_get_skill(domain="base", section="field-json")`；请求字段类型不在 reference 已支持类型目录中时，说明当前工具不支持并停止，不要猜测未注册的字段 JSON 或 schema，也不要用其他字段类型冒充；涉及 `formula` / `lookup` 时必须读 `lark_get_skill(domain="base", section="formula-field-guide")` / `lark_get_skill(domain="base", section="lookup-field-guide")`。
 - 表名、字段名、视图名、workflow 配置中的名称必须来自真实返回；跨表场景还要读取目标表结构。
 - 删除、角色更新、字段更新、表单提交（`lark_base_form_submit()`）等高风险操作遵循 confirmation gate（`_confirm=true`）；目标不明确时先用 get/list 消歧。
-- 批量写入单批最多 200 条；连续写同一表时串行执行，遇到 `1254291` 按短暂等待后重试处理。
+- 真正的 batch 写工具遵守各自文档的单批上限；`lark_base_field_create()` 的字段数组是顺序单项请求，按调用方超时而非固定条数拆分；连续写同一表时串行执行，遇到 `1254291` 按短暂等待后重试处理。
 - `select` 字段只支持写入字段中已有的选项；构造 CellValue 前先用 `lark_base_field_list()` 或 `lark_base_field_search_options()` 确认目标选项存在。
 
 ## 表单与视图细节
@@ -123,7 +128,7 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 
 ## Dashboard / Workflow / Role
 
-- Dashboard 的复杂点是 block 的 `data_config`，不是 list/get/create/delete 命令参数。创建或更新 block 前先读 `lark_get_skill(domain="base", section="dashboard-block-data-config")`，组件必须串行创建；`lark_base_dashboard_arrange()` 是服务端智能布局，仅在用户明确要求重排/美化、或对本次会话从零新建的仪表盘做收尾整理时执行。`lark_base_dashboard_block_get_data()` 读取图表最终计算结果，不返回 block 名称、类型、布局或 `data_config`；需要元数据先用 `lark_base_dashboard_block_get()`。
+- Dashboard 的复杂点是 block 的 `data_config`，不是 list/get/create/delete 命令参数。创建或更新 block 前先读 `lark_get_skill(domain="base", section="dashboard-block-data-config")`，组件必须串行创建；`lark_base_dashboard_arrange()` 是服务端智能布局，仅在用户明确要求重排/美化、或对本次会话从零新建的仪表盘做收尾整理时执行。`lark_base_dashboard_block_get_data()` 读取图表最终计算结果，不返回 block 名称、类型、布局或 `data_config`；需要元数据先用 `lark_base_dashboard_block_get()`。用户要求"全部/完整"仪表盘内容时不得跳过 text 或不支持直接取数的 block，按 `lark_get_skill(domain="base", section="dashboard")` 的完整读取分支恢复。
 - Dashboard 工具不支持指定组件的 `x/y/w/h`、精确位置或尺寸，不能把 `lark_base_dashboard_arrange()` 静默当作等价实现。用户只要求一般性重排/美化时可执行一次智能重排；用户要求精确结果时先说明限制并询问是否接受自适应布局，接受后才执行。不要改用 `lark_invoke` 探测裸 API、源码或未公开布局参数。
 - 创建接口成功返回即表示写入成功；只有结果不确定时才额外执行一次 `lark_base_dashboard_get()` 或 `lark_base_dashboard_block_list()`。不要仅为确认创建而逐组件调用 `lark_base_dashboard_block_get_data()`。
 - 用户要读取多个组件的计算结果时，先完整列出组件（`lark_base_dashboard_block_list(base_token="xxx", dashboard_id="blk_xxx", page_size="100")`；若 `has_more=true`，继续把返回的 `page_token` 传给 `page_token` 参数，直到 `has_more=false`），再按 `lark_get_skill(domain="base", section="dashboard-block-get-data")` 在同一轮里连续串行调用，逐个读取；不要把每个 block 拆成独立模型轮次。

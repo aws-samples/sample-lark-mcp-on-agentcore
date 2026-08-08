@@ -1,6 +1,6 @@
 # minutes +search
 
-搜索妙记列表，支持关键词、所有者、参与者以及时间范围等多条件过滤。所有者与参与者都支持传入多个 open\_id，也支持传入 `me` 表示当前用户。只读操作，不修改任何妙记数据。
+搜索妙记列表，支持关键词、所有者、参与者以及时间范围等多条件过滤。接口本身支持 user 身份和 bot / 应用身份，MCP server 始终以 user 身份调用；所有者与参与者都支持传入多个 open\_id，user 身份下也支持传入 `me` 表示当前用户。只读操作，不修改任何妙记数据。
 
 ## 典型触发表达
 
@@ -63,13 +63,13 @@ lark_minutes_search(query="预算复盘", page_size="20", page_token="<PAGE_TOKE
 
 所有参数均可选，但必须至少提供一个过滤条件：`query`、`owner_ids`、`participant_ids`、`start` 或 `end`。
 
-### 2. 仅支持 user 身份
+### 2. 支持 user 和 bot 身份
 
-该接口仅支持 user 身份（MCP server 自动处理认证）。
+该接口同时支持 user 身份和 bot / 应用身份，需要 `minutes:minutes.search:read` 权限。MCP server 始终以 user 身份调用（认证自动处理），bot 身份不可通过 MCP server 使用。
 
 ### 3. `me` 表示当前用户
 
-在 `owner_ids` 和 `participant_ids` 中可使用 `me`，表示当前登录用户。该值会被自动解析为当前用户的 `open_id`。
+在 `owner_ids` 和 `participant_ids` 中可使用 `me`，表示当前登录用户。该值会被自动解析为当前用户的 `open_id`。`me` 只适合 user 身份，因此在 MCP server 上始终可用。
 
 ### 4. 自然语言中的"参与的妙记"默认按并集理解
 

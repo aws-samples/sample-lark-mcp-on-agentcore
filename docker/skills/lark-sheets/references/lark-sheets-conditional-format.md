@@ -172,7 +172,7 @@ lark_sheets_cond_format_create(url="...", sheet_id="<SID>",
 lark_sheets_cond_format_delete(url="...", sheet_id="<SID>", rule_id="<RULE_ID>")
 ```
 
-> 一次只删一个 `rule_id`。要删**多个**条件格式时，先 `lark_sheets_cond_format_list` 拿到各 `rule_id`，再用 `lark_sheets_batch_update` 把多个 `lark_sheets_cond_format_delete` 合并为单次原子提交，不要逐个调用。
+> 一次只删一个 `rule_id`。要删**多个**条件格式时，先 `lark_sheets_cond_format_list` 拿到各 `rule_id`，再用 `lark_sheets_batch_update` 把多个 `lark_sheets_cond_format_delete` 合并为单次批量提交（fail-fast、不回滚），不要逐个调用。
 
 ### Validate / Execute 约束
 

@@ -1,10 +1,10 @@
 # im +messages-resources-download
 
-Download image or file resources from a message. Supports **automatic chunked download for large files** using HTTP Range requests. Resources are identified by the combination of `message_id` + `file_key`, both of which come directly from message content returned by `lark_im_chat_messages_list`.
+Download an image or file attached to a message. Use the `message_id` and resource key returned by a message-reading tool; do not guess or combine identifiers from different messages.
 
 > **Note:** read-only message commands render resource keys in message content, but they do not download binaries automatically. Use this command whenever you need to fetch the actual image/file bytes or save them to a specific path.
 
-This tool maps to: `lark_im_messages_resources_download` (internally calls `GET /open-apis/im/v1/messages/{message_id}/resources/{file_key}`).
+Tool: `lark_im_messages_resources_download`.
 
 ## Commands
 
@@ -26,25 +26,9 @@ lark_im_messages_resources_download(message_id="om_xxx", file_key="img_v3_xxx", 
 | `message_id` | Yes | Message ID (`om_xxx` format) |
 | `file_key` | Yes | Resource key (`img_xxx` or `file_xxx`) |
 | `type` | Yes | Resource type: `image` or `file` |
-| `output` | No | Output path (relative paths only; `..` traversal is not allowed). When omitted, the server's original filename from `Content-Disposition` is used if available; otherwise defaults to `file_key`. File extension is automatically inferred from `Content-Disposition` or `Content-Type` if not provided |
+| `output` | No | Relative output path; absolute paths and `..` traversal are rejected. When omitted, the command uses the attachment name when available and otherwise falls back to the resource key |
 
-## Large File Download (Auto Chunking)
-
-When downloading large files, the command automatically uses **HTTP Range requests** for reliable chunked downloading:
-
-| Behavior | Details |
-|----------|---------|
-| Probe chunk | First 128 KB to detect file size and Content-Type |
-| Chunk size | 8 MB per subsequent request |
-| Workers | Single-threaded sequential download (ensures reliability) |
-| Retries | Up to 2 retries for transient request failures, with exponential backoff |
-
-**Benefits:**
-- Reduces the impact of transient request failures during large downloads
-- Preserves the server's original filename via `Content-Disposition` (supports RFC 5987 UTF-8 encoding); falls back to `Content-Type`-based extension inference
-- Validates file size integrity after download completion
-
-## `file_key` Sources
+## Choose `type`
 
 Different resource markers in message content correspond to different `file_key` and `type` values:
 
@@ -54,6 +38,17 @@ Different resource markers in message content correspond to different `file_key`
 | File | `file_xxx` | `file_xxx` | `file` |
 | Audio | `file_xxx` | `file_xxx` | `file` |
 | Video | `file_xxx` | `file_xxx` | `file` |
+
+Stickers cannot be downloaded with this tool.
+
+## Output
+
+On success, read:
+
+| Field | Meaning |
+|------|---------|
+| `data.saved_path` | Saved local path |
+| `data.size_bytes` | Saved byte count |
 
 ## Usage Scenario
 
@@ -72,11 +67,10 @@ lark_im_messages_resources_download(message_id="om_xxx", file_key="img_v3_xxx", 
 
 | Symptom | Root Cause | Solution |
 |---------|---------|---------|
-| Download failed | `file_key` does not match the `message_id` | Make sure the `file_key` came from that message's content |
-| Hit error code 234002 or 14005 | No permission, **not** missing API scope | no access to this chat or file was deleted — do not retry, return the error to the user |
+| Resource does not match the message | `file_key` and `message_id` came from different messages | Read the message again and use its matching identifiers |
 | Permission denied | `im:message:readonly` is not authorized | Ensure the scope is authorized |
-| File size mismatch | Chunked download integrity check failed | Network instability during download; retry the command |
-| Content-Range error | Server returned invalid range header | Transient API issue; retry the command |
+| Attachment unavailable | The message or resource is deleted, hidden, restricted, or inaccessible to the caller | Do not retry unchanged; report the exact error |
+| Retryable network error | The transfer did not complete | Retry the same call |
 
 ## References
 

@@ -118,7 +118,7 @@ lark_docs_fetch(doc="Z1Fj...tnAc", scope="keyword", keyword="部署|发布|上�
 | `max_depth` | 否 | `outline` = 标题层级上限；其它 = 子树深度（`-1` 不限，默认） |
 | `format` | 否 | `json`（默认）\| `pretty` |
 
-## 图片、文件、画板的处理
+## 处理文档内嵌资源
 
 **文档中的素材以 XML 标签形式出现：**
 
@@ -128,14 +128,18 @@ lark_docs_fetch(doc="Z1Fj...tnAc", scope="keyword", keyword="部署|发布|上�
 <whiteboard token="..."/>
 ```
 
-- `<img>` / `<source>` 带 `url` 时，直接用该 URL 下载即可（普通 HTTP GET），无需走 shortcut。
-- 没有 `url`、或只想预览 → `lark_docs_media_preview(token="<token>", output="./preview_media")`
-- 明确下载，或目标是 `<whiteboard>`（画板只能走 shortcut） → `lark_docs_media_download(token="<token>", output="./downloaded_media")`
-- 文档封面图不是正文素材；下载/更新/删除封面图 → `lark_docs_resource_download` / `lark_docs_resource_update` / `lark_docs_resource_delete`（`type="cover"`）
+| 返回内容 | 处理方式 |
+|-|-|
+| `<img>`、`<source>` | 有 `url` 时**仅下载可信的公开 HTTPS URL**：拒绝带 userinfo 的 URL，以及解析到 private / loopback / link-local / multicast / unspecified 地址的 host，并逐次校验重定向；不满足时禁止请求。无 `url` 或只想预览时提取 `token`，用 `lark_docs_media_preview(token="<token>")` |
+| `<whiteboard>` | 提取 `token`，用 `lark_docs_media_download(token="<token>", type="whiteboard")`（画板只能走这条路径） |
+| `<sheet>`、`<cite file-type="sheets">` | 提取 `token` 和 `sheet-id`，转到 `lark_get_skill(domain="sheets")` |
+| `<bitable>`、`<cite file-type="bitable">` | 提取 `token` 和 `table-id`，转到 `lark_get_skill(domain="base")` |
+| `<vc-transcribe-tab>` | 提取 `vc-node-id`，用 `lark_note_detail(note_id="<vc-node-id>")` |
+| `<synced_reference>` | 提取 `src-token` 和 `src-block-id`，读取源文档并定位 block |
 
-## 嵌入电子表格 / 多维表格
-
-返回中可能含 `<sheet>`、`<bitable>`、`<cite file-type="sheets|bitable">`。内部数据无法通过 `lark_docs_fetch` 获取，提取 `token` 等属性后切到 `lark-sheets` / `lark-base` 下钻，详见 SKILL.md 快速决策路由表。
+- 明确要下载图片 / 附件时用 `lark_docs_media_download(token="<token>")`。
+- 文档封面图不是正文素材；下载/更新/删除封面图 → `lark_docs_resource_download` / `lark_docs_resource_update` / `lark_docs_resource_delete`（`type="cover"`）。
+- `<sheet>` / `<bitable>` 的内部数据无法通过 `lark_docs_fetch` 获取，必须按上表切到对应技能下钻。
 
 ## 参考
 

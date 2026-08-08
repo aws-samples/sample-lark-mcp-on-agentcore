@@ -22,6 +22,7 @@
   "docs:document.content:read",
   "docs:document:export",
   "docs:document:import",
+  "docs:document.media:upload",
   "drive:drive.metadata:readonly",
   "drive:file:upload",
   "drive:file:download",
@@ -47,5 +48,6 @@
   "mail:user_mailbox.message:modify",
   "mail:user_mailbox.message:send",
   "wiki:wiki:readonly",
-  "wiki:node:read"
+  "wiki:node:read",
+  "wiki:node:retrieve"
 ]

@@ -285,6 +285,9 @@ lark_drive_export(token="<SOURCE_DOC_TOKEN>", doc_type="docx", file_extension="p
 # 2. 继续查询导出结果
 lark_drive_task_result(scenario="export", ticket="<EXPORT_TICKET>", file_token="<SOURCE_DOC_TOKEN>")
 
+# 如果返回 rate_limit / 99991400：至少等待 1 分钟后重试同一次 lark_drive_task_result；
+# 若仍限频，以 1 分钟为起点继续指数退避。
+
 # 3. 拿到 file_token 后下载
 lark_drive_export_download(file_token="<EXPORTED_FILE_TOKEN>")
 ```

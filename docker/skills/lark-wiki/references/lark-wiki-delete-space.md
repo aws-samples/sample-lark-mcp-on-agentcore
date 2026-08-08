@@ -108,11 +108,13 @@ dry-run 会展示两步调用链：
 
 ### 2. 只有知识库 URL（`.../wiki/<token>`）
 
+节点解析和删除必须使用相同身份（MCP server 始终使用 user identity，自动满足）。
+
 ```
-lark_invoke(tool_name="lark_wiki_spaces_get_node", args={params: {"token": "<wiki_token>"}, format: "json"})
+lark_wiki_node_get(node_token="<wiki_url>", format="json")
 ```
 
-读取 `data.node.space_id`。
+读取 `data.space_id`。
 
 ### 3. 只有知识库名称
 

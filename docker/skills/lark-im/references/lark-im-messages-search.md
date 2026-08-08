@@ -4,8 +4,6 @@ Search Feishu messages across conversations. This tool automatically performs a 
 
 By default each result message also carries a `reactions` block (counts + details from `im.reactions.batch_query`) when the server has reactions for it, and `update_time` for messages that were actually edited. With `page_all`, every page is enriched; pass `no_reactions=true` to skip the extra round-trip. See `lark_get_skill(domain="im", section="message-enrichment")` for the full contract.
 
-> **User identity only.** Bot identity is not supported.
-
 This tool maps to: `lark_im_messages_search` (internally calls `POST /open-apis/im/v1/messages/search` + batched `GET /open-apis/im/v1/messages/mget`, then batch-fetches chat context).
 
 ## Commands
@@ -156,7 +154,7 @@ Use `lark_im_messages_resources_download` if you need to fetch the underlying im
 
 Use `query` only for real message keywords. If the user asks for activity review such as "最近一周我和哪些 Bot 有过交互" or "整理我和某人的聊天记录", and the useful constraints are sender type, chat, person, or time range, keep `query=""` and rely on those filters. Do not put generic instruction words such as "看看", "总结", "交互内容", or "聊天记录" into `query`; those words often over-constrain message search and hide the relevant messages.
 
-This guidance applies only when using user identity. `lark_im_messages_search` is user-only; if the user explicitly asks for application/bot identity, do not try bot identity. For bot identity with a named group and history/listing intent, resolve the group with `lark_im_chat_search`, then list messages with `lark_im_chat_messages_list(chat_id="<chat_id>")`.
+This guidance applies to both user and bot identity (⚠️ bot identity is not available via the MCP server, which always calls as the user). For named-group history/listing intents where search is not needed, resolving the group with `lark_im_chat_search` and listing messages with `lark_im_chat_messages_list(chat_id="<chat_id>")` is still a good narrower path.
 
 ```
 # Review recent bot interactions without forcing a keyword

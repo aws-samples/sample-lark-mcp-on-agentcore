@@ -83,6 +83,8 @@ lark_drive_export(token="<DOCX_TOKEN>", doc_type="docx", file_extension="pdf", o
 - `only_schema` 只支持 `bitable` 导出为 `.base`，用于仅导出表结构
 - 如果格式不匹配，会返回 typed validation error，并在 `hint` 中给出可重试的 `file_extension` 建议；例如 `docx + csv` 会提示改用 `docx/pdf/markdown`，或改传 sheet/bitable URL
 - shortcut 内部固定有限轮询：最多 10 次，每次间隔 5 秒
+- 创建导出任务时收到 `rate_limit` / `99991400` 不会生成 `ticket`；至少等待 1 分钟后重跑原 `lark_drive_export`，持续限频时从 1 分钟开始指数退避
+- 状态轮询一旦收到 `rate_limit` / `99991400` 会立即停止，不会继续消耗剩余轮询次数；错误会保留原始 typed metadata，并在 `hint` 中提供已有 `ticket` 的续查方式
 - 轮询超时不是失败；会返回 `ticket`、`timed_out=true` 和 `next_command`，供后续继续查询
 
 ## 错误码处理
@@ -91,6 +93,7 @@ lark_drive_export(token="<DOCX_TOKEN>", doc_type="docx", file_extension="pdf", o
 |--------|------|----------|
 | `1069914` | token 非法或 token/type 不匹配；常见原因是把 Wiki node token 当作底层 `docx` / `sheet` / `bitable` token 使用，没有传 `doc_type="wiki"` | 优先改用 `url="<Wiki URL>"`；只有裸 Wiki token 时，用 `lark_drive_export(token="<WIKI_NODE_TOKEN>", doc_type="wiki")`。不确定 token 类型时，先用 `lark_drive_inspect(url="<TOKEN>", type="wiki")` 检查是否能解包为 Wiki node；如果不是 Wiki token，再检查 token 来源、`doc_type` 是否与实际资源类型一致 |
 | `1069902` | 没有当前导出任务所需权限 | 不要直接重试同一命令；先确认当前身份是否能访问该文档、是否有下载/导出权限，以及文档是否受分享、密级或租户策略限制。需要补权限时，让文档 owner 或管理员授权后再执行 |
+| `99991400` / `rate_limit` | OpenAPI 请求频率受限 | 立即停止并按错误 `hint` 处理：没有 `ticket` 时，至少等待 1 分钟后重跑原 `lark_drive_export`；已有 `ticket` 时，只执行 `lark_drive_task_result(scenario="export", ...)` 续查，不要重复创建任务。持续限频时从 1 分钟开始指数退避 |
 | `99991679` | 缺少 OpenAPI scope | 按错误 envelope 中的 `missing_scopes` / `required_scope` / `hint` 补齐授权（认证由 MCP server 自动处理）。补 scope 前不要反复重试导出命令 |
 
 ## 推荐续跑方式

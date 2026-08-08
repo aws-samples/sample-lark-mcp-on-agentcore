@@ -1,6 +1,6 @@
 # 编辑已有 PPT：读-改-写闭环
 
-局部编辑走 **shortcut `lark_slides_replace_slide`**（块级替换 / 插入），配合 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", ...)` 读原页拿 `block_id`。已有 Slides 的多页整页重建走 **`lark_slides_replace_pages`**，保持原 presentation 链接不变。
+局部编辑走 **shortcut `lark_slides_replace_slide`**（块级替换 / 插入），配合 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", ...)` 读原页拿 `block_id`。整页重建走 **`lark_slides_update_slide`**（见 `lark_get_skill(domain="slides", section="update-slide")`），多页就每页各跑一次 —— 它原地覆盖并保留 `slide_id` 和页序；只有写进 `content` 且带原 id 的元素才会保留元素 id，遗漏的元素会被删除。
 
 > 生成 XML 前**必读** `lark_get_skill(domain="slides", section="xml-schema-quick-ref")`。
 
@@ -11,7 +11,7 @@
 | 已知某块的 `block_id`，要换这块内容（改标题、换图、挪坐标） | `block_replace` | 精准替换，原子性好；`replacement` 根 `id` 自动注入为 `block_id` |
 | 只加 1~N 个元素、不动现有布局 | `block_insert` | 新增不覆盖，可选 `insert_before_block_id` 指定位置 |
 | 一次动多个元素（如：换标题 + 加图） | 单次 `parts` 里拼多条 | 整批作为原子事务，任一失败整批不生效；`block_replace` 和 `block_insert` 可混用 |
-| 多页版式重建、整页坐标重排 | `lark_slides_replace_pages` | 原 presentation 内批量 create-before/delete-old，不生成新 Slides 链接 |
+| 整页版式重建、整页坐标重排、改页面背景、删若干元素 | `lark_slides_update_slide`（每页一次） | 原地整页覆盖，`slide_id` 和页序不变；带原 `id` 的元素保留 id，不带 `id` 的作为新元素插入，遗漏的被删除 |
 
 > **没有字段级 patch**：即便只想改一个 `shape` 的 `topLeftX`，也得把整个块的新 XML 写出来用 `block_replace`。这不是"微调"，是块级重写。
 
@@ -29,6 +29,8 @@ lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"blo
 ```
 
 `slide_id` / 页序不会变。`block_replace` 的 `replacement` 根元素 `id` 会自动注入为 `block_id`。
+
+> **part 的字段名是 `block_id` + `replacement`（XML 字符串）**：写成 `content` / `xml` / `block` 会被直接拒绝（报 `unknown field "content"; did you mean "replacement"?`）。收到这个报错时改字段名，不要改字段值。
 
 ## `revision_id` 参数
 
@@ -77,7 +79,7 @@ lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"blo
 ## 相关文档
 
 - `lark_get_skill(domain="slides", section="replace-slide")` — +replace-slide 参数详情
-- `lark_get_skill(domain="slides", section="replace-pages")` — 多页整页重建 shortcut
+- `lark_get_skill(domain="slides", section="update-slide")` — `lark_slides_update_slide` 参数详情（整页覆盖）
 - `lark_get_skill(domain="slides", section="xml-presentation-slide-get")` — slide.get 参考
 - `lark_get_skill(domain="slides", section="media-upload")` — 上传图片拿 file_token
 - `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` — XML 元素和属性速查

@@ -27,10 +27,10 @@ cdk.out/
 #    default philosophy of excluding test dirs (this repo uses Jest-style
 #    __tests__/, which the default list does not cover).
 docker/__tests__/server-runtime.test.js
-# 2) Skill helper scripts flagged by use-defused-xml. Both guard the stdlib
+# 2) Skill helper script flagged by use-defused-xml. It guards the stdlib
 #    parser with ensure_safe_xml_source() (rejects DOCTYPE/ENTITY declarations,
 #    caps input size — blocks XXE and XML bombs; verified with attack payloads).
 #    defusedxml cannot be imported: the container runs skill scripts with the
 #    base-image python3 and has no pip / third-party Python deps by design.
-docker/skills/lark-doc/scripts/doc_word_stat.py
+#    (lark-doc/scripts/doc_word_stat.py was dropped upstream in lark-cli 1.0.85.)
 docker/skills/lark-slides/scripts/xml_text_overlap_lint.py

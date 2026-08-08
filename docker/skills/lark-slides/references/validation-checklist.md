@@ -1,6 +1,6 @@
 # Validation Checklist
 
-创建或大幅改写演示文稿后，必须做一次显式验证。目标是发现空白页、XML 损坏、内容截断、明显溢出、弱视觉层级和未验证输出。
+创建、大幅改写演示文稿或每次通过 `lark_slides_update_slide` 整页写回后，必须做一次显式验证。目标是发现空白页、XML 损坏、内容截断、明显溢出、弱视觉层级和未验证输出。
 
 小型已有页编辑也要做对应范围的验证：至少读取被改页面或全文 XML，确认目标元素已更新且未破坏周边结构。
 
@@ -43,7 +43,7 @@ lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["-
 - `element_ids`：相关 XML 元素 ID；
 - `rule`：规则 ID、名称、阈值和比较关系；
 - `measurement`：越界量、交叠面积、覆盖率等实测值；
-- `related_objects`：相关对象的类型与坐标框；
+- `related_objects`：相关对象的类型、坐标框，以及指向当前输入 XML 节点的 XPath-like `xml_path`；
 - `target`、`message`、`hint`：页码、语义说明和处理建议。
 
 当 `sparse_container_content.measurement.content_coverage_ratio < rule.threshold` 时，需要结合同页截图判断留白是否有意设计；不要仅凭 warning 自动扩充内容。
@@ -53,7 +53,7 @@ lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["-
 | code | 含义 | 处理方式 |
 |------|------|----------|
 | `xml_not_well_formed` | XML 语法错误或文本未转义 | 修复标签闭合、属性引号、`&` / `<` / `>` 转义 |
-| `sml_prefixed_tag` | SML 元素使用了命名空间前缀，如 `<ns0:slide>` 或 `<sml:shape>` | 使用 `<slide xmlns="http://www.larkoffice.com/sml/2.0">` 的默认命名空间，或使用无前缀标签 |
+| `sml_prefixed_tag` | SML 元素使用了命名空间前缀，如 `<ns0:slide>` 或 `<sml:shape>` | 使用 `<slide xmlns="https://www.larkoffice.com/sml/2.0">` 的默认命名空间，或使用无前缀标签 |
 | `sxsd_unsupported_tag` | 使用了 SXSD 不支持的标签 | 按 lint `hint` 替换为受支持标签；常见如 `textbox -> <shape type="text">`、`image -> <img>` |
 | `sxsd_unsupported_attr` | 支持的标签上使用了不支持的属性 | 按 lint `hint` 改为支持的属性；常见如 `x -> topLeftX`、`fontColor -> color` |
 | `iconpark_unsupported_icon_type` | `<icon>` 使用了 `iconpark-index.json` 中不存在的 `iconType` | 按 lint `hint` 改为名单内的 `iconType`，或先用 `lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", ...)` 搜索 |
@@ -62,7 +62,7 @@ lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["-
 | `bbox_overlap` | 文本元素的估算绘制区域明显重叠 | 拉开文本坐标、缩小文本框/字号，或改成明确的分栏/分组结构 |
 | `*_out_of_canvas` | 元素边界超出页面画布 | 根据 `measurement.overflow` 移回画布或缩小尺寸 |
 | `blank_slide` | 页面没有画布内可见内容 | 补充主体内容；仅有空背景或空形状不能准出 |
-| `sparse_container_content` | 大卡片内容覆盖率低于阈值 | 按元素 ID 定位卡片，结合截图判断是否补充或放大内容 |
+| `sparse_container_content` | 大卡片内容覆盖率低于阈值 | 按 `related_objects[].xml_path` 定位卡片；`element_id` 存在且唯一时也可按 ID 定位，再结合截图判断是否补充或放大内容 |
 | `sparse_slide_content` | 全页有效内容覆盖率偏低 | 复核截图，确认是否为有意留白 |
 
 ## Screenshot QA

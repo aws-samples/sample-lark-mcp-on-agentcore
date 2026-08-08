@@ -54,7 +54,7 @@
 5. **新增合并时数据保护**：合并前确认目标区域只有左上角有数据，其余单元格为空，否则合并会导致非左上角的数据丢失。
 6. **批量取消合并一次调用即可**：当一个范围（整列 `A:A`、整行 `3:3`、矩形 `A1:D100`）内存在多个合并区域，直接调一次 `lark_sheets_cells_unmerge` 传入这个大范围，会一次性取消该范围内所有合并区域；**不要**为每个合并区域单独调用 unmerge，也不要用 `lark_sheets_batch_update` 拆成多次 unmerge。
 
-**⚠️ 批量操作必须用 `lark_sheets_batch_update`**：对**多个**不同区域执行 `lark_sheets_cells_merge` 时，禁止逐个调用，合并为单次原子 `lark_sheets_batch_update`（语义与 `operations` 入参格式见 `lark_get_skill(domain="sheets", section="batch-update")`）。行高列宽**不需要** `lark_sheets_batch_update`：多行 / 多列不同尺寸直接用 `lark_sheets_rows_resize(heights=…)` / `lark_sheets_cols_resize(widths=…)` 的 map 形态，一次调用原子完成。
+**⚠️ 多区域合并不要逐个调用**：对**多个**不同区域执行 `lark_sheets_cells_merge` 时，写成一份 `lark_sheets_styles_put` 的 `cell_merges` 一次交付（合并与样式 / 行高列宽 / 冻结同属一份声明式规格，见 `lark_get_skill(domain="sheets", section="styles-put")`）；只有当合并夹在**跨类型、有顺序依赖**的操作链里（如插列 → 合并 → 写表头）才用 `lark_sheets_batch_update`（fail-fast、不回滚，入参格式见 `lark_get_skill(domain="sheets", section="batch-update")`）。行高列宽同理**不需要** `lark_sheets_batch_update`：多行 / 多列不同尺寸直接用 `lark_sheets_rows_resize(heights=…)` / `lark_sheets_cols_resize(widths=…)` 的 map 形态，一次调用完成。
 
 **唯一例外**：`lark_sheets_cells_unmerge` 原生支持传一个大 range 一次性取消其中所有合并区域，应直接单次调用，**不要**拆进 `lark_sheets_batch_update`。
 
@@ -123,7 +123,7 @@ _high-risk-write（首次调用会被服务端拒绝并给出确认提示，确�
 | 参数 | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `height` | int | xor | 统一行高（像素，例：30 / 40 / 60；不是磅/points），配 `range` 使用。传了 `height` 就是像素模式，可以省略 `type`；显式 `type="pixel"` 也行（等价）。多行不同高用 `heights` |
-| `heights` | 复合 JSON | xor | 差异化行高 map，一次原子调用给多行设置不同高度：键为单行（`"1"`）或行闭区间（`"2:20"`），值为像素高（如 30 / 50）、`"auto"`（自适应内容）或 `"standard"`（重置默认）。⚠️ 单位是像素，不是磅/points。与 `range` / `height` / `type` 互斥 |
+| `heights` | 复合 JSON | xor | 差异化行高 map，一次调用给多行设置不同高度：键为单行（`"1"`）或行闭区间（`"2:20"`），值为像素高（如 30 / 50）、`"auto"`（自适应内容）或 `"standard"`（重置默认）。⚠️ 单位是像素，不是磅/points。与 `range` / `height` / `type` 互斥 |
 | `type` | string | xor | 尺寸方式 enum：`pixel`（需配 `height`）/ `standard`（重置为默认行高）/ `auto`（自动适应内容）。常规写法直接给 `height` 即可省略本参数；`type="standard"` / `type="auto"` 不能与 `height` 同时给（可选值：`pixel` / `standard` / `auto`） |
 | `range` | string | xor | 要调整行高的行闭区间；1-based 行号如 `2:10` 或单行 `5`。统一尺寸形态必填（配 `height` 或 `type`）；map 形态（`heights`）不传 |
 
@@ -132,7 +132,7 @@ _high-risk-write（首次调用会被服务端拒绝并给出确认提示，确�
 | 参数 | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `width` | int | xor | 统一列宽（像素，例：80 / 120 / 200；不是 Excel 字符单位），配 `range` 使用。传了 `width` 就是像素模式，可以省略 `type`；显式 `type="pixel"` 也行（等价）。多列不同宽用 `widths` |
-| `widths` | 复合 JSON | xor | 差异化列宽 map，一次原子调用给多列设置不同宽度：键为单列（`"A"`）或列闭区间（`"C:E"`），值为像素宽（如 80 / 120 / 200）或 `"standard"`（重置默认）。⚠️ 单位是像素，不是 Excel 字符单位（像素 ≈ 字符数×8+16）。与 `range` / `width` / `type` 互斥 |
+| `widths` | 复合 JSON | xor | 差异化列宽 map，一次调用给多列设置不同宽度：键为单列（`"A"`）或列闭区间（`"C:E"`），值为像素宽（如 80 / 120 / 200）或 `"standard"`（重置默认）。⚠️ 单位是像素，不是 Excel 字符单位（像素 ≈ 字符数×8+16）。与 `range` / `width` / `type` 互斥 |
 | `type` | string | xor | 尺寸方式 enum：`pixel`（需配 `width`）/ `standard`（重置为默认列宽）。常规写法直接给 `width` 即可省略本参数；`type="standard"` 不能与 `width` 同时给（可选值：`pixel` / `standard`） |
 | `range` | string | xor | 要调整列宽的列闭区间；列字母如 `A:E` 或单列 `C`。统一尺寸形态必填（配 `width` 或 `type`）；map 形态（`widths`）不传 |
 
@@ -224,7 +224,7 @@ lark_sheets_cells_unmerge(url="...", sheet_id="<SID>", range="A1:C100")
 行高列宽分两条工具，避免行 / 列在底层 schema 的差异（行支持 `auto`，列不支持）混在一起。两种形态：
 
 - **统一尺寸**：`range` + `height`/`width`（省略 `type`，等价于 `type="pixel"`）。非像素模式走 `type="standard"` / `type="auto"`，此时不能再带像素值。
-- **差异化尺寸**：`heights`/`widths` 一个 JSON map，键为单行/列或闭区间、值为像素或模式字符串，**一次调用原子完成多行 / 多列不同尺寸**——不要拆多次调用，也不要用 `lark_sheets_batch_update`。
+- **差异化尺寸**：`heights`/`widths` 一个 JSON map，键为单行/列或闭区间、值为像素或模式字符串，**一次调用完成多行 / 多列不同尺寸**——不要拆多次调用，也不要用 `lark_sheets_batch_update`。
 
 ```
 # 统一尺寸：把第 2-10 行设为固定 30 px
@@ -272,5 +272,5 @@ lark_sheets_range_sort(url="...", sheet_id="<SID>", range="A1:E100", has_header=
 
 ### Validate / Execute 约束
 
-- `Validate`：XOR 公共四件套；`lark_sheets_cells_clear` 为 high-risk-write，需 `_confirm=true` 确认；`lark_sheets_range_move` / `lark_sheets_range_copy` / `lark_sheets_range_fill` / `lark_sheets_range_sort` 校验源 / 目标 range 在同一 spreadsheet；`lark_sheets_range_sort` 的 `sort_keys` 必须合法 JSON 数组且 col 都在 `range` 内；`lark_sheets_rows_resize` / `lark_sheets_cols_resize` 两种形态二选一——统一形态必须给 `range` 且至少给 `height`/`width` 或 `type` 之一（`type="standard"`/`"auto"` 不能与像素参数同给，`type="pixel"` 共存 OK），map 形态（`heights`/`widths`）不能与 `range`/`height`/`width`/`type` 混用，map 键必须与命令维度一致（行数字 / 列字母）、不得重复，值为正整数像素或模式字符串；列宽 < 20px 拒绝（疑似 Excel 字符单位）；`lark_sheets_cols_resize` 不接受 `auto`（列宽不支持自适应）。map 形态在 `lark_sheets_batch_update` 子操作里不可用（它本身就是原子批量）。
+- `Validate`：XOR 公共四件套；`lark_sheets_cells_clear` 为 high-risk-write，需 `_confirm=true` 确认；`lark_sheets_range_move` / `lark_sheets_range_copy` / `lark_sheets_range_fill` / `lark_sheets_range_sort` 校验源 / 目标 range 在同一 spreadsheet；`lark_sheets_range_sort` 的 `sort_keys` 必须合法 JSON 数组且 col 都在 `range` 内；`lark_sheets_rows_resize` / `lark_sheets_cols_resize` 两种形态二选一——统一形态必须给 `range` 且至少给 `height`/`width` 或 `type` 之一（`type="standard"`/`"auto"` 不能与像素参数同给，`type="pixel"` 共存 OK），map 形态（`heights`/`widths`）不能与 `range`/`height`/`width`/`type` 混用，map 键必须与命令维度一致（行数字 / 列字母）、不得重复，值为正整数像素或模式字符串；列宽 < 20px 拒绝（疑似 Excel 字符单位）；`lark_sheets_cols_resize` 不接受 `auto`（列宽不支持自适应）。map 形态在 `lark_sheets_batch_update` 子操作里不可用（它本身就是批量提交）。
 - `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_cells_get(range="<影响范围>")` 抽样比对。

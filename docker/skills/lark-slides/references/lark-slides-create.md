@@ -10,14 +10,16 @@
 
 | 场景 | 推荐方式 |
 |------|----------|
-| 简单 XML（1-3 页、结构简单、几乎无复杂中文和特殊字符） | `lark_slides_create(slides='[...]')` 一步创建 |
-| 复杂 XML（多页、含中文、大段文本、复杂布局、嵌套引号、特殊字符较多） | **两步创建**：先 `lark_slides_create` 创建空白 PPT，再用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="add-slide")`）逐页添加 |
+| 不超过 10 页 | `lark_slides_create(slides='[...]')` 一步创建（数组每项一页，顺序即页序）|
+| 超过 10 页，或单次 payload 很大 | **两步创建**：先 `lark_slides_create` 创建空白 PPT，再用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="add-slide")`）逐页添加 |
 | 已有 PPT 继续追加或插入页面 | 使用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="add-slide")`），必要时配合 `before_slide_id` |
 
-> [!WARNING]
-> `slides='[...]'` 的风险点主要在一次性提交的 payload 复杂度，而不是单纯页数。即使只有 1 页，只要 XML 足够复杂，也建议使用两步创建法。
 > [!IMPORTANT]
-> `lark_slides_create` 的 `slides` 参数底层会逐页创建，不是原子操作。中途失败时先记录 `xml_presentation_id`，回读确认当前状态，再继续修复或追加。
+> `lark_slides_create` 带页面时底层会逐页创建，不是原子操作。中途失败时先记录 `xml_presentation_id`，回读确认当前状态，再继续修复或追加。
+>
+> 单次 payload 过大时（整份 XML 接近百 KB 量级）改走两步创建逐页添加，避免一次性提交被参数长度上限截断。
+
+**CRITICAL — 提交前必须先跑版式 lint**：对待提交的 `<slide>` XML 运行 `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`，`summary.error_count` 必须为 0。
 
 ## 用法
 
@@ -37,14 +39,14 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 - **`title`**（string）：演示文稿标题
 - **`url`**（string，可选）：演示文稿的在线链接，如有返回则务必展示给用户
 - **`revision_id`**（integer）：演示文稿版本号
-- **`slide_ids`**（string[]，可选）：仅传 `slides` 时返回，成功添加的页面 ID 列表
-- **`slides_added`**（integer，可选）：仅传 `slides` 时返回，成功添加的页面数量
-- **`images_uploaded`**（integer，可选）：仅 `slides` 中含 `@<本地路径>` 占位符时返回，已上传的去重后图片数量
+- **`slide_ids`**（string[]，可选）：带页面创建时返回，成功添加的页面 ID 列表
+- **`slides_added`**（integer，可选）：带页面创建时返回，成功添加的页面数量
+- **`images_uploaded`**（integer，可选）：页面 XML 中含 `@<本地路径>` 占位符时返回，已上传的去重后图片数量
 
 > [!IMPORTANT]
-> 不传 `slides` 时，`lark_slides_create` 只创建空白演示文稿。创建后用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加 slide 内容。
+> 不带页面参数时，`lark_slides_create` 只创建空白演示文稿。创建后用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加 slide 内容。
 >
-> 传了 `slides` 时，先创建空白演示文稿，再逐页添加页面。如果某一页添加失败，已创建的演示文稿和已添加的页面会保留。
+> 带了页面时，先创建空白演示文稿，再逐页添加页面。如果某一页添加失败，已创建的演示文稿和已添加的页面会保留。
 
 > [!IMPORTANT]
 > ⚠️ 以应用身份（bot identity）创建演示文稿的操作需要 bot identity，不通过 MCP server 提供。
@@ -54,18 +56,23 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `title` | 否 | 演示文稿标题（不传则默认 "Untitled"） |
-| `slides` | 否 | slide 内容 JSON 数组，每个元素是一个 `<slide>` XML 字符串（最多 10 个；超过 10 页请先创建空白 PPT，再用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加） |
+| `slide` | 否 | 一页 `<slide>` XML；与 `slides` 二选一，同时传会报错 |
+| `slides` | 否 | 页面 XML 的 JSON 字符串数组，最多 10 个；与 `slide` 二选一 |
+
+10 页是上限，服务端每次只接收一页。超过 10 页时先创建空白 PPT，再用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加。
+
+两种形式的每一页都会在发请求前校验成「单个完整的 `<slide>` 文档」。不合格的页在创建演示文稿之前报错并指出页序号，不会留下空壳演示文稿。
 
 ## `slides` 参数格式
 
 ```json
 [
-  "<slide xmlns=\"http://www.larkoffice.com/sml/2.0\">...第1页XML...</slide>",
-  "<slide xmlns=\"http://www.larkoffice.com/sml/2.0\">...第2页XML...</slide>"
+  "<slide xmlns=\"https://www.larkoffice.com/sml/2.0\">...第1页XML...</slide>",
+  "<slide xmlns=\"https://www.larkoffice.com/sml/2.0\">...第2页XML...</slide>"
 ]
 ```
 
-JSON string 数组，每个元素是一页 slide 的完整 XML。
+JSON string 数组，每个元素是一页 slide 的完整 XML；数组元素是页面 XML 原文，包装成 API 所需的 `{"slide": {"content": …}}` 并逐页调用由服务端完成。
 
 ### 本地图片：`@<path>` 占位符
 
@@ -83,7 +90,7 @@ JSON string 数组，每个元素是一页 slide 的完整 XML。
 
 ## 创建后续步骤
 
-如果没有使用 `slides`，`lark_slides_create` 返回的 `xml_presentation_id` 用于后续操作：
+创建空白 PPT 时，`lark_slides_create` 返回的 `xml_presentation_id` 用于后续操作：
 
 ```
 # 第 1 步：创建空白 PPT
@@ -91,7 +98,7 @@ lark_slides_create(title="项目汇报")
 # 获取返回的 xml_presentation_id
 
 # 第 2 步：逐页添加
-lark_slides_add_slide(presentation="<PRES_ID>", slide="<slide xmlns=\"http://www.larkoffice.com/sml/2.0\">...</slide>")
+lark_slides_add_slide(presentation="<PRES_ID>", slide="<slide xmlns=\"https://www.larkoffice.com/sml/2.0\">...</slide>")
 ```
 
 ## 常见错误

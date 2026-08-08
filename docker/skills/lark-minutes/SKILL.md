@@ -15,7 +15,7 @@ description: "飞书妙记：搜索妙记、查看妙记基础信息、下载/�
 
 | Shortcut | 说明 |
 |----------|------|
-| `lark_minutes_search` | 按关键词、所有者、参与者、时间范围搜索妙记 |
+| `lark_minutes_search` | 按关键词、所有者、参与者、时间范围搜索妙记；支持 user/bot 身份（MCP server 始终以 user 身份调用） |
 | `lark_minutes_detail` | 查询妙记详情(标题和关联的纪要note_id)，按需获取 AI 产物（总结、待办、章节、逐字稿、关键词） |
 | `lark_minutes_download` | 下载妙记音视频媒体文件 |
 | `lark_minutes_upload` | 上传 file_token 生成妙记 |

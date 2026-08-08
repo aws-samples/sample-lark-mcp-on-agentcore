@@ -24,7 +24,7 @@
   "lark_task_complete",
   "lark_contact_search_user",
   "lark_contact_get_user",
-  "lark_sheets_read",
-  "lark_sheets_write",
+  "lark_sheets_cells_get",
+  "lark_sheets_cells_set",
   "lark_mail_send"
 ]
