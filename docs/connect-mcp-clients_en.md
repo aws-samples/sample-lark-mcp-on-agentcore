@@ -24,7 +24,7 @@ your deploy output:
 
 Save → the client prompts to authorize → browser opens Feishu → approve → done.
 
-On success the client loads 200+ Feishu tools. Tokens are cached locally and
+On success the client loads 450+ Feishu tools. Tokens are cached locally and
 refreshed automatically.
 
 ## Per-client notes
