@@ -37,7 +37,7 @@ lark_slides_media_upload(file="./pic.png", presentation="https://xxx.feishu.cn/w
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `file` | 是 | 本地图片路径，**必须是 CWD 内的相对路径**（如 `./pic.png`）。**最大 20 MB** |
+| `file` | 是 | 本地图片路径，**必须是 CWD 内的相对路径**（如 `./pic.png`）。**最大 20 MB**。**仅支持 png / jpeg / gif / bmp / tiff / webp** |
 | `presentation` | 是 | `xml_presentation_id`、`/slides/<token>` URL，或 `/wiki/<token>` URL |
 
 ## 使用流程
@@ -47,12 +47,12 @@ lark_slides_media_upload(file="./pic.png", presentation="https://xxx.feishu.cn/w
 
 ### 给已有 PPT 的已有页加图
 
-拿到 `file_token` 后走 `lark_slides_replace_slide`（`lark_get_skill(domain="slides", section="replace-slide")`）的 `block_insert`，不用搬原 XML、不改 `slide_id`、不打乱页序。
+拿到 `file_token` 后走 `lark_slides_replace_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")`）的 `block_insert`，不用搬原 XML、不改 `slide_id`、不打乱页序。
 
 注意事项：
 
 1. **`<img>` 坐标避开现有元素** —— 先读现有元素 bbox 挑空白区；空间不够就先用 `block_replace` 挪动/缩小现有元素后再放图
-2. **`<img>` 的 `width:height` 对齐原图比例** —— 比例不一致会被裁剪，参见 `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` 的 `<img>` 说明
+2. **`<img>` 的 `width:height` 对齐原图比例** —— 比例不一致会被裁剪，参见 `lark_get_skill(domain="slides", section="xml/xml-schema-quick-ref")` 的 `<img>` 说明
 
 ## 工作原理
 
@@ -74,6 +74,6 @@ lark_slides_media_upload(file="./pic.png", presentation="https://xxx.feishu.cn/w
 
 ## 参考
 
-- `lark_get_skill(domain="slides", section="create")` — 新建 PPT（支持 `@` 占位符自动上传图片）
-- `lark_get_skill(domain="slides", section="replace-slide")` — 给已有页加图 / 换图（`block_insert` / `block_replace`）
-- `lark_get_skill(domain="slides", section="add-slide")` — 追加/插入单页（同样支持 `@` 占位符自动上传）
+- `lark_get_skill(domain="slides", section="cli/lark-slides-create")` — 新建 PPT（支持 `@` 占位符自动上传图片）
+- `lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")` — 给已有页加图 / 换图（`block_insert` / `block_replace`）
+- `lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")` — 追加/插入单页（同样支持 `@` 占位符自动上传）

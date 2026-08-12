@@ -13,6 +13,8 @@ description: "飞书日历：管理日历日程和会议室。查看/搜索日�
 
 身份按**日程归属**决定：MCP server 始终以当前登录用户身份执行，因此可以查看/管理登录用户本人的日程（绝大多数场景）。⚠️ 查看/管理 bot 自己创建或拥有的日程需要 bot 身份，MCP server 不可用。
 
+**对话人称映射**：「我」= 当前登录用户，「你」= 应用（bot）。作为字段取值的人称（参会人、会议 owner 等）只决定字段填谁，不改变执行身份——如「邀请我、会议 owner 为我」就是把当前登录用户的 open_id 填进这些字段（会议 owner 字段本身只能以 bot 身份在应用日历上设置，MCP server 不可用，见 `lark_get_skill(domain="calendar", section="create")`）。⚠️ 「你创建日程」这类要求由 bot 自己创建/拥有日程的场景需要 bot 身份，MCP server 不可用。
+
 ## Shortcuts
 
 | Shortcut | 说明 |

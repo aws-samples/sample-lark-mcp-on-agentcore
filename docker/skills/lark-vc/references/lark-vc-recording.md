@@ -35,9 +35,9 @@ lark_vc_recording(meeting_ids="69xxxxxxxxxxxxx28", format="json")
 
 每次只能指定一种输入方式。同时传入会报错。
 
-### 2. 仅支持 user 身份
+### 2. 身份
 
-该工具仅支持 user 身份（authentication is handled automatically by the MCP server）。user token 只能查自己有权限的录制。
+`meeting_ids` 和 `calendar_event_ids` 两种模式在 MCP server 上都以**用户身份**执行（authentication is handled automatically by the MCP server），只能查当前用户有权限的录制。⚠️ 上游还支持应用身份（只能查机器人有权限的录制），但 MCP server 无法切换身份，该路径不可用。
 
 ### 3. 批量上限
 

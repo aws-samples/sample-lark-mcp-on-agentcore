@@ -1,8 +1,8 @@
 # 编辑已有 PPT：读-改-写闭环
 
-局部编辑走 **shortcut `lark_slides_replace_slide`**（块级替换 / 插入），配合 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", ...)` 读原页拿 `block_id`。整页重建走 **`lark_slides_update_slide`**（见 `lark_get_skill(domain="slides", section="update-slide")`），多页就每页各跑一次 —— 它原地覆盖并保留 `slide_id` 和页序；只有写进 `content` 且带原 id 的元素才会保留元素 id，遗漏的元素会被删除。
+局部编辑走 **shortcut `lark_slides_replace_slide`**（块级替换 / 插入），配合 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", ...)` 读原页拿 `block_id`。整页重建走 **`lark_slides_update_slide`**（见 `lark_get_skill(domain="slides", section="cli/lark-slides-update-slide")`），多页就每页各跑一次 —— 它原地覆盖并保留 `slide_id` 和页序；只有写进 `content` 且带原 id 的元素才会保留元素 id，遗漏的元素会被删除。
 
-> 生成 XML 前**必读** `lark_get_skill(domain="slides", section="xml-schema-quick-ref")`。
+> 生成 XML 前**必读** `lark_get_skill(domain="slides", section="xml/xml-schema-quick-ref")`。
 
 ## 决策树：block_replace vs block_insert
 
@@ -24,13 +24,13 @@ SID = "slide_id_here"
 # 1. 读原页，从 XML 里挑出要改的块的 3 位 short id（如 bUn / bab）
 lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={params: {"xml_presentation_id": PID, "slide_id": SID}})
 
-# 2. 用 +replace-slide 直接改那个块（不需要搬原 XML）
+# 2. 用 lark_slides_replace_slide 直接改那个块（不需要搬原 XML）
 lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"block_replace","block_id":"bUn","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]')
 ```
 
 `slide_id` / 页序不会变。`block_replace` 的 `replacement` 根元素 `id` 会自动注入为 `block_id`。
 
-> **part 的字段名是 `block_id` + `replacement`（XML 字符串）**：写成 `content` / `xml` / `block` 会被直接拒绝（报 `unknown field "content"; did you mean "replacement"?`）。收到这个报错时改字段名，不要改字段值。
+> **编写 `parts` 时只使用标准字段**：`block_replace` 使用 `action` + `block_id` + `replacement`（XML 字符串），`block_insert` 使用 `action` + `insertion`（可选 `insert_before_block_id`）。收到 unknown field 报错时应按上述结构修改字段名，而不是修改字段值。
 
 ## `revision_id` 参数
 
@@ -78,8 +78,8 @@ lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"blo
 
 ## 相关文档
 
-- `lark_get_skill(domain="slides", section="replace-slide")` — +replace-slide 参数详情
-- `lark_get_skill(domain="slides", section="update-slide")` — `lark_slides_update_slide` 参数详情（整页覆盖）
-- `lark_get_skill(domain="slides", section="xml-presentation-slide-get")` — slide.get 参考
-- `lark_get_skill(domain="slides", section="media-upload")` — 上传图片拿 file_token
-- `lark_get_skill(domain="slides", section="xml-schema-quick-ref")` — XML 元素和属性速查
+- `lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")` — `lark_slides_replace_slide` 参数详情
+- `lark_get_skill(domain="slides", section="cli/lark-slides-update-slide")` — `lark_slides_update_slide` 参数详情（整页覆盖）
+- `lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentation-slide-get")` — slide.get 参考
+- `lark_get_skill(domain="slides", section="cli/lark-slides-media-upload")` — 上传图片拿 file_token
+- `lark_get_skill(domain="slides", section="xml/xml-schema-quick-ref")` — XML 元素和属性速查

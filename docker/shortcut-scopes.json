@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.85",
-    "extracted_at": "2026-08-08",
+    "lark_cli_version": "1.0.86",
+    "extracted_at": "2026-08-12",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -228,6 +228,55 @@
     {
       "service": "apps",
       "command": "+db-recovery-diff",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+db-sync-create",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+db-sync-delete",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+db-sync-disable",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+db-sync-enable",
+      "scopes": [
+        "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+db-sync-get",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+db-sync-list",
+      "scopes": [
+        "spark:app:read"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+db-sync-update",
       "scopes": [
         "spark:app:write"
       ]
@@ -643,6 +692,13 @@
       "command": "+update",
       "scopes": [
         "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+user-id-convert",
+      "scopes": [
+        "spark:directory.user.id_convert:read"
       ]
     },
     {
@@ -1589,7 +1645,8 @@
       "command": "+download",
       "scopes": [
         "drive:file:download",
-        "drive:drive.metadata:readonly"
+        "drive:drive.metadata:readonly",
+        "wiki:node:retrieve"
       ]
     },
     {
@@ -1659,6 +1716,13 @@
     },
     {
       "service": "drive",
+      "command": "+member-remove",
+      "scopes": [
+        "docs:permission.member:delete"
+      ]
+    },
+    {
+      "service": "drive",
       "command": "+move",
       "scopes": [
         "space:document:move"
@@ -1675,7 +1739,8 @@
       "service": "drive",
       "command": "+preview",
       "scopes": [
-        "drive:file:download"
+        "drive:file:download",
+        "wiki:node:retrieve"
       ]
     },
     {

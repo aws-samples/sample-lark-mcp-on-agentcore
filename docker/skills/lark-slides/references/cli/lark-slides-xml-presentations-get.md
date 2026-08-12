@@ -22,7 +22,7 @@ lark_slides_xml_get(presentation="slides_example_presentation_id", output=".lark
 | `raw` | boolean | 否 | 直接返回 XML，不包 JSON envelope；不能与 `output` 或非 JSON `format` 同时使用 |
 | `slide_id` | string | 否 | 只读取指定 `slide_id` 的单页 XML；不能与 `slide_number` 或 `remove_attr_id` 同时使用 |
 | `slide_number` | integer | 否 | 只读取指定的 1-based 页码；不能与 `slide_id` 或 `remove_attr_id` 同时使用 |
-| `remove_attr_id` | boolean | 否 | 仅全文读取可用；移除 XML id 属性后读取，不适合后续精确块编辑（尤其不要把它的输出交给 `lark_slides_update_slide`，见 `lark_get_skill(domain="slides", section="update-slide")`）|
+| `remove_attr_id` | boolean | 否 | 仅全文读取可用；移除 XML id 属性后读取，不适合后续精确块编辑（尤其不要把它的输出交给 `lark_slides_update_slide`，见 `lark_get_skill(domain="slides", section="cli/lark-slides-update-slide")`）|
 
 ### 读取单页
 
@@ -95,6 +95,6 @@ lark_invoke(tool_name="lark_slides_xml_presentations_get", args={
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="create")` - 创建空白 PPT
-- `lark_get_skill(domain="slides", section="add-slide")` - 添加幻灯片页面
-- `lark_get_skill(domain="slides", section="delete-slide")` - 删除幻灯片页面
+- `lark_get_skill(domain="slides", section="cli/lark-slides-create")` - 创建空白 PPT
+- `lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")` - 添加幻灯片页面
+- `lark_get_skill(domain="slides", section="cli/lark-slides-delete-slide")` - 删除幻灯片页面

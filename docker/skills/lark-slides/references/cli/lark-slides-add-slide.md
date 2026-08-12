@@ -4,7 +4,7 @@
 
 `presentation` 接受 token / `/slides/` URL / `/wiki/` URL（wiki 自动解析），`slide` 直接收一整页 `<slide>` XML 字符串，`<img src="@./local.png">` 占位符自动上传并替换成 `file_token`。
 
-**CRITICAL — 提交前必须先跑版式 lint**：把待提交的 `<slide>` XML 交给 `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`，`summary.error_count` 必须为 0。
+**CRITICAL — 提交前必须先跑版式 lint**：把待提交的 `<slide>` XML 交给 `lark_exec_script(script="lark-slides/scripts/xml_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`，`summary.error_count` 必须为 0。
 
 ## 用法
 
@@ -37,7 +37,7 @@ lark_slides_add_slide(presentation="<PID>", slide="<slide xmlns=\"https://www.la
 ```
 
 - 文件不存在、不是普通文件、超过 20 MB，都在**调用任何接口之前**报错，不会留下半成品。
-- 去重只在**单次调用内**生效：多页共用同一张图时，逐页循环会把它每页重传一次。这种图先用 `lark_slides_media_upload`（`lark_get_skill(domain="slides", section="media-upload")`）传一次，把 `file_token` 写进各页的 `src`。
+- 去重只在**单次调用内**生效：多页共用同一张图时，逐页循环会把它每页重传一次。这种图先用 `lark_slides_media_upload`（`lark_get_skill(domain="slides", section="cli/lark-slides-media-upload")`）传一次，把 `file_token` 写进各页的 `src`。
 
 ## 成功输出
 
@@ -63,11 +63,11 @@ lark_slides_add_slide(presentation="<PID>", slide="<slide xmlns=\"https://www.la
 |------|------|------|
 | `--slide is not a single complete <slide> document` | 传了 `<presentation>` 整份 XML，或多个 `<slide>` 拼在一起 | 一次只传一页，根元素必须是 `<slide>` |
 | `--slide cannot be empty` | `slide` 传了空串 | 检查内容有没有取到值 |
-| 3350001 | XML 结构/转义有问题；**或 `before_slide_id` 不是有效 `slide_id`** | 先跑一遍版式 lint 确认 XML 合法；插页失败先用 `lark_slides_xml_get` 回读确认 `slide_id`；再按 `lark_get_skill(domain="slides", section="troubleshooting")` 排查 |
+| 3350001 | XML 结构/转义有问题；**或 `before_slide_id` 不是有效 `slide_id`** | 先跑一遍版式 lint 确认 XML 合法；插页失败先用 `lark_slides_xml_get` 回读确认 `slide_id`；再按 `lark_get_skill(domain="slides", section="workflow/error-handling")` 排查 |
 | 1061004 / 403 | 当前身份对这份 PPT 没有编辑权限 | 检查是否拥有 `slides:presentation:update` 或 `slides:presentation:write_only` scope；wiki 链接另需 `wiki:node:read`，`@` 占位符另需 `docs:document.media:upload` |
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="create")` — 创建 PPT（两步创建的第一步）
-- `lark_get_skill(domain="slides", section="delete-slide")` — 按 `slide_id` 删除单页
-- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） — 回读全文 XML 确认 `slide_id`
+- `lark_get_skill(domain="slides", section="cli/lark-slides-create")` — 创建 PPT（两步创建的第一步）
+- `lark_get_skill(domain="slides", section="cli/lark-slides-delete-slide")` — 按 `slide_id` 删除单页
+- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentations-get")`） — 回读全文 XML 确认 `slide_id`

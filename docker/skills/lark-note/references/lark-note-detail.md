@@ -1,6 +1,6 @@
 # note detail
 
-通过 `note_id` 查询会议纪要详情，获取下挂文档 Token（AI 智能纪要、逐字稿、会中共享文档）。只读，仅支持 user 身份。
+通过 `note_id` 查询会议纪要详情，获取下挂文档 Token（AI 智能纪要、逐字稿、会中共享文档）。只读；MCP server 以 user 身份执行，user 身份完整支持本工具。
 
 ## 命令
 

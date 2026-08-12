@@ -42,7 +42,7 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="replace-slide")` — 块级替换 shortcut（推荐）
-- `lark_get_skill(domain="slides", section="xml-presentation-slide-replace")` — 底层 replace API 参考
-- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） — 读整个 PPT 并保存到本地文件
-- `lark_get_skill(domain="slides", section="edit-workflows")` — 读-改-写闭环
+- `lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")` — 块级替换 shortcut（推荐）
+- `lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentation-slide-replace")` — 底层 replace API 参考
+- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentations-get")`） — 读整个 PPT 并保存到本地文件
+- `lark_get_skill(domain="slides", section="workflow/slides-editing")` — 读-改-写闭环

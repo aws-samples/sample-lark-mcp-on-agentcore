@@ -1,6 +1,6 @@
 ## `drive +preview`
 
-查看或下载 Drive 文件内容，或列出并获取文件可用的预览产物。这个 shortcut 不猜测默认类型：
+查看或下载 Drive 文件内容，或列出并获取文件可用的预览产物。对象是 Drive **文件**，也支持 Wiki URL / node token（先把 Wiki 节点解析到底层文件，`obj_type` 必须是 `file`）。这个 shortcut 不猜测默认类型：
 
 - 如果只需要查看或下载文件内容，或不关心 PDF/text/image 等转换预览，优先使用 `type="source_file"` + `output="<path>"`
 - 只想看候选项时，用 `list_only=true`
@@ -14,6 +14,15 @@
 ```
 # 查看文件内容
 lark_drive_preview(file_token="<FILE_TOKEN>", type="source_file", output="./artifacts/source")
+
+# 推荐：直接传 URL，自动解析类型和 token
+lark_drive_preview(url="https://example.feishu.cn/file/<FILE_TOKEN>", list_only=true)
+
+# Wiki URL 也可直接传，会先解析到底层 obj_token/obj_type（obj_type 必须是 file）
+lark_drive_preview(url="https://example.feishu.cn/wiki/<WIKI_NODE_TOKEN>", type="source_file", output="./artifacts/source")
+
+# 只有裸 Wiki node token 时，显式传 wiki_token
+lark_drive_preview(wiki_token="<WIKI_NODE_TOKEN>", list_only=true)
 
 # 列出可用预览候选项
 lark_drive_preview(file_token="<FILE_TOKEN>", list_only=true)
@@ -32,7 +41,9 @@ lark_drive_preview(file_token="<FILE_TOKEN>", version="12", type="html", output=
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `file_token` | 是 | Drive 文件 token |
+| `file_token` | 条件必填 | Drive 文件 token；与 `url` / `wiki_token` 三选一 |
+| `url` | 条件必填 | 飞书文件 URL 或 Wiki URL；自动解析类型和 token |
+| `wiki_token` | 条件必填 | 裸 Wiki node token；先解析到底层 Drive 文件 |
 | `type` | 条件必填 | 预览类型；优先使用 `list_only=true` 返回的 `type`，如 `pdf` / `html` / `text` / `png` / `jpg` / `source_file` |
 | `version` | 否 | 文件版本号 |
 | `list_only` | 否 | 仅返回候选项，不下载 |
@@ -72,6 +83,7 @@ lark_drive_preview(file_token="<FILE_TOKEN>", version="12", type="html", output=
 - `type="source_file"` 用于查看文件内容，不依赖 `list_only=true` 返回的候选项；它适合读取或保存源内容，不等同于 PDF/text/image 等转换预览
 - 候选项状态来自后端 `preview_status` 枚举，例如 `READY` / `PROCESSING` / `FAILED` / `NO_SUPPORT`
 - 本地文件名在未显式带扩展名时，会结合响应头自动补扩展名
+- Wiki URL / 裸 Wiki node token 会先解析到底层文档，解析后会在输出里附带 `wiki_token` 和 `wiki_node`（含底层 `obj_token`/`obj_type`）；`obj_type` 必须是 `file`。如果 Wiki 指向 `docx` / `sheet` / `bitable` / `slides` 等在线文档，`lark_drive_preview` 无法直接处理，会返回 typed validation error，并在 hint 中提示改用 `lark_drive_export`（见 `lark_get_skill(domain="drive", section="export")`）
 
 ### 参考
 

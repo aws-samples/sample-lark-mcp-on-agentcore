@@ -74,7 +74,7 @@ lark_vc_meeting_list_active(format="json")
 
 ## 参考
 
-- `lark_get_skill(domain="vc-agent", section="meeting-events")` — 使用 `meeting_id` 读取会中事件
 - `lark_get_skill(domain="vc-agent", section="meeting-join")` — ⚠️ 应用身份入会能力（MCP server 不可用）
-- `lark_get_skill(domain="vc-agent")` — Agent 会中能力（本 skill）
-- `lark_get_skill(domain="vc")` — 视频会议原子域（Meeting / Note 等核心概念）
+- `lark_get_skill(domain="vc", section="meeting-events")` — 使用 `meeting_id` 读取会中事件
+- `lark_get_skill(domain="vc-agent")` — Agent 会中编排能力（应用机器人入会 / 离会）
+- `lark_get_skill(domain="vc")` — 视频会议原子域（Meeting / Note 等核心概念，本 skill）

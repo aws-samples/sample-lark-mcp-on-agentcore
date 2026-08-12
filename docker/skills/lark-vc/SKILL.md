@@ -1,6 +1,6 @@
 ---
 name: lark-vc
-description: "飞书视频会议：搜索历史会议记录、查询会议纪要（总结/待办/章节/逐字稿）、查询参会人快照。当用户查询已结束的会议、获取会议产物（纪要/妙记）、查看参会人时使用；查询未来日程走 lark-calendar。不负责：Agent 真实入会/离会、会中实时事件（走 lark-vc-agent）。"
+description: "飞书视频会议：查询进行中的会议列表（含会议 ID）、读取会中实时内容（发言、聊天、共享等）、发送会中消息，以及搜索历史会议、查询会议纪要（总结/待办/章节/逐字稿）和参会人快照。Agent 真实入会/离会走 lark-vc-agent；查询未来日程走 lark-calendar。"
 ---
 
 # vc (v1)
@@ -18,8 +18,12 @@ description: "飞书视频会议：搜索历史会议记录、查询会议纪要
 | `lark_vc_search` | 搜索历史会议记录（需至关键词、时间范围、组织者、参与者、会议室少一个筛选条件） |
 | `lark_vc_detail` | 通过 meeting_ids 获取会议详情，包括 note_id 和 minute_token |
 | `lark_vc_recording` | 通过 meeting_ids 或 calendar_event_ids 查询 minute_token |
+| `lark_vc_meeting_list_active` | 查询当前身份可见的进行中会议并获取 `meeting_id` |
+| `lark_vc_meeting_events` | 读取当前身份可见的会中事件 |
+| `lark_vc_meeting_message_send` | 发送会中文本或 reaction |
 
 - 使用任何 Shortcut 前，必须先调用对应的 `lark_get_skill(domain="vc", section="...")` 了解参数和返回值结构。
+- ⚠️ 会中三件套（`lark_vc_meeting_list_active` / `lark_vc_meeting_events` / `lark_vc_meeting_message_send`）在 MCP server 上只有**用户身份**路径：只能发现并读写当前用户正在参加的会议；应用身份（机器人视角）路径不可用，说明见 `lark_get_skill(domain="vc-agent")`。
 
 ## 意图路由
 
@@ -28,8 +32,10 @@ description: "飞书视频会议：搜索历史会议记录、查询会议纪要
 | 查"昨天的会议""上周的会""已结束的会议" | 本 skill（`lark_vc_search`，含即时会议） |
 | 查日历/日程或未来时间的会议 | lark-calendar |
 | 查"今天有哪些会议" | `lark_vc_search`（已结束）+ lark-calendar（未开始），合并展示 |
+| 查询进行中的会议、会中事件或发送会中消息 | 本 skill 的 `lark_vc_meeting_list_active` / `lark_vc_meeting_events` / `lark_vc_meeting_message_send`，也可由 lark-vc-agent 编排 |
+| 用户询问会议内容，但未提供 `meeting_id`，也未明确指向已结束会议 | 先用 `lark_vc_meeting_list_active` 查询进行中的会议；无结果时，再用 `lark_vc_search` 查询当天最近结束的会议；仍无结果时询问会议时间、主题或会议号，不自行扩大时间范围 |
 | 只按自然语言标题查"xx 纪要的逐字稿 / 原始记录 / 谁说了什么" | 先到 lark-drive / lark-doc；仅在已拿到 `note_id` / `vc-node-id` 后再到 lark-note |
-| Agent 真实入会/离会、会中实时事件 | lark-vc-agent |
+| Agent 真实入会/离会 | lark-vc-agent（⚠️ 应用身份写操作，MCP server 不可用） |
 | 妙记信息/时长/封面/链接 | 先走 `lark_vc_detail` 或 `lark_vc_recording` 获取 `minute_token`，再用 lark-minutes 的 `lark_invoke(tool_name="lark_minutes_minutes_get", ...)` |
 | 本地音视频文件转纪要/逐字稿 | 先走 lark-minutes 上传，再用 `lark_minutes_detail(minute_tokens="<minute_token>")` |
 
@@ -126,8 +132,8 @@ lark_invoke(tool_name="lark_vc_meeting_get", args={
 |---------|---------|--------|
 | 参会人快照（谁参加过、何时入/离会，任意时点）| `lark_invoke(tool_name="lark_vc_meeting_get", args={params: {"meeting_id":"...", "with_participants": true}})` | 本 skill |
 | 已结束会议的发言内容 | 优先：`lark_vc_detail` 取 `note_id` 再 `lark_note_detail` 取 `verbatim_doc_token` 后 `lark_docs_fetch`；备选：`lark_vc_detail` 取 `minute_token` 再 `lark_minutes_detail(transcript=true)` | lark-note / lark-minutes |
-| **进行中会议**的实时事件流（转写、聊天、共享、会中加入/离开）| `lark_vc_meeting_events` | lark-vc-agent |
-| **Agent 真实入会 / 离会** | `lark_vc_meeting_join` / `lark_vc_meeting_leave` | lark-vc-agent |
+| **进行中会议**的实时事件流（转写、聊天、共享、文档上下文、会中加入/离开）| `lark_vc_meeting_events` | 本 skill / lark-vc-agent |
+| **Agent 真实入会 / 离会** | `lark_vc_meeting_join` / `lark_vc_meeting_leave` | lark-vc-agent（⚠️ 应用身份，MCP server 不可用） |
 
 ## 资源关系
 
@@ -187,7 +193,7 @@ lark_invoke(tool_name="lark_vc_meeting_get", args={
 ## 不在本 skill 范围
 
 - 查询未来的会议日程 → lark-calendar
-- Agent 真实入会/离会、会中实时事件 → lark-vc-agent
+- Agent 真实入会/离会 → lark-vc-agent（⚠️ 应用身份写操作，MCP server 不可用）
 - 只有纪要文档标题的逐字稿查询 → 文档搜索 / Docx 正文读取；有显式 `vc-node-id` 才进入 lark-note
 - 本地音视频文件转纪要/逐字稿、妙记搜索/下载/上传/重命名/替换说话人 → lark-minutes
 - 通过 `note_id` 取纪要文档 Token → lark-note

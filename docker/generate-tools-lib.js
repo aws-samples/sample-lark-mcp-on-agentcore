@@ -103,6 +103,9 @@ function translateFlagDescription(desc) {
   out = out.replace(/\s*\(@file or -(?:[^()]|\([^()]*\))*\)/g, '');
   // inline "or @file" alternatives ("filter JSON object or @file, ...")
   out = out.replace(/\s+or @file/gi, '');
+  // ", inline or via @file/-" — lark-cli 1.0.86 states the channel up front
+  // instead of as a trailing hint (apps +db-sync-create/update `--config`).
+  out = out.replace(/,?\s*inline or via @file(?:\/-)?/gi, '');
   // "run `--print-schema` for the full structure" → point at the embedded
   // schema. Consume a leading connector (`;`, `—`, `-`) so "Deeply nested —
   // run …" doesn't leave a dangling dash before the replacement.

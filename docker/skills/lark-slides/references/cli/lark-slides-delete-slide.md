@@ -1,6 +1,6 @@
 # slides +delete-slide（按 slide_id 删除单页）
 
-从演示文稿删除**一页**，按 `slide_id` 指定。只改一页里的局部内容用 `lark_slides_replace_slide`（`lark_get_skill(domain="slides", section="replace-slide")`），不要删了重建。
+从演示文稿删除**一页**，按 `slide_id` 指定。只改一页里的局部内容用 `lark_slides_replace_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")`），不要删了重建。
 
 `presentation` 接受 token / `/slides/` URL / `/wiki/` URL，ID 是普通参数而不是 `params` JSON 串。
 
@@ -46,7 +46,7 @@ lark_slides_delete_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX", 
 
 ## 删错了怎么办
 
-删除在原地不可撤销，但可以走历史版本回滚：`lark_slides_history_list` 找 `history_version_id` → `lark_slides_history_revert`（只接受 `history_version_id`，不能传 `revision_id`）→ `lark_slides_history_revert_status` 轮询。用法见 `lark_get_skill(domain="slides", section="history")`。
+删除在原地不可撤销，但可以走历史版本回滚：`lark_slides_history_list` 找 `history_version_id` → `lark_slides_history_revert`（只接受 `history_version_id`，不能传 `revision_id`）→ `lark_slides_history_revert_status` 轮询。用法见 `lark_get_skill(domain="slides", section="cli/lark-slides-history")`。
 
 ## 常见错误
 
@@ -58,6 +58,6 @@ lark_slides_delete_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX", 
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="add-slide")` — 追加/插入单页
-- `lark_get_skill(domain="slides", section="history")` — 历史版本回滚（误删恢复）
-- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） — 回读全文 XML 确认 `slide_id`
+- `lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")` — 追加/插入单页
+- `lark_get_skill(domain="slides", section="cli/lark-slides-history")` — 历史版本回滚（误删恢复）
+- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentations-get")`） — 回读全文 XML 确认 `slide_id`

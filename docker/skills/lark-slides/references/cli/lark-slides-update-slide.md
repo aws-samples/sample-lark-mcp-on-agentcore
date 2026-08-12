@@ -68,7 +68,7 @@ lark_slides_update_slide(presentation="<PRES>", slide_id="<SLIDE>", content="<�
 
 ## 什么时候不要用它
 
-- **只改一个元素** → 用 `lark_get_skill(domain="slides", section="replace-slide")` 的 `lark_slides_replace_slide`，一条 `block_replace` part 更省，也不用带上整页
+- **只改一个元素** → 用 `lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")` 的 `lark_slides_replace_slide`，一条 `block_replace` part 更省，也不用带上整页
 - **要改多个页面** → 对每一页各跑一次本工具
 - **要新建页面** → `lark_slides_create` 或 `lark_slides_add_slide`
 
@@ -77,7 +77,7 @@ lark_slides_update_slide(presentation="<PRES>", slide_id="<SLIDE>", content="<�
 和其他整页写入一样，先跑版式 lint：
 
 ```
-lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<整页 XML>")
+lark_exec_script(script="lark-slides/scripts/xml_lint.py", args=["--input", "-"], stdin="<整页 XML>")
 ```
 
 `summary.error_count` 必须为 0 才提交；`warning_count > 0` 时写完要截图复核。
@@ -88,7 +88,7 @@ lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["-
 lark_slides_xml_get(presentation="<PRES>")
 ```
 
-按 `lark_get_skill(domain="slides", section="validation-checklist")` 完成验证：核对总页数、目标页和关键元素（包括需要保留的 ID、文本、背景与备注），并对回读 XML 运行同一版式 lint；发现差异时先停止后续写入并重新基于最新版处理。
+按 `lark_get_skill(domain="slides", section="workflow/validation-xml")` 完成验证：核对总页数、目标页和关键元素（包括需要保留的 ID、文本、背景与备注），并对回读 XML 运行同一版式 lint；发现差异时先停止后续写入并重新基于最新版处理。
 
 ## 成功输出
 
@@ -120,6 +120,6 @@ lark_slides_xml_get(presentation="<PRES>")
 | 现象 | 原因 | 解决 |
 |------|------|------|
 | 3350001，原因包含 `not found` | `presentation` 不匹配，或 `slide_id` 对应的页面已被删除 | 检查 `presentation` 和 `slide_id`，再用 `lark_slides_xml_get` 回读当前页面 ID |
-| 3350001，其他 invalid param | `content` 的 XML 结构有问题（如 `<shape>` 缺 `<content/>`、包含服务端不支持的元素） | 按 `lark_get_skill(domain="slides", section="troubleshooting")` 检查 `content` 的 XML 结构 |
+| 3350001，其他 invalid param | `content` 的 XML 结构有问题（如 `<shape>` 缺 `<content/>`、包含服务端不支持的元素） | 按 `lark_get_skill(domain="slides", section="workflow/error-handling")` 检查 `content` 的 XML 结构 |
 | 3350002 not found | `revision_id` 传了不存在的版本号 | 用 `-1` 或真实存在的 `revision_id` |
 | 1061004 / 403 | 当前身份对这份 PPT 没有编辑权限 | 检查是否拥有 `slides:presentation:update` 或 `slides:presentation:write_only` scope；wiki 链接另需 `wiki:node:read` |

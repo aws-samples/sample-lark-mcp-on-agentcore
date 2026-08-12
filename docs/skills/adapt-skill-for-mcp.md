@@ -294,10 +294,10 @@ Handle them like this:
       return sys.stdin.read()
   ```
 
-  (Reference implementations: `doc_word_stat.py`, `xml_text_overlap_lint.py`.) The
+  (Reference implementation: `lark-slides/scripts/xml_lint.py`.) The
   `skill-quality` test "every script invoked with stdin= actually reads stdin" enforces this
   statically — a doc/script drift fails CI rather than surfacing as a silent runtime error.
-- **Data files consumed by scripts** (e.g. `references/iconpark-index.json`,
+- **Data files consumed by scripts** (e.g. `references/xml/iconpark-index.json`,
   `assets/templates/*.xml`) stay at their current paths — the scripts locate them via
   `Path(__file__).parent.parent` which resolves correctly in the container.
 - **The `scripts/` whitelist regex**: only paths matching
@@ -308,7 +308,7 @@ Handle them like this:
 |------------------------------|---------------|
 | `python3 scripts/iconpark_tool.py search --query "增长趋势" --limit 8` | `lark_exec_script(script="lark-slides/scripts/iconpark_tool.py", args=["search", "--query", "增长趋势", "--limit", "8"])` |
 | `python3 scripts/template_tool.py summarize --template office--work_report --label 内容` | `lark_exec_script(script="lark-slides/scripts/template_tool.py", args=["summarize", "--template", "office--work_report", "--label", "内容"])` |
-| `python3 scripts/xml_text_overlap_lint.py --input <file>` | `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<XML content>")` |
+| `python3 scripts/xml_lint.py --input <file>` | `lark_exec_script(script="lark-slides/scripts/xml_lint.py", args=["--input", "-"], stdin="<XML content>")` |
 
 ## Excluded skills (do not adapt)
 

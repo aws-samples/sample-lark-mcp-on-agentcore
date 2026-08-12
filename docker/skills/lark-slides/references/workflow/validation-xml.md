@@ -1,6 +1,6 @@
 # Validation Checklist
 
-创建、大幅改写演示文稿或每次通过 `lark_slides_update_slide` 整页写回后，必须做一次显式验证。目标是发现空白页、XML 损坏、内容截断、明显溢出、弱视觉层级和未验证输出。
+创建、大幅改写演示文稿或整页写回后，必须做一次显式验证。目标是发现空白页、XML 损坏、内容截断、明显溢出、弱视觉层级和未验证输出。
 
 小型已有页编辑也要做对应范围的验证：至少读取被改页面或全文 XML，确认目标元素已更新且未破坏周边结构。
 
@@ -27,7 +27,7 @@ lark_slides_xml_get(presentation="YOUR_ID", output=".lark-slides/plan/<deck-or-t
 `lark_slides_xml_get` 拿到 XML 后，只运行统一版式准出入口：
 
 ```
-lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待检查的 presentation XML>")
+lark_exec_script(script="lark-slides/scripts/xml_lint.py", args=["--input", "-"], stdin="<待检查的 presentation XML>")
 ```
 
 它一次检查 XML/SXSD 合法性、元素越界、文本重叠、空白页、文本高度风险、整页内容稀疏和大卡片内容覆盖率。大卡片自身 `<content>` 的估算文本面积与卡片内平级元素一起参与覆盖率并集计算。

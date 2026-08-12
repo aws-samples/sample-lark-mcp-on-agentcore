@@ -48,7 +48,7 @@ avoids that loop. It does **not** widen what users see at first authorization (s
 minimal set); the only cost is a larger declared permission ceiling and more items for
 your admin to approve.
 
-Scope list (215 entries, copy-paste ready):
+Scope list (217 entries, copy-paste ready):
 
 ```json
 {
@@ -135,6 +135,7 @@ Scope list (215 entries, copy-paste ready):
       "docs:permission.member:apply",
       "docs:permission.member:auth",
       "docs:permission.member:create",
+      "docs:permission.member:delete",
       "docs:permission.member:retrieve",
       "docs:permission.member:transfer",
       "docs:permission.setting:read",
@@ -239,6 +240,7 @@ Scope list (215 entries, copy-paste ready):
       "space:folder:create",
       "spark:app:read",
       "spark:app:write",
+      "spark:directory.user.id_convert:read",
       "task:attachment:write",
       "task:comment:write",
       "task:custom_field:read",

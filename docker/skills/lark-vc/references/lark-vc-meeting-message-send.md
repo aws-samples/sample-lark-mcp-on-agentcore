@@ -128,10 +128,10 @@ VC_CanNotSee, VC_NoSound, VC_LooksGood, VC_SoundsClear
 - 会议需要开启会中智能体/Agent 能力开关。
 - 需要 `vc:meeting.message:write` 权限。
 
-用户身份报权限或身份不支持类错误时，按主 skill 的"用户身份被拒绝时"处理；如果错误表明该链路只能用应用身份，说明该能力在 MCP server 上不可用，不要反复重试。
+用户身份报权限或身份不支持类错误时，按 `lark_get_skill(domain="vc-agent")` 的"用户身份被拒绝时"处理；如果错误表明该链路只能用应用身份，说明该能力在 MCP server 上不可用，不要反复重试。
 
 ## 相关
 
-- `lark_get_skill(domain="vc-agent", section="meeting-list-active")` — 发现当前进行中会议 ID
-- `lark_get_skill(domain="vc-agent", section="meeting-events")` — 读取会中事件
+- `lark_get_skill(domain="vc", section="meeting-list-active")` — 发现当前进行中会议 ID
+- `lark_get_skill(domain="vc", section="meeting-events")` — 读取会中事件
 - `lark_get_skill(domain="vc-agent", section="meeting-join")` — ⚠️ 应用机器人入会（MCP server 不可用）

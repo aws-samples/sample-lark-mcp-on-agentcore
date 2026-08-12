@@ -4,22 +4,22 @@
 
 提交源必须是直接生成的单页 `<slide>` XML。禁止从完整 `<presentation>` XML 解析、拆分、重序列化出 slide 数组再提交。
 
-本工具只从零创建演示文稿，没有导入本地 PPT 文件的参数。要把已有 PPTX 变成 Slides，用 `lark_drive_import(file="<x.pptx>", type="slides")`，再在导入结果上编辑，流程见 `lark_get_skill(domain="slides", section="pptx-template-workflows")`。
+本工具只从零创建演示文稿，没有导入本地 PPT 文件的参数。要把已有 PPTX 变成 Slides，用 `lark_drive_import(file="<x.pptx>", type="slides")`，再在导入结果上编辑，流程见 `lark_get_skill(domain="slides", section="workflow/template-editing")`。
 
 ## 创建方式选择
 
 | 场景 | 推荐方式 |
 |------|----------|
 | 不超过 10 页 | `lark_slides_create(slides='[...]')` 一步创建（数组每项一页，顺序即页序）|
-| 超过 10 页，或单次 payload 很大 | **两步创建**：先 `lark_slides_create` 创建空白 PPT，再用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="add-slide")`）逐页添加 |
-| 已有 PPT 继续追加或插入页面 | 使用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="add-slide")`），必要时配合 `before_slide_id` |
+| 超过 10 页，或单次 payload 很大 | **两步创建**：先 `lark_slides_create` 创建空白 PPT，再用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")`）逐页添加 |
+| 已有 PPT 继续追加或插入页面 | 使用 `lark_slides_add_slide`（详见 `lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")`），必要时配合 `before_slide_id` |
 
 > [!IMPORTANT]
 > `lark_slides_create` 带页面时底层会逐页创建，不是原子操作。中途失败时先记录 `xml_presentation_id`，回读确认当前状态，再继续修复或追加。
 >
 > 单次 payload 过大时（整份 XML 接近百 KB 量级）改走两步创建逐页添加，避免一次性提交被参数长度上限截断。
 
-**CRITICAL — 提交前必须先跑版式 lint**：对待提交的 `<slide>` XML 运行 `lark_exec_script(script="lark-slides/scripts/xml_text_overlap_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`，`summary.error_count` 必须为 0。
+**CRITICAL — 提交前必须先跑版式 lint**：对待提交的 `<slide>` XML 运行 `lark_exec_script(script="lark-slides/scripts/xml_lint.py", args=["--input", "-"], stdin="<待提交 XML>")`，`summary.error_count` 必须为 0。
 
 ## 用法
 
@@ -44,7 +44,7 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 - **`images_uploaded`**（integer，可选）：页面 XML 中含 `@<本地路径>` 占位符时返回，已上传的去重后图片数量
 
 > [!IMPORTANT]
-> 不带页面参数时，`lark_slides_create` 只创建空白演示文稿。创建后用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加 slide 内容。
+> 不带页面参数时，`lark_slides_create` 只创建空白演示文稿。创建后用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")`）逐页添加 slide 内容。
 >
 > 带了页面时，先创建空白演示文稿，再逐页添加页面。如果某一页添加失败，已创建的演示文稿和已添加的页面会保留。
 
@@ -59,7 +59,7 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 | `slide` | 否 | 一页 `<slide>` XML；与 `slides` 二选一，同时传会报错 |
 | `slides` | 否 | 页面 XML 的 JSON 字符串数组，最多 10 个；与 `slide` 二选一 |
 
-10 页是上限，服务端每次只接收一页。超过 10 页时先创建空白 PPT，再用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`）逐页添加。
+10 页是上限，服务端每次只接收一页。超过 10 页时先创建空白 PPT，再用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")`）逐页添加。
 
 两种形式的每一页都会在发请求前校验成「单个完整的 `<slide>` 文档」。不合格的页在创建演示文稿之前报错并指出页序号，不会留下空壳演示文稿。
 
@@ -110,5 +110,5 @@ lark_slides_add_slide(presentation="<PRES_ID>", slide="<slide xmlns=\"https://ww
 
 ## 相关命令
 
-- `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="add-slide")`） — 追加/插入单页（两步创建的第二步）
-- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="xml-presentations-get")`） — 读取 PPT 内容并保存到本地文件
+- `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")`） — 追加/插入单页（两步创建的第二步）
+- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentations-get")`） — 读取 PPT 内容并保存到本地文件

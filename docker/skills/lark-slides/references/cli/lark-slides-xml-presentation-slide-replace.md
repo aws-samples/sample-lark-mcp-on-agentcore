@@ -23,6 +23,6 @@ lark_invoke(tool_name="lark_slides_xml_presentation_slide_replace", args={
 
 ## 相关命令
 
-- `lark_get_skill(domain="slides", section="replace-slide")` — 块级替换 shortcut（推荐，自动注入 id）
-- `lark_get_skill(domain="slides", section="xml-presentation-slide-get")` — 读原页拿 block short ID
-- `lark_get_skill(domain="slides", section="media-upload")` — 上传图片拿 file_token
+- `lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")` — 块级替换 shortcut（推荐，自动注入 id）
+- `lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentation-slide-get")` — 读原页拿 block short ID
+- `lark_get_skill(domain="slides", section="cli/lark-slides-media-upload")` — 上传图片拿 file_token
