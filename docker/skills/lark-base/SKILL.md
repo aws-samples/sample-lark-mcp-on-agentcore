@@ -49,7 +49,7 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 | Base 文件导入/导出 | 转 `lark_get_skill(domain="drive")` | 文件格式、参数、路径限制和仅结构导出规则由 drive skill 负责；在线复制走 `lark_base_base_copy()` |
 | 查看 Base 内资源目录 | `lark_base_base_block_list()` | 想先了解一个 Base 里有哪些 table/docx/dashboard/workflow/folder 时优先用它；返回 ID 关系和 fewshot 看 `lark_discover(query="base.base-block.list")` |
 | 管理 Base 内资源目录 | `lark_base_base_block_create/move/rename/delete` | 创建或整理 Base 直接管理的 folder/table/docx/dashboard/workflow；资源内容继续用对应工具 |
-| 管理数据表 | `lark_base_table_list/get/create/update/delete` | 处理 table 的列出、详情、创建、重命名和删除 |
+| 管理数据表 | `lark_base_table_list/get/create/update/delete` | 处理 table 的列出、详情、创建、重命名和删除；`lark_base_table_create()` 必须传 `fields` 一次性定义表结构，字段 JSON 读 `lark_get_skill(domain="base", section="field-json")` |
 | 复制 Base 内单张数据表 | `lark_base_table_copy()` / `lark_base_table_copy_status()` | 默认只复制结构；只有用户明确要求复制全表、数据、行或记录时才传 `range="all"`；异步任务按返回的 `task_id` 查询或续等 |
 | 列/查/删字段 | `lark_base_field_list/get/delete/search_options` | 写入前用 list/get 确认字段类型、选项、ID；删除前确认目标字段 |
 | 创建/更新字段 | `lark_base_field_create()` / `lark_base_field_update()` | 同一表创建多个字段时，默认一次向 `lark_base_field_create()` 的 `json` 传字段对象数组；预计串行运行时间超过调用方超时时按时间预算拆分，不按固定条数切块；仅创建一个或多个只含 `name` + `type:text` 的简单字段时看工具 schema 即可，其他类型或属性必读 `lark_get_skill(domain="base", section="field-json")`；公式读 `lark_get_skill(domain="base", section="formula-field-guide")`，lookup 读 `lark_get_skill(domain="base", section="lookup-field-guide")`；仍需逐项恢复或工具细节时读 `lark_get_skill(domain="base", section="field-create")`，更新细节读 `lark_get_skill(domain="base", section="field-update")` |

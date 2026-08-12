@@ -31,8 +31,13 @@ lark_task_create(summary="Release v2.0", due="2026-08-15", data="{\"is_milestone
 | `idempotency_key` | No | Client token to ensure idempotency of the request. |
 | `data` | No | JSON object merged into the task create request for API fields without dedicated parameters, such as `{"is_milestone":true}`. Explicit named parameters override same-named fields in this object. |
 
-Use `lark_discover(query="task.tasks.create")` to confirm that an extra field is supported before
-passing it through `data`. Prefer this tool over the raw `lark_invoke(tool_name="lark_task_tasks_create", ...)`
+> **Required:** If `lark_task_create` has no dedicated parameter for a field requested by the user,
+> first inspect `lark_discover(query="task.tasks.create")`, then add that field to `data` using the
+> exact field name, type, and nesting from the Meta API request-body schema. Do not omit requested
+> fields or guess their JSON shape. Keep fields already supplied through dedicated parameters out of
+> `data`.
+
+Prefer this tool over the raw `lark_invoke(tool_name="lark_task_tasks_create", ...)`
 call when `data` can express the request. Do not assume that other tools accept a `data` parameter;
 check each one's schema via `lark_discover` first.
 

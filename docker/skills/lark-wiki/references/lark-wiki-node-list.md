@@ -86,7 +86,7 @@ lark_wiki_node_list(space_id="6946843325487912356", parent_node_token="wikcn_EXA
 - `space_id="my_library"` is a per-user alias. The MCP server always runs with user identity so this works by default.
 - `space_id` is a numeric wiki `space_id`. Do not pass a wiki URL, wiki node token, document token, or title. Use `lark_wiki_space_list` to discover it.
 - `parent_node_token` must resolve to a wiki node token. If you have a docx/sheet/base/file URL, first call `lark_wiki_node_get(node_token="<url>")` and use the returned `node_token`.
-- Treat `invalid_parameters` (`space_id is not int`, `invalid page_token`), `not_found` (`node not found by parent node token`), and `permission_denied` as terminal for the current arguments. Fix the argument or permission before retrying.
+- Treat `invalid_parameters` (`space_id is not int`, `invalid page_token`), `not_found` (`node not found by parent node token`), and `permission_denied` as terminal for the current arguments. For `131006 permission_denied`, the current identity lacks access to the target space or parent node; this is resource access, not app scope authorization. Do not retry the same request or reauthorize as trial and error. Ask the resource owner or wiki administrator to grant read access, or use an accessible resource.
 - For `rate_limit`, stop immediate retries and retry later with exponential backoff or a smaller `page_limit`.
 
 ## Required Scope

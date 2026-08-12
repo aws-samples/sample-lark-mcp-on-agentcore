@@ -29,6 +29,7 @@ description: "飞书知识库：管理知识空间、空间成员和文档节点
   - 用户明确选定后再执行 `lark_wiki_delete_space(space_id="<ID>", _confirm=true)`（高风险写操作）。
   - 反例：不要把 wiki URL / 名称直接当 `space_id`（如 `space_id="https://.../wiki/<wiki_token>"`）；务必先用 `lark_wiki_node_get` 解析出 `data.space_id` 再传。
 - 用户要在知识库中创建新节点，优先使用 `lark_wiki_node_create`。
+- 用户要**原地重命名 Wiki 节点 / 修改节点标题**：使用 `lark_drive_update_title(url="<wiki_url>", title="<new_title>")`。该工具保留同一个 `node_token`，并会根据 API 返回给出准确的缺失 scope 和授权提示；不要探索 raw `wiki.nodes` 的 `update_title` 端点，也不要通过复制或新建第二个节点实现改名。
 - 用户要列出 Wiki 节点：先用 `lark_wiki_space_list` 拿数字 `space_id`，再用 `lark_wiki_node_list(space_id="<space_id>")`。不要把 wiki URL、node token、doc token、名称直接当 `space_id`。钻子节点时 `parent_node_token` 必须是 wiki node token；如果用户给的是 docx/sheet/base URL，先用 `lark_wiki_node_get(node_token="<url>")` 解析出 `node_token`。
 - `lark_wiki_node_list` 命中 `invalid_parameters`、`not_found`、`permission_denied` 时，不要重复调用同一参数；按 hint 修 `space_id` / `parent_node_token` / 权限。只有 `rate_limit` 才做退避重试。
 - 用户说"给知识库添加成员/管理员"：先把目标解析成"用户 / 群 / 部门 / 应用"四类之一，再决定 `member_type`，不要先调 `lark_wiki_member_add` 再根据报错反推类型。
@@ -104,7 +105,8 @@ lark_invoke(tool_name="lark_wiki_<resource>_<method>", args={...})  # 调用 API
 
 ## 不在本 skill 范围
 
-- 上传 / 下载文件到知识库节点下 → lark-drive（`lark_drive_upload` with `wiki_token` param）
+- 上传文件到知识库节点下 → lark-drive（`lark_drive_upload` with `wiki_token` param）
+- 下载 Wiki 节点对应的文件（底层 `obj_type` 为 `file`）→ lark-drive：`lark_drive_download(wiki_token="<node_token>")` 或 `lark_drive_download(url="<wiki_url>")`（会先把 Wiki 节点解析到底层文件再下载）；底层是 `docx`/`sheet`/`bitable`/`slides` 等在线文档时改用 `lark_drive_export`
 - 编辑文档正文内容 → lark-doc
 - 表格 / 多维表格数据操作 → lark-sheets / lark-base
 - 按名称搜索文档 / Wiki / 表格文件、评论与权限管理 → lark-drive

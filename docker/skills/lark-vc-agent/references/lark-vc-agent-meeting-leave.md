@@ -83,10 +83,10 @@ lark_vc_detail(meeting_ids="<meeting.id>")
 ## 参考
 
 - `lark_get_skill(domain="vc-agent", section="meeting-join")` — ⚠️ 对应的应用身份入会能力（MCP server 不可用）
-- `lark_get_skill(domain="vc-agent", section="meeting-list-active")` — 发现当前可读事件的进行中会议 ID
-- `lark_get_skill(domain="vc-agent", section="meeting-events")` — 会中事件流
+- `lark_get_skill(domain="vc", section="meeting-list-active")` — 发现当前可读事件的进行中会议 ID
+- `lark_get_skill(domain="vc", section="meeting-events")` — 会中事件流
 - `lark_get_skill(domain="vc", section="search")` — 搜索历史会议（获取 meeting_id）
 - `lark_get_skill(domain="vc", section="recording")` — 查询 minute_token
 - `lark_get_skill(domain="vc", section="detail")` — 获取会议详情
-- `lark_get_skill(domain="vc-agent")` — Agent 会中能力（本 skill）
+- `lark_get_skill(domain="vc-agent")` — Agent 会中编排能力（本 skill）
 - `lark_get_skill(domain="vc")` — 视频会议原子域（Meeting / Note 等核心概念）

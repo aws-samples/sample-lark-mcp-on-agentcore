@@ -14,16 +14,17 @@ description: "飞书云空间（云盘/云存储）：管理 Drive 文件和文�
 ## 快速决策
 
 - 用户要把**已有 Wiki 节点移出知识库，放到 Drive 文件夹或"我的空间"根目录**：切到 `lark_get_skill(domain="wiki")`，使用 `lark_wiki_move_to_drive`；不要把 Wiki token 直接交给 `lark_drive_move`。这是会改变文档归属和权限继承的写操作，执行前确认源节点与目标位置。
-- 用户要**复制文档 / 创建副本 到云盘或者文件夹**时，使用 `lark_drive_copy`，用法见 `lark_get_skill(domain="drive", section="copy")`。如果是要复制文档 / 创建副本到知识库，使用 `lark_wiki_node_copy`（见 `lark_get_skill(domain="wiki", section="node-copy")`）。
+- 用户要**复制文档 / 创建副本 到云盘或者文件夹**时：已提供可直接使用的 URL 或 token，按 `lark_get_skill(domain="drive", section="copy")` 使用 `lark_drive_copy`；仅提供标题时，先按 `lark_get_skill(domain="drive", section="search")` 使用 `lark_drive_search` 唯一定位源资源，再按 copy reference 复制。如果是要复制文档 / 创建副本到知识库，使用 `lark_wiki_node_copy`（见 `lark_get_skill(domain="wiki", section="node-copy")`）。
 - 用户要**识别飞书 / doubao 云空间 URL 的类型和 token**时，可以先按 URL 路径形态做轻量判断；当路径已明确指向 docx / sheet / bitable / slides / file / folder 等资源时，可直接提取对应 token/type。传入 wiki URL、需要识别标题或 canonical URL、URL/token 有歧义，或后续操作依赖底层真实资源时，再使用 `lark_drive_inspect(url="<url>")` 进行识别；具体用法、失败处理和边界见 `lark_get_skill(domain="drive", section="inspect")`。
 - 高风险写操作（删除、公开权限修改、owner 转移、版本删除/回滚、批量移动/覆盖/同步）必须同时满足三个条件才执行：目标已解析为该操作可直接使用的执行对象，执行细节已明确到可直接调用命令（例如删除的 file-token/type、公开权限修改的共享范围、owner 转移的目标 owner、版本删除/回滚的 version id、移动/覆盖/同步的目标位置和冲突策略），且用户在本轮明确确认执行这些具体目标和执行细节。用户只说"删除没用的文件""开放/共享给大家""改成开放""覆盖/移动这些"只表示目标状态；先只读发现并列出候选、权限档位或执行方案，停止等待用户确认。
 - 用户要**检查 / 治理文档权限、公开范围、链接分享、外部访问、复制下载权限、密级标签、owner 转移**，或要"权限风险报告、收紧权限、申请查看 / 编辑权限、转移 / 批量转移 owner"，必须先调用 `lark_get_skill(domain="drive", section="workflow")`，再按其中 `Workflow Registry` 进入 `permission_governance` workflow（`lark_get_skill(domain="drive", section="workflow-permission-governance")`）。
+- 用户明确要**移除单个云文档协作者权限**时，使用 `lark_drive_member_remove`；先调用 `lark_get_skill(domain="drive", section="member-remove")`。这是高风险写操作，真实执行必须确认准确的资源、成员 ID/type 和 wiki 权限范围，并显式传 `_confirm=true`。
 - 用户要为指定飞书文档**设置 / 修改密级标签（secure label）**，或查询当前用户可用的密级标签，直接调用 `lark_get_skill(domain="drive", section="secure-label")`；这是 Drive 文件治理能力。
 - 用户要**查询文件、文件夹或云文档自身的公开访问、分享、协作者管理、安全与评论权限设置**，优先使用 `lark_drive_permission_get_setting()`；它只读取目标自身设置，不递归审计文件夹子文档权限。裸 token 必须显式传 `type`。
 - 用户要**按特定主题、关键词或内容线索跨容器查找资料，并统一收集到 Drive 文件夹或 Wiki 节点**，必须先调用 `lark_get_skill(domain="drive", section="workflow")`，再按其中 `Workflow Registry` 进入 `topic_move_collector` workflow（`lark_get_skill(domain="drive", section="workflow-topic-move-collector")`）。该 workflow 负责搜索召回、内容验证、相关性分类、移动计划、写前确认和结果验证；禁止直接从 `lark_drive_search` 或 `lark_drive_move` 开始。
 - 用户要**整理云盘 / 文件夹 / 文档库 / 知识库 / 个人文档库**，或要"盘点目录结构、找出未归档/临时/重复/空目录、生成整理方案"，必须先调用 `lark_get_skill(domain="drive", section="workflow")`，再按其中 `Workflow Registry` 进入 `knowledge_organize` workflow（`lark_get_skill(domain="drive", section="workflow-knowledge-organize")`）。默认只生成方案；创建目录、移动资源、申请权限都必须单独确认。
 - 按主题跨范围查找并集中归档，进入 `topic_move_collector`；对已知文件夹、文档库或知识库做目录盘点和结构重组，进入 `knowledge_organize`；只移动一个已明确资源时仍使用原子移动命令。
-- 用户要**搜文档 / Wiki / 电子表格 / 多维表格 / 云空间（云盘/云存储）对象**，优先使用 `lark_drive_search()`。自然语言里"最近我编辑过的"、"我创建的"（→ `created_by_me=true`，原始创建者语义）、"我负责/owner 的"（→ `mine=true`，owner 语义）、"最近一周我打开过的 xxx"、"某人 owner 的 docx" 等直接映射到扁平参数，避免手写嵌套 JSON。
+- 用户要**搜文档 / Wiki / 电子表格 / 多维表格 / 云空间（云盘/云存储）对象**，优先使用 `lark_drive_search()`；按标题定位和处理重复候选时遵循 `lark_get_skill(domain="drive", section="search")`。自然语言里"最近我编辑过的"、"我创建的"（→ `created_by_me=true`，原始创建者语义）、"我负责/owner 的"（→ `mine=true`，owner 语义）、"最近一周我打开过的 xxx"、"某人 owner 的 docx" 等直接映射到扁平参数，避免手写嵌套 JSON。
 - 用户要对**文档评论**做任何操作（添加评论、列表 / 批量查询、回复、获取 / 更新 / 删除回复、解决 / 恢复、reaction），按下方 Shortcuts 表选择对应的评论工具，执行前先调用该工具对应的 `lark_get_skill(domain="drive", section=...)`。按评论定位文档正文位置见 `lark_get_skill(domain="drive", section="comment-location")`。
 - 用户给出 doubao.com 的云空间资源 URL/token，或明确提到豆包里的 file/folder/docx/sheet/bitable/wiki 资源时，仍按资源类型、URL 路径和 token 路由到本 skill；不要因为域名不是飞书而回退到 WebFetch。
 - 用户要把本地 `.xlsx` / `.csv` / `.base` 导入成 Base / 多维表格 / bitable，第一步必须使用 `lark_drive_import(type="bitable")`。
@@ -35,7 +36,7 @@ description: "飞书云空间（云盘/云存储）：管理 Drive 文件和文�
 - 用户要查看、下载、回滚或删除文件的**历史版本**，使用 `lark_drive_version_history()`、`lark_drive_version_get()`、`lark_drive_version_revert()`、`lark_drive_version_delete()`；这组工具同时支持 user identity 和 bot identity。
 - 用户要把本地 `.xlsx` / `.xls` / `.csv` 导入成电子表格，使用 `lark_drive_import(type="sheet")`。
 - 用户要在云空间（云盘/云存储）里新建文件夹，优先使用 `lark_drive_create_folder()`。
-- 用户要查看或下载文件内容，或者查看文件可用预览格式并获取 PDF / HTML / 文本 / 图片等转换预览产物，使用 `lark_drive_preview()`。
+- 用户要查看或下载文件内容，或者查看文件可用预览格式并获取 PDF / HTML / 文本 / 图片等转换预览产物，使用 `lark_drive_preview()`。`lark_drive_preview` 和 `lark_drive_download` 都支持 `file_token` / `url` / `wiki_token` 三选一（Wiki 会解析到底层 `file`）；但两者只处理 Drive **文件**，若目标是 docx/sheet/bitable/slides 等在线文档，改用 `lark_drive_export`。
 - 用户要获取某个文件的封面图，优先使用 `lark_drive_cover()`；先 `list_only=true` 看规格，再选 `spec` 下载。
 - 用户要导出云文档时，优先使用 `lark_drive_export(url="<文档 URL>", file_extension="<格式>")`；详细参数、Wiki token 和错误码处理见 `lark_get_skill(domain="drive", section="export")`。
 - 用户要把本地文件上传到知识库 / 文档库里的某个 wiki 节点下时，仍然使用 `lark_drive_upload(wiki_token="<wiki_token>")`；不要误切到 `wiki` 域命令。
@@ -146,6 +147,7 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_drive_apply_permission()`（详见 `lark_get_skill(domain="drive", section="apply-permission")`） | 以 user 身份向文档 owner 申请访问权限。 |
 | `lark_drive_member_add()`（详见 `lark_get_skill(domain="drive", section="member-add")`） | 添加一个或最多 10 个 Drive 文档、文件、文件夹或 wiki 节点协作者/授权成员；封装 Drive permission member create/batch_create，真实写入需要 `_confirm=true`。 |
 | `lark_drive_member_list()`（详见 `lark_get_skill(domain="drive", section="member-list")`） | 查询 Drive 文档、文件、文件夹或 wiki 节点的协作者/授权成员列表。 |
+| `lark_drive_member_remove()`（详见 `lark_get_skill(domain="drive", section="member-remove")`） | 移除一个 Drive 文档、文件、文件夹或 wiki 节点协作者；封装 Drive permission member delete，真实写入需要 `_confirm=true`。 |
 | `lark_drive_permission_get_setting()`（详见 `lark_get_skill(domain="drive", section="permission-get-setting")`） | 查询文件、文件夹或云文档自身的公开访问、分享、协作者管理、安全与评论权限设置；支持 URL 或裸 token + `type`；不递归读取文件夹子文档权限。 |
 | `lark_drive_secure_label_list()`（详见 `lark_get_skill(domain="drive", section="secure-label")`） | 列出当前用户可用的密级标签。 |
 | `lark_drive_secure_label_update()`（详见 `lark_get_skill(domain="drive", section="secure-label")`） | 更新 Drive 文件或文档的密级标签。 |

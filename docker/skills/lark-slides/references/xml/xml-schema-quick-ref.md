@@ -230,7 +230,7 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 
 `img` 使用 `topLeftX` / `topLeftY`，不是 `x` / `y`。
 
-`src` 只支持：`lark_slides_media_upload` 返回的 `file_token`，或 `@<本地路径>` 占位符（`lark_slides_create` 的 `slides` 和 `lark_slides_add_slide` 的 `slide` 会自动上传并替换）。**禁止使用 http(s) 外链 URL**——飞书 slides 渲染端不会代理外链图，外链 src 在 PPT 里通常不显示。本地图片详见 `lark_get_skill(domain="slides", section="create")` / `lark_get_skill(domain="slides", section="media-upload")`。
+`src` 只支持：`lark_slides_media_upload` 返回的 `file_token`，或 `@<本地路径>` 占位符（`lark_slides_create` 的 `slides` 和 `lark_slides_add_slide` 的 `slide` 会自动上传并替换）。**禁止使用 http(s) 外链 URL**——飞书 slides 渲染端不会代理外链图，外链 src 在 PPT 里通常不显示。本地图片详见 `lark_get_skill(domain="slides", section="cli/lark-slides-create")` / `lark_get_skill(domain="slides", section="cli/lark-slides-media-upload")`。
 
 本地图片的两种姿势：
 
@@ -251,7 +251,7 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 
 图标必须填充颜色并和背景有足够对比。
 
-禁止盲猜 iconType，必须先检索 IconPark，再写 `<icon iconType="...">`。检索方式和更多规则见 `lark_get_skill(domain="slides", section="iconpark")`。
+禁止盲猜 iconType，必须先检索 IconPark，再写 `<icon iconType="...">`。检索方式和更多规则见 `lark_get_skill(domain="slides", section="xml/iconpark")`。
 
 ### table
 

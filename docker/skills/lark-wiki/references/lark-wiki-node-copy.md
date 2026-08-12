@@ -1,6 +1,6 @@
 # lark-wiki +node-copy
 
-Copy a wiki node (including its content) to a target space or under a target parent node. Used for cross-space migration.
+Copy one Wiki node, including that node's content, to a target space or under a target parent node. Descendant nodes are not copied.
 
 > High-risk write — the upstream API is flagged `danger: true`, so this tool requires explicit `_confirm=true` before issuing the request. Forgetting `_confirm` returns a `confirmation_required` error and the copy is **not** performed.
 
@@ -41,22 +41,11 @@ lark_wiki_node_copy(space_id="<source_space_id>", node_token="<source_node_token
 }
 ```
 
-## Migration workflow
-
-To migrate a subtree from one space to another:
-
-```
-# 1. List nodes in the source space
-lark_wiki_node_list(space_id="source_space_id")
-
-# 2. Copy each node to the target space
-lark_wiki_node_copy(space_id="<source_space_id>", node_token="wikcn_EXAMPLE_TOKEN", target_space_id="<target_space_id>", _confirm=true)
-```
-
 ## Notes
 
-- Copying is recursive — the subtree under the node is also copied.
-- There is no native move API; migration = copy to target + (manually delete source if needed).
+- Copying is non-recursive: only the requested node and its content are copied.
+- Descendant nodes must be copied separately.
+- To move an existing Wiki node without keeping the source, use `lark_get_skill(domain="wiki", section="move")` instead of copy-then-delete.
 
 ## Required Scope
 

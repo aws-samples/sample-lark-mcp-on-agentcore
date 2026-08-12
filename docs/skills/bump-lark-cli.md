@@ -309,8 +309,8 @@ done
 
 > **⚠️ Verbatim `cp -r` CLOBBERS local script patches.** Some `.py` scripts carry
 > repo-local modifications that do NOT exist upstream and must survive the bump — the
-> **XXE guard** (`ensure_safe_xml_source` + `nosemgrep`, in `xml_text_overlap_lint.py` and
-> `doc_word_stat.py`) and the **stdin shim** (`if str(file_path) == "-": return sys.stdin.read()`,
+> **XXE guard** (`ensure_safe_xml_source` + `nosemgrep`, in `lark-slides/scripts/xml_lint.py`)
+> and the **stdin shim** (`if str(file_path) == "-": return sys.stdin.read()`,
 > required because the container has no writable FS — see
 > [`adapt-skill-for-mcp.md`](adapt-skill-for-mcp.md) Rule 9). A blind `cp -r` overwrites both.
 > For any script with local patches, do a **3-way merge** instead: take the NEW upstream file as
@@ -318,16 +318,22 @@ done
 > letting the copy win. After copying, re-assert the patches survived:
 >
 > ```bash
-> # XXE guard present wherever it was before:
-> grep -L ensure_safe_xml_source docker/skills/lark-slides/scripts/xml_text_overlap_lint.py \
->   docker/skills/lark-doc/scripts/doc_word_stat.py   # → prints nothing
-> # stdin shim present in both:
-> grep -L sys.stdin docker/skills/lark-slides/scripts/xml_text_overlap_lint.py \
->   docker/skills/lark-doc/scripts/doc_word_stat.py   # → prints nothing
+> # XXE guard + stdin shim present (prints nothing when both are intact):
+> grep -L ensure_safe_xml_source docker/skills/lark-slides/scripts/xml_lint.py
+> grep -L sys.stdin docker/skills/lark-slides/scripts/xml_lint.py
 > ```
 >
 > The `skill-quality` stdin-contract test also fails if the shim is lost on a script any doc
 > pipes `stdin=` to, but the XXE guard has no such test — verify it by grep here.
+>
+> **A rename counts as a clobber.** 1.0.86 renamed this script
+> (`xml_text_overlap_lint.py` → `xml_lint.py`, with the data paths moving to
+> `references/xml/`) and left an `from xml_lint import *` compat shim at the old name;
+> the patched local file has to be re-ported onto the NEW name and the old one deleted
+> (the shim is not copied). `lark-doc/scripts/doc_word_stat.py` carried the same two
+> patches until upstream dropped the script in 1.0.85 — if a future version brings it
+> back, it needs the guard again. `.semgrepignore` lists the guarded file by path, so a
+> rename has to be mirrored there or its `use-defused-xml` suppression stops applying.
 
 Then confirm no orphan adapted dirs remain (runs against the **regenerated** tree, so do it
 here, not in Step 8):

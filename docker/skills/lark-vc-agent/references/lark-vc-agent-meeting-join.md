@@ -3,7 +3,7 @@
 
 (authentication is handled automatically by the MCP server)
 
-> ⚠️ **此操作要求应用身份（bot/app identity），通过 MCP server 不可用。** MCP server 始终以用户身份调用，无法让应用机器人入会。本文档保留入会能力的概念说明，便于解释为什么"代我入会 / 让机器人旁听"这类请求无法在 MCP 上完成；不要把它当作可直接调用的工具向用户承诺执行。需要读取进行中会议的事件时，请用用户身份路径：`lark_get_skill(domain="vc-agent", section="meeting-list-active")` 发现会议，再用 `lark_vc_meeting_events` 读取。
+> ⚠️ **此操作要求应用身份（bot/app identity），通过 MCP server 不可用。** MCP server 始终以用户身份调用，无法让应用机器人入会。本文档保留入会能力的概念说明，便于解释为什么"代我入会 / 让机器人旁听"这类请求无法在 MCP 上完成；不要把它当作可直接调用的工具向用户承诺执行。需要读取进行中会议的事件时，请用用户身份路径：`lark_get_skill(domain="vc", section="meeting-list-active")` 发现会议，再用 `lark_vc_meeting_events` 读取。
 
 通过 9 位会议号让应用机器人加入一场正在进行的视频会议。这是一次**写操作**，会实际让应用机器人加入会议。
 
@@ -122,10 +122,10 @@ lark_vc_detail(meeting_ids="<meeting.id>")
 ## 参考
 
 - `lark_get_skill(domain="vc-agent", section="meeting-leave")` — ⚠️ 对应的应用身份离会能力（MCP server 不可用）
-- `lark_get_skill(domain="vc-agent", section="meeting-list-active")` — 发现当前可读事件的进行中会议 ID
-- `lark_get_skill(domain="vc-agent", section="meeting-events")` — 会中事件流
+- `lark_get_skill(domain="vc", section="meeting-list-active")` — 发现当前可读事件的进行中会议 ID
+- `lark_get_skill(domain="vc", section="meeting-events")` — 会中事件流
 - `lark_get_skill(domain="vc", section="search")` — 搜索历史会议记录
 - `lark_get_skill(domain="vc", section="recording")` — 查询 minute_token
 - `lark_get_skill(domain="vc", section="detail")` — 获取会议详情
-- `lark_get_skill(domain="vc-agent")` — Agent 会中能力（本 skill）
+- `lark_get_skill(domain="vc-agent")` — Agent 会中编排能力（本 skill）
 - `lark_get_skill(domain="vc")` — 视频会议原子域（Meeting / Note 等核心概念）

@@ -68,7 +68,7 @@ description: "飞书妙记：搜索妙记、查看妙记基础信息、下载/�
 
 ### 3. 申请妙记权限
 
-遇到妙记没有查看或编辑权限时，引导用户申请对应权限；只有用户明确要申请时，才调用 `lark_minutes_apply_permission`。
+遇到妙记没有查看或编辑权限时，引导用户申请对应权限；只有用户明确要申请时，才调用 `lark_minutes_apply_permission`。使用前必读 `lark_get_skill(domain="minutes", section="apply-permission")`（写操作，含权限语义与安全约束）。
 
 只有当用户明确要求"申请查看权限"、"申请编辑权限"、"帮我申请这条妙记权限"时，才调用：
 
@@ -78,7 +78,10 @@ lark_minutes_apply_permission(minute_token="<token>", perm="view|edit")
 
 这是向妙记所有者发起权限申请，不代表立即获得权限。
 
-**安全约束**：遇到无权限错误时，不要自动调用 `lark_minutes_apply_permission`；先把无权限事实告知用户，只有用户明确要求申请权限时才发起申请。
+**安全约束**：
+
+- 遇到无权限错误时，不要自动调用 `lark_minutes_apply_permission`；先把无权限事实告知用户，只有用户明确要求申请权限时才发起申请。
+- 申请到的是**当前身份**（MCP server 始终为 user identity）对这条妙记的权限，不要指望它能解决 scope 缺失；也不存在"换个身份重新读一次"来绕过资源权限这条路。
 
 ### 4. 上传音视频文件生成妙记（并可继续获取纪要 / 逐字稿）
 

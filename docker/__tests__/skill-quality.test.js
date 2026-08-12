@@ -304,7 +304,7 @@ describe.skipIf(skipIfNoSkills)('skill quality', () => {
       const content = readFileSync(file, 'utf8');
       let m;
       while ((m = callRe.exec(content)) !== null) {
-        const scriptRel = m[1]; // e.g. lark-slides/scripts/xml_text_overlap_lint.py
+        const scriptRel = m[1]; // e.g. lark-slides/scripts/xml_lint.py
         const scriptPath = join(SKILLS_DIR, scriptRel);
         if (!existsSync(scriptPath)) {
           offenders.push({ file: file.replace(SKILLS_DIR + '/', ''), script: scriptRel, reason: 'script file not found' });

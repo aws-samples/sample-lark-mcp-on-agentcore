@@ -33,4 +33,4 @@ docker/__tests__/server-runtime.test.js
 #    defusedxml cannot be imported: the container runs skill scripts with the
 #    base-image python3 and has no pip / third-party Python deps by design.
 #    (lark-doc/scripts/doc_word_stat.py was dropped upstream in lark-cli 1.0.85.)
-docker/skills/lark-slides/scripts/xml_text_overlap_lint.py
+docker/skills/lark-slides/scripts/xml_lint.py

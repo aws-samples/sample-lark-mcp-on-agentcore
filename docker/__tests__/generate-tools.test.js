@@ -369,6 +369,14 @@ describe('translateFlagDescription', () => {
     expect(out).toContain('filter JSON object');
   });
 
+  it('strips the up-front ", inline or via @file/-" channel hint (lark-cli 1.0.86)', () => {
+    const desc = 'sync config JSON object, inline or via @file/- (supports @file, - reads stdin (one flag per call; use @file for others))';
+    const out = translateFlagDescription(desc);
+    expect(out).not.toContain('@file');
+    expect(out).not.toContain('stdin');
+    expect(out).toBe('sync config JSON object');
+  });
+
   it('strips "supports @file or -" tails', () => {
     const desc = 'JSON array of pages ({slide_id, content}); supports @file or -';
     const out = translateFlagDescription(desc);

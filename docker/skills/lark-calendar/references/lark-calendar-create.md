@@ -52,6 +52,7 @@ lark_invoke(tool_name="lark_calendar_event_attendees_create", args={
 ```
 
 完整 API 命令的关键差异：
+- `lark_calendar_create` 在传入 `attendee_ids`（即需要邀请其他参会人）时，会自动把当前登录用户一并加进参会人，但 `lark_calendar_events_create` / `lark_calendar_event_attendees_create` 等完整 API **不会**自动加。需自行把当前登录用户的 open_id 以 `type: "user"` 写入 `attendees`，与邀请的其他参会人合并去重后添加。当前登录用户的 open_id 用 `lark_contact_search_user(user_ids="me")` 获取（`me` 代表调用者，返回的 `open_id` 始终非空）。
 - 时间参数是 **Unix 秒字符串**（非 ISO 8601）。换算时**禁止依赖容器默认时区**（常为 UTC，会导致 8 小时偏移），必须显式指定目标时区。
 - 全天日程的开始日期和结束日期必须分别是日程开始的第一天和结束的最后一天；单日全天日程两者相同。
 - 手动拆成"创建日程 + 添加参会人"两步时，若第二步失败，建议删除刚创建的空日程，避免遗留无参会人的日程。

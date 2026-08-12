@@ -24,8 +24,8 @@ XS_NS = "{http://www.w3.org/2001/XMLSchema}"
 XML_NS = "{http://www.w3.org/XML/1998/namespace}"
 SVG_NS = "{http://www.w3.org/2000/svg}"
 SML_NAMESPACE = "https://www.larkoffice.com/sml/2.0"
-SXSD_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "references" / "slides_xml_schema_definition.xml"
-ICONPARK_INDEX_PATH = Path(__file__).resolve().parents[1] / "references" / "iconpark-index.json"
+SXSD_SCHEMA_PATH = Path(__file__).resolve().parents[1] / "references" / "xml" / "slides_xml_schema_definition.xml"
+ICONPARK_INDEX_PATH = Path(__file__).resolve().parents[1] / "references" / "xml" / "iconpark-index.json"
 SXSD_TAG_ALIASES = {
     "textbox": "<shape type=\"text\">",
     "textBox": "<shape type=\"text\">",
@@ -2790,7 +2790,7 @@ def build_result(
     status = slide_status(all_errors, all_warnings)
     result: dict[str, Any] = {
         "schema_version": "2.0",
-        "tool": "xml_text_overlap_lint",
+        "tool": "xml_lint",
         "file": source_path,
         "slide_size": slide_size,
         "summary": {
@@ -2980,7 +2980,7 @@ def lint_xml(xml: str, source_path: str | None = None) -> dict[str, Any]:
 
 
 def print_usage() -> None:
-    print("Usage:\n  python3 xml_text_overlap_lint.py --input <presentation.xml>\n  python3 xml_text_overlap_lint.py --input -   # read XML from stdin", file=sys.stderr)
+    print("Usage:\n  python3 xml_lint.py --input <presentation.xml>\n  python3 xml_lint.py --input -   # read XML from stdin", file=sys.stderr)
 
 
 def run_cli(argv: list[str] | None = None) -> None:
@@ -3003,5 +3003,5 @@ if __name__ == "__main__":
     try:
         run_cli()
     except XmlLayoutLintError as error:
-        print(f"xml-text-overlap-lint error: {error}", file=sys.stderr)
+        print(f"xml-lint error: {error}", file=sys.stderr)
         raise SystemExit(1) from error
