@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.86",
-    "extracted_at": "2026-08-12",
+    "lark_cli_version": "1.0.87",
+    "extracted_at": "2026-08-17",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -717,6 +717,95 @@
     },
     {
       "service": "base",
+      "command": "+app-block-create",
+      "scopes": [
+        "base:appmode_block:create",
+        "base:appmode_block:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-block-get",
+      "scopes": [
+        "base:appmode_block:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-block-get-data",
+      "scopes": [
+        "base:appmode_block:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-block-list",
+      "scopes": [
+        "base:appmode_block:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-block-update",
+      "scopes": [
+        "base:appmode_block:update",
+        "base:appmode_block:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-create",
+      "scopes": [
+        "base:appmode:create",
+        "base:workspace:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-get",
+      "scopes": [
+        "base:appmode:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-page-create",
+      "scopes": [
+        "base:appmode_page:create",
+        "base:appmode_page:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-page-delete",
+      "scopes": [
+        "base:appmode_page:delete"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-page-get",
+      "scopes": [
+        "base:appmode_page:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-page-list",
+      "scopes": [
+        "base:appmode_page:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+app-page-update",
+      "scopes": [
+        "base:appmode_page:update",
+        "base:appmode_page:read"
+      ]
+    },
+    {
+      "service": "base",
       "command": "+base-block-create",
       "scopes": [
         "base:block:create"
@@ -1341,6 +1430,27 @@
       "command": "+workflow-update",
       "scopes": [
         "base:workflow:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+workspace-create",
+      "scopes": [
+        "base:workspace:create"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+workspace-entity-list",
+      "scopes": [
+        "base:workspace:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+workspace-move-in",
+      "scopes": [
+        "base:workspace:update"
       ]
     },
     {

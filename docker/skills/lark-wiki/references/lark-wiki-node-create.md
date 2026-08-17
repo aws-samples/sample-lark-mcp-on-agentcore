@@ -83,6 +83,7 @@ lark_wiki_node_create(space_id="<SPACE_ID>", node_type="shortcut", obj_type="fil
 - **默认对象类型**：不传 `obj_type` 时默认创建 `docx` 节点
 - **默认节点类型**：不传 `node_type` 时默认创建普通节点 `origin`
 - **输出结果**：成功后会返回 `resolved_space_id`、`resolved_by`、`node_token`、`obj_token`、`obj_type`、`node_type`、`title` 等字段，便于后续继续操作
+- **结构限制**：返回 `131003` 表示触发了知识空间总节点数、目录深度或单个父节点直属子节点数等结构限制。这不是瞬时错误，禁止使用相同参数重试。根据上游错误信息选择更浅或其他父节点、重新组织现有节点，或清理/改用其他知识空间；不要在无法确认具体限制时盲目增加中间层级。
 
 ## 推荐场景
 

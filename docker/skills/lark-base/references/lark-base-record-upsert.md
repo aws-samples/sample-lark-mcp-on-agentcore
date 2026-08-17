@@ -9,7 +9,7 @@
 lark_base_record_upsert(json='{"项目名称":"Apollo","状态":"进行中"}', base_token="<base_token>", table_id="<table_id>")
 
 # 更新记录
-lark_base_record_upsert(json='{"项目名称":"Apollo","状态":"完成","完成时间":"2026-03-24 10:00:00"}', base_token="<base_token>", table_id="<table_id>", record_id="<record_id>")
+lark_base_record_upsert(json='{"项目名称":"Apollo","状态":"完成","完成时间":"2026-03-24 10:00"}', base_token="<base_token>", table_id="<table_id>", record_id="<record_id>")
 ```
 
 ## 参数
@@ -38,7 +38,7 @@ lark_base_record_upsert(json='{"项目名称":"Apollo","状态":"完成","完成
 {
   "项目名称": "Apollo",
   "状态": "进行中",
-  "完成时间": "2026-03-24 10:00:00"
+  "完成时间": "2026-03-24 10:00"
 }
 ```
 

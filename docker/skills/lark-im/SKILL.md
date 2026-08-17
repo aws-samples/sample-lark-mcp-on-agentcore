@@ -183,7 +183,11 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 
 ### images
 
-  - `create` — 上传图片。⚠️ This operation requires bot identity and is not available via the MCP server.
+  - `create` — 上传图片。Identity: supports `user` and `bot`; user identity requires `im:resource` scope on the UAT.
+
+### files
+
+  - `create` — 上传文件。Identity: supports `user` and `bot`; user identity requires `im:resource` scope on the UAT.
 
 ### pins
 
@@ -231,6 +235,7 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 | `reactions.list` | `im:message.reactions:read` |
 | `threads.forward` | `im:message` |
 | `images.create` | `im:resource` |
+| `files.create` | `im:resource` |
 | `pins.create` | `im:message.pins:write_only` |
 | `pins.delete` | `im:message.pins:write_only` |
 | `pins.list` | `im:message.pins:read` |
