@@ -247,6 +247,19 @@ describe('R5: execFile is abortable and its timeout aligns under the Lambda', ()
     expect(lastExecFileOpts.signal).toBeInstanceOf(AbortSignal);
   });
 
+  it('runs lark-cli in a writable cwd so relative --output paths do not EACCES', async () => {
+    // Dockerfile sets WORKDIR /app (root-owned 755) and USER node, so the
+    // inherited cwd is NOT writable. Every lark-cli flag that writes a file
+    // relative to cwd — drive +download/+preview/+cover --output, slides
+    // +screenshot --output, base +record-download-attachment --output, and the
+    // ndjson record export (which stages a temp file even with no --output) —
+    // fails with "cannot create file: ... permission denied" unless cwd is
+    // moved to the tmpfs.
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', {}, 52);
+    expect(lastExecFileOpts.cwd).toBe('/tmp');
+  });
+
   it('caps the execFile timeout at or below the Lambda 25s budget', async () => {
     execFileBehavior = { mode: 'instant' };
     await callTool('lark_calendar_agenda', {}, 51);

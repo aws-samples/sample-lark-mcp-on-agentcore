@@ -55,6 +55,15 @@ const LARK_CLI_TIMEOUT_MS = parseInt(process.env.LARK_CLI_TIMEOUT_MS || '24000',
 function runLarkCli(cliArgs, env, timeoutMs, abortSignal) {
   return new Promise((resolve, reject) => {
     const child = execFile('lark-cli', cliArgs, {
+      // cwd MUST be a writable dir. Several lark-cli flags write files relative
+      // to cwd (--output on drive +download/+preview/+cover, slides +screenshot,
+      // base +record-download-attachment, and the ndjson record export, which
+      // stages a temp file even when --output is omitted). Inheriting the
+      // server's cwd (Dockerfile WORKDIR /app, root-owned 755 while the process
+      // runs as USER node) makes every one of those fail with EACCES
+      // ("cannot create file: ... permission denied"). /tmp is the tmpfs the
+      // lark_exec_script child already uses.
+      cwd: '/tmp',
       timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024, env, signal: abortSignal,
     }, (err, stdout, stderr) => {
       activeChildren.delete(child);
