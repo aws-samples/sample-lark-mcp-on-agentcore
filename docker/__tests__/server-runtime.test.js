@@ -288,6 +288,36 @@ describe('R10: repeatable (stringArray) flags reach lark-cli as repeated flags',
   });
 });
 
+describe('R11: a wholly-rejected projection is reported, not silently degraded', () => {
+  it('turns "every requested field ignored" into a self-correctable error', async () => {
+    // lark-cli answers ok with the right records_count but exports record_id
+    // only. Passing that through means the analysis step downstream reads null
+    // for every column it asked for and reports a plausible wrong answer.
+    execFileBehavior = { mode: 'stdout', stdout: JSON.stringify({
+      ok: true, records_count: 15,
+      ignored_fields: [{ name: '根本不存在的字段', reason: 'NOT_FOUND' }],
+    }) };
+    const res = await callTool('lark_calendar_agenda', { field_id: ['根本不存在的字段'] }, 95);
+    expect(res.data.result.isError).toBe(false);
+    const p = JSON.parse(res.data.result.content[0].text);
+    expect(p.ok).toBe(false);
+    expect(p.error).toBe('projection_dropped');
+    expect(p.unknown_fields).toEqual(['根本不存在的字段']);
+    expect(p.hint).toContain('lark_base_field_list()');
+  });
+
+  it('passes a PARTIAL rejection through untouched', async () => {
+    // Part of the projection worked; ignored_fields still reports the rest.
+    const stdout = JSON.stringify({
+      ok: true, records_count: 15, ignored_fields: [{ name: 'B', reason: 'NOT_FOUND' }],
+    });
+    execFileBehavior = { mode: 'stdout', stdout };
+    const res = await callTool('lark_calendar_agenda', { field_id: ['A', 'B'] }, 96);
+    expect(res.data.result.isError).toBeUndefined();
+    expect(res.data.result.content[0].text).toBe(stdout);
+  });
+});
+
 describe('R5: execFile is abortable and its timeout aligns under the Lambda', () => {
   it('passes an AbortSignal into execFile so a client disconnect can kill the child', async () => {
     // The middleware aborts its fetch at 25s; if the child keeps running to the

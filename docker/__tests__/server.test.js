@@ -19,7 +19,9 @@ import {
   createSemaphore,
   createSingleFlight,
   coerceFlagValue,
+  errorText,
   toFlagList,
+  allProjectedFieldsDropped,
   validatePayload,
   translateCliError,
   stripCliNotice,
@@ -144,6 +146,63 @@ describe('buildInputSchema', () => {
   it('does NOT add _confirm for non-high-risk tools', () => {
     const schema = buildInputSchema(FAKE_CATALOG.tools[0]);
     expect(schema.properties._confirm).toBeUndefined();
+  });
+});
+
+describe('errorText (unified failure envelope)', () => {
+  it('prefixes every server-minted error with ok:false', () => {
+    // lark-cli's own error envelopes already carry ok:false. Server-side errors
+    // used to omit it, so a client had no single predicate for "this failed".
+    expect(JSON.parse(errorText({ error: 'server_busy' }))).toEqual({ ok: false, error: 'server_busy' });
+  });
+
+  it('keeps the payload fields alongside ok', () => {
+    const parsed = JSON.parse(errorText({ error: 'invalid_argument', parameter: 'field_id', hint: 'use an array' }));
+    expect(parsed.ok).toBe(false);
+    expect(parsed.parameter).toBe('field_id');
+    expect(parsed.hint).toBe('use an array');
+  });
+});
+
+describe('allProjectedFieldsDropped', () => {
+  const DEF = {
+    service: 'base', command: '+record-list', description: 'x', risk: 'read',
+    flags: [{ name: 'field-id', type: 'stringArray', description: 'projection' }],
+  };
+  const ok = (ignored) => JSON.stringify({ ok: true, records_count: 15, ignored_fields: ignored });
+
+  it('flags an export where every requested field was ignored', () => {
+    const r = allProjectedFieldsDropped(ok([{ name: 'A' }, { name: 'B' }]), DEF, { field_id: ['A', 'B'] });
+    expect(r).toEqual({ parameter: 'field_id', unknown: ['A', 'B'] });
+  });
+
+  it('stays silent on a PARTIAL rejection (some of the projection worked)', () => {
+    expect(allProjectedFieldsDropped(ok([{ name: 'B' }]), DEF, { field_id: ['A', 'B'] })).toBeNull();
+  });
+
+  it('stays silent when nothing was ignored', () => {
+    expect(allProjectedFieldsDropped(ok([]), DEF, { field_id: ['A'] })).toBeNull();
+    expect(allProjectedFieldsDropped(JSON.stringify({ ok: true }), DEF, { field_id: ['A'] })).toBeNull();
+  });
+
+  it('stays silent when no projection was requested', () => {
+    expect(allProjectedFieldsDropped(ok([{ name: 'A' }]), DEF, {})).toBeNull();
+  });
+
+  it('reads ignored_fields nested under data as well', () => {
+    const nested = JSON.stringify({ ok: true, data: { ignored_fields: [{ name: 'A' }] } });
+    expect(allProjectedFieldsDropped(nested, DEF, { field_id: ['A'] })).toEqual({ parameter: 'field_id', unknown: ['A'] });
+  });
+
+  it('does not fire on a tool without a repeatable field-id flag (write paths)', () => {
+    // On writes, ignored_fields legitimately reports read-only columns.
+    const writeDef = { service: 'base', command: '+record-upsert', description: 'x', risk: 'write', flags: [{ name: 'json', type: 'string', description: 'p' }] };
+    expect(allProjectedFieldsDropped(ok([{ name: 'A' }]), writeDef, { field_id: ['A'] })).toBeNull();
+  });
+
+  it('does not fire when the call itself failed', () => {
+    const failed = JSON.stringify({ ok: false, error: { type: 'validation' }, ignored_fields: [{ name: 'A' }] });
+    expect(allProjectedFieldsDropped(failed, DEF, { field_id: ['A'] })).toBeNull();
   });
 });
 

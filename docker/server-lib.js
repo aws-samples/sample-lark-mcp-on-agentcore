@@ -222,6 +222,17 @@ function createSingleFlight(fn) {
 // and lark-cli rejects it downstream with an opaque error. Accept BOTH
 // conventions: a string passes through; an object/array is stringified;
 // primitives keep String() (ordinary CLI flag values).
+// Every server-generated failure payload carries ok:false, so a caller has ONE
+// predicate (`ok === false`) that covers both families of error: the envelopes
+// lark-cli produces itself (which already carry ok:false) and the ones this
+// server mints before/around the spawn. `isError` answers a DIFFERENT question —
+// terminal vs self-correctable — and deliberately does NOT track ok:false: a
+// lenient MCP client hides the content of an isError:true result, which would
+// bury exactly the hint a self-correctable failure exists to deliver.
+function errorText(payload) {
+  return JSON.stringify({ ok: false, ...payload });
+}
+
 function coerceFlagValue(value) {
   if (typeof value === 'string') return value;
   if (typeof value === 'object' && value !== null) return JSON.stringify(value);
@@ -250,6 +261,30 @@ function toFlagList(value) {
   return list
     .filter(v => v !== undefined && v !== null && typeof v !== 'object' && v !== '')
     .map(v => (typeof v === 'string' ? v : String(v)));
+}
+
+// Detect a projection that was entirely rejected. lark-cli answers ok with the
+// correct records_count but exports record_id only, listing the unknown names in
+// `ignored_fields` — so an analysis step downstream reads null for every column it
+// asked for and produces a plausible wrong answer. Returns {parameter, unknown}
+// when EVERY requested value was ignored, else null: a partial rejection means
+// part of the projection worked and `ignored_fields` already reports the rest.
+// Scoped to repeatable projection flags (`field-id`) so it never fires on the
+// write paths, where `ignored_fields` legitimately reports read-only columns.
+function allProjectedFieldsDropped(output, def, args) {
+  const flag = (def?.flags || []).find(f => f.name === 'field-id' && f.type === 'stringArray');
+  if (!flag) return null;
+  const parameter = toSchemaKey(flag.name);
+  const requested = toFlagList(args?.[parameter]);
+  if (requested.length === 0) return null;
+  let data;
+  try { data = JSON.parse(output); } catch { return null; }
+  if (data?.ok === false) return null;
+  const ignored = data?.ignored_fields || data?.data?.ignored_fields;
+  if (!Array.isArray(ignored) || ignored.length === 0) return null;
+  const ignoredNames = new Set(ignored.map(e => e?.name ?? e?.id).filter(Boolean));
+  if (!requested.every(r => ignoredNames.has(r))) return null;
+  return { parameter, unknown: requested };
 }
 
 // Pre-spawn payload validation against the embedded --print-schema contract
@@ -446,7 +481,9 @@ module.exports = {
   PERMISSION_ERROR_CODE,
   ServerBusyError,
   coerceFlagValue,
+  errorText,
   toFlagList,
+  allProjectedFieldsDropped,
   validatePayload,
   translateCliError,
   stripCliNotice,

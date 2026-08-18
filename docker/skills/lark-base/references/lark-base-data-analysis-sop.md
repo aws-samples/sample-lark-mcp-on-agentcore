@@ -125,6 +125,7 @@ NDJSON artifact 无法跨调用复用（文件对 agent 不可达），所以每
 - manifest 的 `rev` 是导出首个响应页返回的 table revision；与 `lark_base_table_list()` 返回的最新 `rev` 比较，可判断上下文里的结论是否仍对应当前表版本。
 - `query_context` 保存导出查询范围；沿用上下文里的既有结论时结合原查询上下文确认谓词下推口径保持一致。
 - `ignored_fields` 和 `record_not_found` 只在 manifest（不带 `jq_records` 的返回）中出现。
+- **投影自检：拿到 manifest 先看 `ignored_fields` 和 `columns`。** `ignored_fields` 非空说明有字段名没被识别（大小写、空格、字段被重命名、这段调用是从另一张表复制来的）；此时 `columns` 里缺的就是被丢掉的列，后续 `jq_records` 读它们只会得到 `null` 而不会报错。请求的字段**全部**没命中时工具会直接返回 `projection_dropped` 错误而不是给你一份只有 `record_id` 的导出；部分命中不会报错，必须自己核对 `columns` 是否覆盖了计算需要的每一列，必要时先 `lark_base_field_list()` 取真实字段名。
 
 ## 数据库专家快速心智模型
 
