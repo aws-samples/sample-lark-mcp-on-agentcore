@@ -35,7 +35,12 @@ const FAKE_TOOL_DEF_READ = {
   command: '+agenda',
   description: 'Show upcoming calendar events',
   risk: 'read',
-  flags: [{ name: 'days', type: 'number', description: 'Number of days', required: false }],
+  flags: [
+    { name: 'days', type: 'number', description: 'Number of days', required: false },
+    // Repeatable (cobra stringArray) flag: exercises the array -> repeated-flag
+    // expansion and the comma-string rejection (R10 below).
+    { name: 'field-id', type: 'stringArray', description: 'stringArray field to project', required: false },
+  ],
 };
 const FAKE_TOOL_DEF_DELETE = {
   service: 'base',
@@ -77,6 +82,7 @@ const FAKE_TIER1 = ['lark_calendar_agenda', 'lark_base_delete_table', 'lark_shee
 //   { mode: 'maxbuffer', partial }              -> err.code=ERR_CHILD_PROCESS_STDIO_MAXBUFFER
 let execFileBehavior = { mode: 'instant' };
 let lastExecFileOpts = null; // captured opts of the most recent execFile call
+let lastExecFileArgs = null; // captured argv of the most recent execFile call
 let execFileCalls = 0; // total spawns — lets tests assert pre-spawn rejection
 const OK_STDOUT = '{"ok":true,"data":{"events":[]}}';
 
@@ -99,6 +105,7 @@ Module._load = function (request) {
     return {
       execFile: (cmd, args, opts, cb) => {
         lastExecFileOpts = opts;
+        lastExecFileArgs = args;
         execFileCalls++;
         const child = { kill: () => {}, pid: 4242 };
         const b = execFileBehavior;
@@ -232,6 +239,52 @@ describe('R4: child-process timeout / maxBuffer map to a clean structured error'
     execFileBehavior = { mode: 'instant' };
     const ok = await callTool('lark_calendar_agenda', {}, 42);
     expect(ok.data?.result?.isError).toBeUndefined();
+  });
+});
+
+describe('R10: repeatable (stringArray) flags reach lark-cli as repeated flags', () => {
+  it('expands an array into one --flag value pair per element', async () => {
+    // The whole point of the array schema: an MCP arguments object cannot repeat
+    // a key, so server.js has to do the repeating.
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: ['门店名称', '区域'] }, 90);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', '门店名称', '--field-id', '区域']);
+  });
+
+  it('accepts a JSON-array string (clients that stringify arguments)', async () => {
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: '["a","b"]' }, 91);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', 'a', '--field-id', 'b']);
+  });
+
+  it('still accepts a single bare value (pre-array-schema callers)', async () => {
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: '区域' }, 92);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', '区域']);
+  });
+
+  it('rejects a comma-joined string BEFORE spawning instead of silently sending one value', async () => {
+    // lark-cli would take "a,b" as ONE field name, list it in ignored_fields and
+    // still return ok — the projection silently degrades to record_id only and a
+    // downstream jq expression reads null rather than failing. Refusing pre-spawn
+    // makes it loud; isError:false because it is self-correctable.
+    execFileBehavior = { mode: 'instant' };
+    const before = execFileCalls;
+    const res = await callTool('lark_calendar_agenda', { field_id: '门店名称,区域' }, 93);
+    expect(execFileCalls).toBe(before);
+    expect(res.data.result.isError).toBe(false);
+    const payload = JSON.parse(res.data.result.content[0].text);
+    expect(payload.error).toBe('invalid_argument');
+    expect(payload.parameter).toBe('field_id');
+    expect(payload.hint).toContain('field_id=["a", "b"]');
+  });
+
+  it('lets a genuine comma value through when wrapped as a one-element array', async () => {
+    // --extra key=a,b and localized text legitimately contain commas; the array
+    // wrapper is the documented escape hatch, so it must NOT be rejected.
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: ['key=a,b'] }, 94);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', 'key=a,b']);
   });
 });
 

@@ -383,6 +383,23 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     // legitimate values contain commas (--extra key=a,b / localized text), and
     // splitting them would corrupt data instead of losing it loudly.
     if (flag.type === 'stringArray') {
+      // A bare string with a comma is almost always "I meant several values".
+      // lark-cli would accept it as ONE value, report it in ignored_fields and
+      // still return ok — for a projection flag that silently degrades to
+      // record_id only, and a downstream jq expression then reads null instead
+      // of failing. Refuse pre-spawn instead, self-correctable (see the
+      // invalid_payload precedent below). NOT auto-split: a comma can be part of
+      // one legitimate value (--extra key=a,b, localized text), so the caller
+      // says which they meant — `["key=a,b"]` keeps it as a single value.
+      if (typeof value === 'string' && value.includes(',') && !value.trim().startsWith('[')) {
+        return { content: [{ type: 'text', text: JSON.stringify({
+          error: 'invalid_argument',
+          parameter: key,
+          tool: toolName,
+          message: `args.${key} is an array parameter; a comma-joined string is sent as ONE value, not several.`,
+          hint: `Pass ${key}=["a", "b"] instead of ${key}="a,b". If the comma really is part of a single value, wrap it as ${key}=["a,b"].`,
+        }) }], isError: false };
+      }
       for (const item of toFlagList(value)) cliArgs.push(`--${flag.name}`, item);
       continue;
     }
