@@ -472,6 +472,28 @@ describe('R8: missing-scope responses carry an authorize_url and are non-error',
   // is "needs authorization" (normal control flow), not a tool failure.
   const textOf = r => r.data?.result?.content?.[0]?.text ?? '';
 
+  it('app_scope_not_applied (99991672) → isError:false, authorize_url AND console_url', async () => {
+    // The dead end this closes: an allow-listed scope outside the default consent
+    // set is reachable only via extra_scope, Feishu reports it with 99991672, and
+    // that code used to fall through unpatched — so the agent got "the developer
+    // must fix the console" with no link a user could act on.
+    execFileBehavior = { mode: 'stdout', stdout: JSON.stringify({
+      ok: false,
+      identity: 'user',
+      error: {
+        type: 'authorization', subtype: 'app_scope_not_applied', code: 99991672,
+        message: 'access denied: app cli_x has not applied for the required scope(s): base:workspace:create',
+        missing_scopes: ['base:workspace:create'],
+        console_url: 'https://open.feishu.cn/page/scope-apply?clientID=cli_x',
+      },
+    }) };
+    const res = await callTool('lark_calendar_agenda', {}, 97);
+    expect(res.data.result.isError).toBe(false);
+    const payload = JSON.parse(textOf(res));
+    expect(payload.error.authorize_url).toContain('extra_scope=base%3Aworkspace%3Acreate');
+    expect(payload.error.console_url).toContain('open.feishu.cn');
+  });
+
   it('typed missing_scope → isError:false + authorize_url the client can show', async () => {
     execFileBehavior = { mode: 'stdout', stdout: JSON.stringify({
       ok: false,

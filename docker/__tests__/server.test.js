@@ -559,6 +559,58 @@ describe('patchPermissionError', () => {
   const ERROR_CODE = 99991679;
   const patch = (output, toolName, tok) => patchPermissionError(toolScopeMap, AUTHORIZE_BASE, output, toolName, tok);
 
+  // Regression: a scope that is allow-listed but NOT in the deployment's default
+  // consent set can only be granted through incremental auth, and this function is
+  // what mints that link. Feishu reports those with 99991672 /
+  // "app_scope_not_applied", which used to fall through unmatched — so the agent
+  // was told to go fix a console that was already correct and never got an
+  // authorize_url. First hit: base:workspace:create from lark-cli 1.0.87.
+  describe('app-scope class (99991672 / app_scope_not_applied)', () => {
+    const APP_SCOPE_ERR = {
+      ok: false,
+      identity: 'user',
+      error: {
+        type: 'authorization',
+        subtype: 'app_scope_not_applied',
+        code: 99991672,
+        message: 'access denied: app cli_x has not applied for the required scope(s): base:workspace:create',
+        missing_scopes: ['base:workspace:create'],
+        console_url: 'https://open.feishu.cn/page/scope-apply?clientID=cli_x&scopes=base%3Aworkspace%3Acreate',
+      },
+    };
+
+    it('mints an authorize_url from missing_scopes', () => {
+      const parsed = JSON.parse(patch(JSON.stringify(APP_SCOPE_ERR), 'lark_base_workspace_create', 'tok'));
+      expect(parsed.error.authorize_url).toContain('extra_scope=base%3Aworkspace%3Acreate');
+      expect(parsed.error.authorize_url).toContain('t=tok');
+      expect(parsed.error.required_scopes).toEqual(['base:workspace:create']);
+    });
+
+    it('KEEPS console_url — enabling the scope in the console is the other remedy', () => {
+      // Unlike the other classes, the error is ambiguous: the app may genuinely
+      // lack the scope, or the token may just predate the grant. Both links stay.
+      const parsed = JSON.parse(patch(JSON.stringify(APP_SCOPE_ERR), 'lark_base_workspace_create', 'tok'));
+      expect(parsed.error.console_url).toContain('open.feishu.cn');
+      expect(parsed.error.user_action).toContain('authorize_url');
+      expect(parsed.error.user_action).toContain('publish a new app version');
+    });
+
+    it('matches on the bare code even without the typed subtype', () => {
+      const output = JSON.stringify({ error: { code: 99991672, message: 'x', missing_scopes: ['base:workspace:read'] } });
+      const parsed = JSON.parse(patch(output, 'lark_base_workspace_entity_list', ''));
+      expect(parsed.error.authorize_url).toContain('base%3Aworkspace%3Aread');
+    });
+
+    it('still drops console_url for the ordinary missing-scope class', () => {
+      const output = JSON.stringify({
+        error: { type: 'authorization', subtype: 'missing_scope', missing_scopes: ['im:message:send'], console_url: 'https://open.feishu.cn/x' },
+      });
+      const parsed = JSON.parse(patch(output, 'lark_im_messages_send', ''));
+      expect(parsed.error.console_url).toBeUndefined();
+      expect(parsed.error.user_action).not.toContain('publish a new app version');
+    });
+  });
+
   it('adds authorize_url when scope is found in toolScopeMap', () => {
     const output = JSON.stringify({ error: { code: ERROR_CODE, message: 'Permission denied' } });
     const parsed = JSON.parse(patch(output, 'lark_im_messages_send', ''));

@@ -13,6 +13,12 @@
 
 const PERMISSION_ERROR_CODE = 99991679;
 const AUTH_ERROR_CODE = 99991668;
+// "app has not applied for the required scope(s)". The wording blames the app's
+// console config, but Feishu also returns it when the app DOES have the scope and
+// the user_access_token predates the grant — the check runs against the token's
+// effective scope set. The two cases are indistinguishable from the error alone,
+// so this class gets BOTH remedies (see patchPermissionError).
+const APP_SCOPE_NOT_APPLIED_CODE = 99991672;
 
 class ServerBusyError extends Error {
   constructor() { super('server_busy'); this.name = 'ServerBusyError'; }
@@ -107,10 +113,20 @@ function findByName(catalogIndex, name) {
 }
 
 // Rewrite a lark-cli permission-denied error into an actionable hint with an
-// incremental-auth URL. Two detection paths:
+// incremental-auth URL. Three detection paths:
 //   1. Legacy/API-classified: error.code === 99991679 or 99991668
 //   2. Typed envelope (lark-cli ≥1.0.50 pre-flight): error.type === "authorization"
 //      with subtype "missing_scope" or "token_scope_insufficient" (no code field)
+//   3. code === 99991672 / subtype "app_scope_not_applied" — the app-scope class
+//
+// Path 3 exists because a scope that is allow-listed but NOT in the deployment's
+// default consent set (FEISHU_SCOPES) is reachable ONLY through incremental auth:
+// /authorize requests FEISHU_SCOPES + extra_scope, so re-authorizing never adds
+// it, and this function is what mints the extra_scope link. Before path 3 those
+// scopes were a dead end — Feishu reports them with 99991672, the tool told the
+// agent "the developer must fix the console", the console was already correct,
+// and no authorize_url was ever offered. First hit: the base:appmode* /
+// base:workspace* scopes added by lark-cli 1.0.87.
 //
 // Scope discovery layers (in priority order):
 //   a. error.missing_scopes array (typed envelope, most authoritative)
@@ -124,7 +140,11 @@ function patchPermissionError(toolScopeMap, authorizeBase, output, toolName, inc
     const isCodeMatch = code === PERMISSION_ERROR_CODE || code === AUTH_ERROR_CODE;
     const isTypedMatch = data.error?.type === 'authorization' &&
       (data.error.subtype === 'missing_scope' || data.error.subtype === 'token_scope_insufficient');
-    if (isCodeMatch || isTypedMatch) {
+    // The app-scope class: keep the console link (the developer may genuinely
+    // need it) AND offer the authorize link (the token may just predate the grant).
+    const isAppScopeMatch = code === APP_SCOPE_NOT_APPLIED_CODE ||
+      (data.error?.type === 'authorization' && data.error.subtype === 'app_scope_not_applied');
+    if (isCodeMatch || isTypedMatch || isAppScopeMatch) {
       const missing = new Set();
       // Layer 1: typed envelope carries authoritative missing_scopes array
       if (Array.isArray(data.error.missing_scopes)) {
@@ -158,11 +178,16 @@ function patchPermissionError(toolScopeMap, authorizeBase, output, toolName, inc
         const authUrl = `${authorizeBase}/authorize?extra_scope=${encodeURIComponent(scopeList.join(','))}${tokenParam}`;
         data.error.authorize_url = authUrl;
         data.error.required_scopes = scopeList;
-        data.error.user_action = `Ask the user to open authorize_url to grant: ${scopeList.join(', ')}. Do not retry until authorized.`;
+        data.error.user_action = isAppScopeMatch
+          ? `Ask the user to open authorize_url to grant: ${scopeList.join(', ')}. If that page reports the permission does not exist, the app itself is missing it — the developer must enable it at console_url and publish a new app version. Do not retry until one of those is done.`
+          : `Ask the user to open authorize_url to grant: ${scopeList.join(', ')}. Do not retry until authorized.`;
       } else {
         data.error.user_action = 'This tool requires a permission not automatically determined. Contact the admin.';
       }
-      delete data.error.console_url;
+      // console_url is noise once an authorize_url exists — EXCEPT for the
+      // app-scope class, where enabling the scope in the console is one of the
+      // two possible remedies and the agent cannot tell which applies.
+      if (!isAppScopeMatch) delete data.error.console_url;
       return JSON.stringify(data, null, 2);
     }
   } catch {}
