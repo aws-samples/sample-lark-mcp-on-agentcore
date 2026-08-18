@@ -35,7 +35,12 @@ const FAKE_TOOL_DEF_READ = {
   command: '+agenda',
   description: 'Show upcoming calendar events',
   risk: 'read',
-  flags: [{ name: 'days', type: 'number', description: 'Number of days', required: false }],
+  flags: [
+    { name: 'days', type: 'number', description: 'Number of days', required: false },
+    // Repeatable (cobra stringArray) flag: exercises the array -> repeated-flag
+    // expansion and the comma-string rejection (R10 below).
+    { name: 'field-id', type: 'stringArray', description: 'stringArray field to project', required: false },
+  ],
 };
 const FAKE_TOOL_DEF_DELETE = {
   service: 'base',
@@ -77,6 +82,7 @@ const FAKE_TIER1 = ['lark_calendar_agenda', 'lark_base_delete_table', 'lark_shee
 //   { mode: 'maxbuffer', partial }              -> err.code=ERR_CHILD_PROCESS_STDIO_MAXBUFFER
 let execFileBehavior = { mode: 'instant' };
 let lastExecFileOpts = null; // captured opts of the most recent execFile call
+let lastExecFileArgs = null; // captured argv of the most recent execFile call
 let execFileCalls = 0; // total spawns — lets tests assert pre-spawn rejection
 const OK_STDOUT = '{"ok":true,"data":{"events":[]}}';
 
@@ -99,6 +105,7 @@ Module._load = function (request) {
     return {
       execFile: (cmd, args, opts, cb) => {
         lastExecFileOpts = opts;
+        lastExecFileArgs = args;
         execFileCalls++;
         const child = { kill: () => {}, pid: 4242 };
         const b = execFileBehavior;
@@ -235,6 +242,82 @@ describe('R4: child-process timeout / maxBuffer map to a clean structured error'
   });
 });
 
+describe('R10: repeatable (stringArray) flags reach lark-cli as repeated flags', () => {
+  it('expands an array into one --flag value pair per element', async () => {
+    // The whole point of the array schema: an MCP arguments object cannot repeat
+    // a key, so server.js has to do the repeating.
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: ['门店名称', '区域'] }, 90);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', '门店名称', '--field-id', '区域']);
+  });
+
+  it('accepts a JSON-array string (clients that stringify arguments)', async () => {
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: '["a","b"]' }, 91);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', 'a', '--field-id', 'b']);
+  });
+
+  it('still accepts a single bare value (pre-array-schema callers)', async () => {
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: '区域' }, 92);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', '区域']);
+  });
+
+  it('rejects a comma-joined string BEFORE spawning instead of silently sending one value', async () => {
+    // lark-cli would take "a,b" as ONE field name, list it in ignored_fields and
+    // still return ok — the projection silently degrades to record_id only and a
+    // downstream jq expression reads null rather than failing. Refusing pre-spawn
+    // makes it loud; isError:false because it is self-correctable.
+    execFileBehavior = { mode: 'instant' };
+    const before = execFileCalls;
+    const res = await callTool('lark_calendar_agenda', { field_id: '门店名称,区域' }, 93);
+    expect(execFileCalls).toBe(before);
+    expect(res.data.result.isError).toBe(false);
+    const payload = JSON.parse(res.data.result.content[0].text);
+    expect(payload.error).toBe('invalid_argument');
+    expect(payload.parameter).toBe('field_id');
+    expect(payload.hint).toContain('field_id=["a", "b"]');
+  });
+
+  it('lets a genuine comma value through when wrapped as a one-element array', async () => {
+    // --extra key=a,b and localized text legitimately contain commas; the array
+    // wrapper is the documented escape hatch, so it must NOT be rejected.
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', { field_id: ['key=a,b'] }, 94);
+    expect(lastExecFileArgs).toEqual(['calendar', '+agenda', '--field-id', 'key=a,b']);
+  });
+});
+
+describe('R11: a wholly-rejected projection is reported, not silently degraded', () => {
+  it('turns "every requested field ignored" into a self-correctable error', async () => {
+    // lark-cli answers ok with the right records_count but exports record_id
+    // only. Passing that through means the analysis step downstream reads null
+    // for every column it asked for and reports a plausible wrong answer.
+    execFileBehavior = { mode: 'stdout', stdout: JSON.stringify({
+      ok: true, records_count: 15,
+      ignored_fields: [{ name: '根本不存在的字段', reason: 'NOT_FOUND' }],
+    }) };
+    const res = await callTool('lark_calendar_agenda', { field_id: ['根本不存在的字段'] }, 95);
+    expect(res.data.result.isError).toBe(false);
+    const p = JSON.parse(res.data.result.content[0].text);
+    expect(p.ok).toBe(false);
+    expect(p.error).toBe('projection_dropped');
+    expect(p.unknown_fields).toEqual(['根本不存在的字段']);
+    expect(p.hint).toContain('lark_base_field_list()');
+  });
+
+  it('passes a PARTIAL rejection through untouched', async () => {
+    // Part of the projection worked; ignored_fields still reports the rest.
+    const stdout = JSON.stringify({
+      ok: true, records_count: 15, ignored_fields: [{ name: 'B', reason: 'NOT_FOUND' }],
+    });
+    execFileBehavior = { mode: 'stdout', stdout };
+    const res = await callTool('lark_calendar_agenda', { field_id: ['A', 'B'] }, 96);
+    expect(res.data.result.isError).toBeUndefined();
+    expect(res.data.result.content[0].text).toBe(stdout);
+  });
+});
+
 describe('R5: execFile is abortable and its timeout aligns under the Lambda', () => {
   it('passes an AbortSignal into execFile so a client disconnect can kill the child', async () => {
     // The middleware aborts its fetch at 25s; if the child keeps running to the
@@ -245,6 +328,19 @@ describe('R5: execFile is abortable and its timeout aligns under the Lambda', ()
     await callTool('lark_calendar_agenda', {}, 50);
     expect(lastExecFileOpts).not.toBeNull();
     expect(lastExecFileOpts.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('runs lark-cli in a writable cwd so relative --output paths do not EACCES', async () => {
+    // Dockerfile sets WORKDIR /app (root-owned 755) and USER node, so the
+    // inherited cwd is NOT writable. Every lark-cli flag that writes a file
+    // relative to cwd — drive +download/+preview/+cover --output, slides
+    // +screenshot --output, base +record-download-attachment --output, and the
+    // ndjson record export (which stages a temp file even with no --output) —
+    // fails with "cannot create file: ... permission denied" unless cwd is
+    // moved to the tmpfs.
+    execFileBehavior = { mode: 'instant' };
+    await callTool('lark_calendar_agenda', {}, 52);
+    expect(lastExecFileOpts.cwd).toBe('/tmp');
   });
 
   it('caps the execFile timeout at or below the Lambda 25s budget', async () => {
@@ -375,6 +471,28 @@ describe('R8: missing-scope responses carry an authorize_url and are non-error',
   // Suite) then swallow the link as a generic "unknown error". A grantable scope
   // is "needs authorization" (normal control flow), not a tool failure.
   const textOf = r => r.data?.result?.content?.[0]?.text ?? '';
+
+  it('app_scope_not_applied (99991672) → isError:false, authorize_url AND console_url', async () => {
+    // The dead end this closes: an allow-listed scope outside the default consent
+    // set is reachable only via extra_scope, Feishu reports it with 99991672, and
+    // that code used to fall through unpatched — so the agent got "the developer
+    // must fix the console" with no link a user could act on.
+    execFileBehavior = { mode: 'stdout', stdout: JSON.stringify({
+      ok: false,
+      identity: 'user',
+      error: {
+        type: 'authorization', subtype: 'app_scope_not_applied', code: 99991672,
+        message: 'access denied: app cli_x has not applied for the required scope(s): base:workspace:create',
+        missing_scopes: ['base:workspace:create'],
+        console_url: 'https://open.feishu.cn/page/scope-apply?clientID=cli_x',
+      },
+    }) };
+    const res = await callTool('lark_calendar_agenda', {}, 97);
+    expect(res.data.result.isError).toBe(false);
+    const payload = JSON.parse(textOf(res));
+    expect(payload.error.authorize_url).toContain('extra_scope=base%3Aworkspace%3Acreate');
+    expect(payload.error.console_url).toContain('open.feishu.cn');
+  });
 
   it('typed missing_scope → isError:false + authorize_url the client can show', async () => {
     execFileBehavior = { mode: 'stdout', stdout: JSON.stringify({

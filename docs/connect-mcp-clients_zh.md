@@ -32,6 +32,21 @@
 | **Claude Code** | `claude mcp add` 可自动生成上述配置 | [Remote MCP servers](https://docs.anthropic.com/en/docs/claude-code/mcp#remote-mcp-connections) |
 | **Codex** | CLI 和 Desktop App 均支持 | [Codex](https://openai.com/index/introducing-codex/) |
 
+## 错误契约
+
+两个信号相互独立，是刻意的 —— 不要把其中一个当另一个读。
+
+| 信号 | 回答的问题 |
+|------|-----------|
+| 结果文本里的 `ok: false` | **这次调用失败了吗？** 所有失败都带，包括 lark-cli 自己的信封和本服务自造的那些（`invalid_argument`、`projection_dropped`、`unknown_tool`、`server_busy`、`timeout` …）。程序化判断失败请用这个。 |
+| CallToolResult 上的 `isError: true` | **是不是终态？** 只在调用方无法凭响应自行改正时置位 —— 超时、缓冲区溢出、授权被撤销、真正的崩溃。 |
+
+可自纠的失败刻意是 `isError: false` + `ok: false`：响应里带着改正所需的信息（正确的
+参数形状、哪几个字段名不存在、`authorize_url`、该改用哪个工具名）。有些 MCP 客户端
+一看到 `isError` 就渲染自己的通用错误、把 content 丢掉，那样埋掉的正是这些信息。本服务
+的首要消费者是读文本的 agent，所以提示优先。`status: "user_approval_required"` 完全不带
+`ok` —— 它是确认提示，不是失败。
+
 ## 排错
 
 | 现象 | 处理 |

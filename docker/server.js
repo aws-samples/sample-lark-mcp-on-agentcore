@@ -23,6 +23,9 @@ const {
   createSemaphore,
   createSingleFlight,
   coerceFlagValue,
+  errorText,
+  toFlagList,
+  allProjectedFieldsDropped,
   validatePayload,
   translateCliError,
   stripCliNotice,
@@ -55,6 +58,15 @@ const LARK_CLI_TIMEOUT_MS = parseInt(process.env.LARK_CLI_TIMEOUT_MS || '24000',
 function runLarkCli(cliArgs, env, timeoutMs, abortSignal) {
   return new Promise((resolve, reject) => {
     const child = execFile('lark-cli', cliArgs, {
+      // cwd MUST be a writable dir. Several lark-cli flags write files relative
+      // to cwd (--output on drive +download/+preview/+cover, slides +screenshot,
+      // base +record-download-attachment, and the ndjson record export, which
+      // stages a temp file even when --output is omitted). Inheriting the
+      // server's cwd (Dockerfile WORKDIR /app, root-owned 755 while the process
+      // runs as USER node) makes every one of those fail with EACCES
+      // ("cannot create file: ... permission denied"). /tmp is the tmpfs the
+      // lark_exec_script child already uses.
+      cwd: '/tmp',
       timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024, env, signal: abortSignal,
     }, (err, stdout, stderr) => {
       activeChildren.delete(child);
@@ -190,7 +202,7 @@ const EXEC_SCRIPT_TOOL = {
 
 function execScript(script, args, stdin, abortSignal) {
   if (!SCRIPTS_WHITELIST_RE.test(script) || !ALLOWED_SCRIPTS.has(script)) {
-    return Promise.resolve({ error: 'script_not_found', message: `Script not found or not allowed: ${script}` });
+    return Promise.resolve({ ok: false, error: 'script_not_found', message: `Script not found or not allowed: ${script}` });
   }
   return withSemaphore(() => new Promise((resolve) => {
     const scriptPath = `${SKILLS_DIR}/${script}`;
@@ -219,7 +231,7 @@ function execScript(script, args, stdin, abortSignal) {
         try {
           resolve(JSON.parse(stdout));
         } catch {
-          resolve({ error: 'exec_failed', message: stderr || err.message, exit_code: code });
+          resolve({ ok: false, error: 'exec_failed', message: stderr || err.message, exit_code: code });
         }
         return;
       }
@@ -366,6 +378,33 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     const value = args[key];
     if (value === undefined || value === null || value === '') continue;
     if (flag.type === 'boolean') { if (value) cliArgs.push(`--${flag.name}`); continue; }
+    // Repeatable flag: emit `--flag v` once per element. Accepts a real array
+    // (the schema's shape), a JSON-array string (clients that stringify args),
+    // or a bare scalar (one value — the pre-array-schema behaviour, kept so
+    // existing single-value callers don't break). Deliberately NOT comma-split:
+    // legitimate values contain commas (--extra key=a,b / localized text), and
+    // splitting them would corrupt data instead of losing it loudly.
+    if (flag.type === 'stringArray') {
+      // A bare string with a comma is almost always "I meant several values".
+      // lark-cli would accept it as ONE value, report it in ignored_fields and
+      // still return ok — for a projection flag that silently degrades to
+      // record_id only, and a downstream jq expression then reads null instead
+      // of failing. Refuse pre-spawn instead, self-correctable (see the
+      // invalid_payload precedent below). NOT auto-split: a comma can be part of
+      // one legitimate value (--extra key=a,b, localized text), so the caller
+      // says which they meant — `["key=a,b"]` keeps it as a single value.
+      if (typeof value === 'string' && value.includes(',') && !value.trim().startsWith('[')) {
+        return { content: [{ type: 'text', text: errorText({
+          error: 'invalid_argument',
+          parameter: key,
+          tool: toolName,
+          message: `args.${key} is an array parameter; a comma-joined string is sent as ONE value, not several.`,
+          hint: `Pass ${key}=["a", "b"] instead of ${key}="a,b". If the comma really is part of a single value, wrap it as ${key}=["a,b"].`,
+        }) }], isError: false };
+      }
+      for (const item of toFlagList(value)) cliArgs.push(`--${flag.name}`, item);
+      continue;
+    }
     // Accept both conventions for JSON parameters: string passes through,
     // object/array is stringified (String() would corrupt it to "[object
     // Object]"/comma-joins and fail deep inside lark-cli).
@@ -376,7 +415,7 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     // hint behind a generic "unknown error".
     const shapeError = validatePayload(coerced, def.payloadSchemas?.[flag.name], flag.name);
     if (shapeError) {
-      return { content: [{ type: 'text', text: JSON.stringify({
+      return { content: [{ type: 'text', text: errorText({
         error: 'invalid_payload',
         parameter: key,
         tool: toolName,
@@ -422,22 +461,41 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     if (isAuthError(output)) {
       return { content: [{ type: 'text', text: buildReauthResponse(incrAuthToken) }], isError: true };
     }
+    // A projection whose EVERY requested field was rejected is a silent wrong
+    // answer, not a partial one: lark-cli lists the unknown names in
+    // `ignored_fields`, returns ok with the right records_count, and exports
+    // record_id only — so a downstream jq/analysis step reads null for every
+    // column it asked for and reports a plausible-looking result. Typos, renamed
+    // fields and a call copied across tables all land here. Partial rejection is
+    // left alone: part of the projection worked, and `ignored_fields` still
+    // reports the rest. Self-correctable, so isError stays false.
+    const dropped = allProjectedFieldsDropped(output, def, args);
+    if (dropped) {
+      return { content: [{ type: 'text', text: errorText({
+        error: 'projection_dropped',
+        parameter: dropped.parameter,
+        tool: toolName,
+        unknown_fields: dropped.unknown,
+        message: `None of the requested ${dropped.parameter} values exist in this table, so only record_id was returned.`,
+        hint: 'Confirm the field names with lark_base_field_list() (names are case- and space-sensitive) and retry with the real ones.',
+      }) }], isError: false };
+    }
     return { content: [{ type: 'text', text: output }] };
   } catch (err) {
     if (err instanceof ServerBusyError) {
-      return { content: [{ type: 'text', text: '{"error":"server_busy","message":"Too many concurrent requests, retry shortly"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'server_busy', message: 'Too many concurrent requests, retry shortly' }) }], isError: true };
     }
     if (err.message === 'client_aborted') {
-      return { content: [{ type: 'text', text: '{"error":"client_aborted"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'client_aborted' }) }], isError: true };
     }
     if (err.name === 'AbortError') {
-      return { content: [{ type: 'text', text: '{"error":"client_aborted"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'client_aborted' }) }], isError: true };
     }
     if (err.killed || err.signal) {
-      return { content: [{ type: 'text', text: '{"error":"timeout","message":"lark-cli call exceeded the time limit"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'timeout', message: 'lark-cli call exceeded the time limit' }) }], isError: true };
     }
     if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
-      return { content: [{ type: 'text', text: '{"error":"output_too_large","message":"lark-cli output exceeded the buffer limit; narrow the query (e.g. pagination/filters)"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'output_too_large', message: 'lark-cli output exceeded the buffer limit; narrow the query (e.g. pagination/filters)' }) }], isError: true };
     }
     const raw = err.stdout?.trim() || err.stderr?.trim() || err.message;
     const message = extractJson(raw) || raw;
@@ -468,7 +526,7 @@ async function executeRawApi(toolName, args, userToken, incrAuthToken, abortSign
     // NOT isError: a wrong tool name is self-correctable (call lark_discover for
     // the right one). isError:true makes lenient clients hide the hint behind a
     // generic "unknown error", so the agent retries blindly instead of fixing it.
-    return { content: [{ type: 'text', text: JSON.stringify({ error: 'unknown_tool', tool_name: toolName, hint: 'Use lark_discover(query) to find valid tool names.' }) }], isError: false };
+    return { content: [{ type: 'text', text: errorText({ error: 'unknown_tool', tool_name: toolName, hint: 'Use lark_discover(query) to find valid tool names.' }) }], isError: false };
   }
 
   if (entry.risk === 'high-risk-write' && args._confirm !== true) {
@@ -500,7 +558,7 @@ async function executeRawApi(toolName, args, userToken, incrAuthToken, abortSign
         // states the right shape). isError:true makes lenient clients hide it
         // behind a generic "unknown error", defeating the whole point of the hint.
         return {
-          content: [{ type: 'text', text: JSON.stringify({
+          content: [{ type: 'text', text: errorText({
             error: 'invalid_json',
             message: `args.${field} must be a JSON object (or a JSON string), not a raw "key=value" string. Example: ${field}={"user_id_type":"open_id"}.`,
             field,
@@ -560,16 +618,16 @@ async function executeRawApi(toolName, args, userToken, incrAuthToken, abortSign
     return { content: [{ type: 'text', text: output }] };
   } catch (err) {
     if (err instanceof ServerBusyError) {
-      return { content: [{ type: 'text', text: '{"error":"server_busy","message":"Too many concurrent requests, retry shortly"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'server_busy', message: 'Too many concurrent requests, retry shortly' }) }], isError: true };
     }
     if (err.message === 'client_aborted' || err.name === 'AbortError') {
-      return { content: [{ type: 'text', text: '{"error":"client_aborted"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'client_aborted' }) }], isError: true };
     }
     if (err.killed || err.signal) {
-      return { content: [{ type: 'text', text: '{"error":"timeout","message":"lark-cli call exceeded the time limit"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'timeout', message: 'lark-cli call exceeded the time limit' }) }], isError: true };
     }
     if (err.code === 'ERR_CHILD_PROCESS_STDIO_MAXBUFFER') {
-      return { content: [{ type: 'text', text: '{"error":"output_too_large","message":"lark-cli output exceeded the buffer limit; narrow the query (e.g. pagination/filters)"}' }], isError: true };
+      return { content: [{ type: 'text', text: errorText({ error: 'output_too_large', message: 'lark-cli output exceeded the buffer limit; narrow the query (e.g. pagination/filters)' }) }], isError: true };
     }
     const raw = err.stdout?.trim() || err.stderr?.trim() || err.message;
     const message = extractJson(raw) || raw;
@@ -711,7 +769,7 @@ async function handleRequest(req, res, body) {
   // tools/call
   if (mcpReq.method === 'tools/call') {
     if (!appSecretLoaded) {
-      sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: '{"error":"server_initializing","message":"App secret not loaded yet, retry shortly"}' }], isError: true } });
+      sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: errorText({ error: 'server_initializing', message: 'App secret not loaded yet, retry shortly' }) }], isError: true } });
       return;
     }
     const toolName = mcpReq.params?.name || '';
@@ -735,7 +793,7 @@ async function handleRequest(req, res, body) {
       // behind a generic "unknown error" — same convention as unknown_tool.
       const entry = resolveSkillDomain(skillIndex, domain);
       if (!entry) {
-        sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: JSON.stringify({ error: 'unknown_domain', domain, available: skillIndex.map(s => s.domain) }) }], isError: false } });
+        sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: errorText({ error: 'unknown_domain', domain, available: skillIndex.map(s => s.domain) }) }], isError: false } });
         return;
       }
       const skillDir = `${SKILLS_DIR}/${entry.dir}`;
@@ -743,14 +801,14 @@ async function handleRequest(req, res, body) {
       let content;
       if (section) {
         if (isUnsafeSection(section)) {
-          sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: JSON.stringify({ error: 'invalid_section', message: 'section must not contain .. or backslash' }) }], isError: false } });
+          sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: errorText({ error: 'invalid_section', message: 'section must not contain .. or backslash' }) }], isError: false } });
           return;
         }
         // Resolve markdown (no extension) or a text asset (.html/.txt/.csv, with
         // extension + relative path). See skill-sections.js for the search order.
         const filePath = resolveSection(skillDir, entry.domain, section);
         if (!filePath) {
-          sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: JSON.stringify({ error: 'unknown_section', section, available: listAllSections(skillDir) }) }], isError: false } });
+          sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: errorText({ error: 'unknown_section', section, available: listAllSections(skillDir) }) }], isError: false } });
           return;
         }
         content = fs.readFileSync(filePath, 'utf8');
@@ -822,7 +880,7 @@ async function handleRequest(req, res, body) {
       const realName = toolArgs.tool_name;
       const realArgs = toolArgs.args || {};
       if (!userToken) {
-        sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: '{"error":"no user token"}' }], isError: true } });
+        sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: errorText({ error: 'no user token' }) }], isError: true } });
         return;
       }
       const entry = findByName(realName);
@@ -842,7 +900,7 @@ async function handleRequest(req, res, body) {
     const tool = tier1Tools.find(t => t.name === toolName);
     if (tool) {
       if (!userToken) {
-        sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: '{"error":"no user token"}' }], isError: true } });
+        sseResponse(res, { jsonrpc: '2.0', id: mcpReq.id, result: { content: [{ type: 'text', text: errorText({ error: 'no user token' }) }], isError: true } });
         return;
       }
       const result = await executeTool(tool._def, toolArgs, userToken, toolName, incrAuthToken, ac.signal);

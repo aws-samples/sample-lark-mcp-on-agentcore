@@ -43,7 +43,7 @@ description: "妙搭（Spark/Miaoda）应用开发与托管：应用创建、本
 
 - **Base 到应用数据库同步**：用户说“Base 同步到数据库 / 整库同步 / 多张表同步 / 批量任务重新启用 / operation-not-allowed”时，先读 `lark_get_skill(domain="apps", section="db")` 的 Base 数据同步段落，再查 app_id 或处理授权。先形成计划再动手：`lark_apps_db_sync_create` 一次只处理一张 Base 表，整库/多表必须拆成多份单表配置和多次 preview/create；batch/import 任务是一次性任务，不能重新 enable，遇 operation-not-allowed 先解释生命周期边界，再用 `lark_apps_db_sync_get` 查状态/结果，持续同步要新建 streaming 任务。
 - **性能/监控/观测指标**：用户问“接口请求量、错误量、错误率、接口慢、延迟、CPU、内存、最近一小时/七天趋势”时，不要去当前工作区搜索监控文件，也不要询问“监控数据在哪”。先按「app_id 获取」解析应用：`lark_apps_list(keyword="<应用名>")`；拿到 `app_id` 后读 `lark_get_skill(domain="apps", section="observability")`，用 `lark_apps_metric_list`。
-- **请求量 + 错误量 + 延迟**：请求量/错误量用 `lark_apps_metric_list(app_id="<app_id>", metric="requests", since="<range>")`（不传 `series` 会同时返回 total/error）；延迟用 `metric="latency"`（不传 `series` 会返回 p50/p99）。如果用户给了具体接口，再加 `api="<path-or-name>"`；不要臆造 group-by 参数。
+- **请求量 + 错误量 + 延迟**：请求量/错误量用 `lark_apps_metric_list(app_id="<app_id>", metric="requests", since="<range>")`（不传 `series` 会同时返回 total/error）；延迟用 `metric="latency"`（不传 `series` 会返回 p50/p99）。如果用户给了具体接口，再加 `api=["<path-or-name>"]`；不要臆造 group-by 参数。
 - **PV/UV/访问量/活跃用户**：先解析 `app_id`，再用 `lark_apps_analytics_list`，不要误用 `lark_apps_metric_list`。
 - **设置环境变量**：如果用户只给应用名，仍先 `lark_apps_list(keyword=...)` 解析 app_id；设置 online 环境且用户已经明确说“确认/直接执行”时，调用 `lark_apps_env_set(environment="online", ..., _confirm=true)`，不要再次要求确认。回复和日志摘要里只提 key / env / app，不回显真实 value；需要传复杂值时优先用 `@file` 或 stdin。
 - **删除环境变量**：`lark_apps_env_delete` 是破坏性操作。除非用户在同一轮已经明确确认删除这个 app/env/key，否则先向用户确认应用、环境、key 和删除后果；确认后再带 `_confirm=true`。不要因为认证失败/重登完成就自动继续删除，必须保留确认门槛。

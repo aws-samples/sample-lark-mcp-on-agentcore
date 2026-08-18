@@ -19,6 +19,9 @@ import {
   createSemaphore,
   createSingleFlight,
   coerceFlagValue,
+  errorText,
+  toFlagList,
+  allProjectedFieldsDropped,
   validatePayload,
   translateCliError,
   stripCliNotice,
@@ -114,6 +117,26 @@ describe('buildInputSchema', () => {
     const schema = buildInputSchema(FAKE_CATALOG.tools[3]);
     expect(schema.properties.type.enum).toEqual(['docx', 'sheet', 'bitable']);
   });
+  it('maps a repeatable stringArray flag to an array-of-string schema', () => {
+    // An MCP arguments object cannot repeat a key, so a repeatable CLI flag has
+    // to be declared as an array or the agent has no way to pass >1 value.
+    const schema = buildInputSchema({
+      service: 'base', command: '+record-list', description: 'x', risk: 'read',
+      flags: [{ name: 'field-id', type: 'stringArray', description: 'stringArray field ID or name to include' }],
+    });
+    expect(schema.properties.field_id.type).toBe('array');
+    expect(schema.properties.field_id.items).toEqual({ type: 'string' });
+  });
+
+  it('puts a stringArray flag enum on items, not on the array itself', () => {
+    const schema = buildInputSchema({
+      service: 'apps', command: '+log-list', description: 'x', risk: 'read',
+      flags: [{ name: 'level', type: 'stringArray', description: 'log level', enum: ['INFO', 'WARN'] }],
+    });
+    expect(schema.properties.level.items.enum).toEqual(['INFO', 'WARN']);
+    expect(schema.properties.level.enum).toBeUndefined();
+  });
+
   it('adds _confirm property for high-risk-write tools', () => {
     const schema = buildInputSchema(FAKE_CATALOG.tools[1]);
     expect(schema.properties._confirm).toBeDefined();
@@ -123,6 +146,93 @@ describe('buildInputSchema', () => {
   it('does NOT add _confirm for non-high-risk tools', () => {
     const schema = buildInputSchema(FAKE_CATALOG.tools[0]);
     expect(schema.properties._confirm).toBeUndefined();
+  });
+});
+
+describe('errorText (unified failure envelope)', () => {
+  it('prefixes every server-minted error with ok:false', () => {
+    // lark-cli's own error envelopes already carry ok:false. Server-side errors
+    // used to omit it, so a client had no single predicate for "this failed".
+    expect(JSON.parse(errorText({ error: 'server_busy' }))).toEqual({ ok: false, error: 'server_busy' });
+  });
+
+  it('keeps the payload fields alongside ok', () => {
+    const parsed = JSON.parse(errorText({ error: 'invalid_argument', parameter: 'field_id', hint: 'use an array' }));
+    expect(parsed.ok).toBe(false);
+    expect(parsed.parameter).toBe('field_id');
+    expect(parsed.hint).toBe('use an array');
+  });
+});
+
+describe('allProjectedFieldsDropped', () => {
+  const DEF = {
+    service: 'base', command: '+record-list', description: 'x', risk: 'read',
+    flags: [{ name: 'field-id', type: 'stringArray', description: 'projection' }],
+  };
+  const ok = (ignored) => JSON.stringify({ ok: true, records_count: 15, ignored_fields: ignored });
+
+  it('flags an export where every requested field was ignored', () => {
+    const r = allProjectedFieldsDropped(ok([{ name: 'A' }, { name: 'B' }]), DEF, { field_id: ['A', 'B'] });
+    expect(r).toEqual({ parameter: 'field_id', unknown: ['A', 'B'] });
+  });
+
+  it('stays silent on a PARTIAL rejection (some of the projection worked)', () => {
+    expect(allProjectedFieldsDropped(ok([{ name: 'B' }]), DEF, { field_id: ['A', 'B'] })).toBeNull();
+  });
+
+  it('stays silent when nothing was ignored', () => {
+    expect(allProjectedFieldsDropped(ok([]), DEF, { field_id: ['A'] })).toBeNull();
+    expect(allProjectedFieldsDropped(JSON.stringify({ ok: true }), DEF, { field_id: ['A'] })).toBeNull();
+  });
+
+  it('stays silent when no projection was requested', () => {
+    expect(allProjectedFieldsDropped(ok([{ name: 'A' }]), DEF, {})).toBeNull();
+  });
+
+  it('reads ignored_fields nested under data as well', () => {
+    const nested = JSON.stringify({ ok: true, data: { ignored_fields: [{ name: 'A' }] } });
+    expect(allProjectedFieldsDropped(nested, DEF, { field_id: ['A'] })).toEqual({ parameter: 'field_id', unknown: ['A'] });
+  });
+
+  it('does not fire on a tool without a repeatable field-id flag (write paths)', () => {
+    // On writes, ignored_fields legitimately reports read-only columns.
+    const writeDef = { service: 'base', command: '+record-upsert', description: 'x', risk: 'write', flags: [{ name: 'json', type: 'string', description: 'p' }] };
+    expect(allProjectedFieldsDropped(ok([{ name: 'A' }]), writeDef, { field_id: ['A'] })).toBeNull();
+  });
+
+  it('does not fire when the call itself failed', () => {
+    const failed = JSON.stringify({ ok: false, error: { type: 'validation' }, ignored_fields: [{ name: 'A' }] });
+    expect(allProjectedFieldsDropped(failed, DEF, { field_id: ['A'] })).toBeNull();
+  });
+});
+
+describe('toFlagList (repeatable flags)', () => {
+  it('passes an array through as separate values', () => {
+    expect(toFlagList(['门店名称', '区域', '月度销售目标'])).toEqual(['门店名称', '区域', '月度销售目标']);
+  });
+
+  it('parses a JSON-array string (clients that stringify arguments)', () => {
+    expect(toFlagList('["a","b"]')).toEqual(['a', 'b']);
+  });
+
+  it('treats a bare scalar as a single value (pre-array-schema callers)', () => {
+    expect(toFlagList('区域')).toEqual(['区域']);
+    expect(toFlagList(7)).toEqual(['7']);
+  });
+
+  it('does NOT comma-split: commas are legitimate inside a single value', () => {
+    // --extra key=a,b and localized text both contain commas. Splitting would
+    // corrupt the value silently, which is worse than the caller passing one
+    // string when they meant several.
+    expect(toFlagList('key=a,b')).toEqual(['key=a,b']);
+  });
+
+  it('drops empty and non-scalar elements instead of emitting [object Object]', () => {
+    expect(toFlagList(['a', '', null, { x: 1 }, 'b'])).toEqual(['a', 'b']);
+  });
+
+  it('leaves a non-JSON string starting with [ as one literal value', () => {
+    expect(toFlagList('[unparseable')).toEqual(['[unparseable']);
   });
 });
 
@@ -448,6 +558,77 @@ describe('resolveSkillDomain', () => {
 describe('patchPermissionError', () => {
   const ERROR_CODE = 99991679;
   const patch = (output, toolName, tok) => patchPermissionError(toolScopeMap, AUTHORIZE_BASE, output, toolName, tok);
+
+  // The scope-grant class is exactly {99991672, 99991676, 99991679} per lark-cli's
+  // internal/output/lark_errors.go. 99991676 ("token lacks the required scope") was
+  // missing — same remedy as 99991679, so it must mint an authorize_url too.
+  it('treats 99991676 (token lacks the scope) as a grantable scope error', () => {
+    const output = JSON.stringify({ error: { code: 99991676, message: 'x', missing_scopes: ['base:appmode_page:read'] } });
+    const parsed = JSON.parse(patch(output, 'lark_base_app_page_create', 'tok'));
+    expect(parsed.error.authorize_url).toContain('extra_scope=base%3Aappmode_page%3Aread');
+    expect(parsed.error.required_scopes).toEqual(['base:appmode_page:read']);
+    // Not the app-scope class: console_url is noise here, so it stays stripped.
+    expect(parsed.error.user_action).not.toContain('publish a new app version');
+  });
+
+  // Resource-level denial is NOT a scope problem — offering a consent link would
+  // send the agent to grant a permission that was never missing.
+  it('does not touch a resource-level permission_denied (91403 class)', () => {
+    const output = JSON.stringify({ error: { type: 'authorization', subtype: 'permission_denied', code: 91403, message: 'no access to this base' } });
+    expect(patch(output, 'lark_base_record_list', 'tok')).toBe(output);
+  });
+
+  // Regression: a scope that is allow-listed but NOT in the deployment's default
+  // consent set can only be granted through incremental auth, and this function is
+  // what mints that link. Feishu reports those with 99991672 /
+  // "app_scope_not_applied", which used to fall through unmatched — so the agent
+  // was told to go fix a console that was already correct and never got an
+  // authorize_url. First hit: base:workspace:create from lark-cli 1.0.87.
+  describe('app-scope class (99991672 / app_scope_not_applied)', () => {
+    const APP_SCOPE_ERR = {
+      ok: false,
+      identity: 'user',
+      error: {
+        type: 'authorization',
+        subtype: 'app_scope_not_applied',
+        code: 99991672,
+        message: 'access denied: app cli_x has not applied for the required scope(s): base:workspace:create',
+        missing_scopes: ['base:workspace:create'],
+        console_url: 'https://open.feishu.cn/page/scope-apply?clientID=cli_x&scopes=base%3Aworkspace%3Acreate',
+      },
+    };
+
+    it('mints an authorize_url from missing_scopes', () => {
+      const parsed = JSON.parse(patch(JSON.stringify(APP_SCOPE_ERR), 'lark_base_workspace_create', 'tok'));
+      expect(parsed.error.authorize_url).toContain('extra_scope=base%3Aworkspace%3Acreate');
+      expect(parsed.error.authorize_url).toContain('t=tok');
+      expect(parsed.error.required_scopes).toEqual(['base:workspace:create']);
+    });
+
+    it('KEEPS console_url — enabling the scope in the console is the other remedy', () => {
+      // Unlike the other classes, the error is ambiguous: the app may genuinely
+      // lack the scope, or the token may just predate the grant. Both links stay.
+      const parsed = JSON.parse(patch(JSON.stringify(APP_SCOPE_ERR), 'lark_base_workspace_create', 'tok'));
+      expect(parsed.error.console_url).toContain('open.feishu.cn');
+      expect(parsed.error.user_action).toContain('authorize_url');
+      expect(parsed.error.user_action).toContain('publish a new app version');
+    });
+
+    it('matches on the bare code even without the typed subtype', () => {
+      const output = JSON.stringify({ error: { code: 99991672, message: 'x', missing_scopes: ['base:workspace:read'] } });
+      const parsed = JSON.parse(patch(output, 'lark_base_workspace_entity_list', ''));
+      expect(parsed.error.authorize_url).toContain('base%3Aworkspace%3Aread');
+    });
+
+    it('still drops console_url for the ordinary missing-scope class', () => {
+      const output = JSON.stringify({
+        error: { type: 'authorization', subtype: 'missing_scope', missing_scopes: ['im:message:send'], console_url: 'https://open.feishu.cn/x' },
+      });
+      const parsed = JSON.parse(patch(output, 'lark_im_messages_send', ''));
+      expect(parsed.error.console_url).toBeUndefined();
+      expect(parsed.error.user_action).not.toContain('publish a new app version');
+    });
+  });
 
   it('adds authorize_url when scope is found in toolScopeMap', () => {
     const output = JSON.stringify({ error: { code: ERROR_CODE, message: 'Permission denied' } });

@@ -1,8 +1,6 @@
 # Base data-query guide
 
-This guide is the entry point for `lark_base_data_query()`. Use it for common aggregation fewshots and command selection. For the complete DSL fields, operators, limits, and response details, use `lark_get_skill(domain="base", section="data-query")` as the DSL SSOT.
-
-Before using `lark_base_data_query()`, also follow `lark_get_skill(domain="base", section="data-analysis-sop")` to confirm that the task really needs aggregation instead of record listing or a temporary view.
+Read this guide after `lark_get_skill(domain="base", section="data-analysis-sop")` enters the Cloud path and selects `lark_base_data_query()`, or directly when the user explicitly asks about the `lark_base_data_query` tool or its DSL. It provides common aggregation fewshots; use `lark_get_skill(domain="base", section="data-query")` only for complete DSL fields, operators, limits, response details, or error recovery.
 
 ## When to use
 

@@ -9,8 +9,8 @@ Use it after obtaining real `message_id` values from `lark_mail_triage`, `lark_m
 ## Common Commands
 
 ```
-lark_mail_message_trash(message_ids="<id1>,<id2>", _confirm=true)
-lark_mail_message_trash(mailbox="shared@example.com", message_ids="<id>", _confirm=true)
+lark_mail_message_trash(message_ids=["<id1>", "<id2>"], _confirm=true)
+lark_mail_message_trash(mailbox="shared@example.com", message_ids=["<id>"], _confirm=true)
 ```
 
 ## Parameters
@@ -18,7 +18,7 @@ lark_mail_message_trash(mailbox="shared@example.com", message_ids="<id>", _confi
 | Parameter | Required | Notes |
 | --- | --- | --- |
 | `mailbox` | No | Mailbox that owns the messages. Defaults to `me`. |
-| `message_ids` | Yes | Supports comma-separated values. |
+| `message_ids` | Yes | Array of message IDs; pass one element per ID (a comma-joined string is treated as ONE id). |
 | `_confirm` | Yes for execution | Required by the high-risk write confirmation framework. Add only after the user confirms. |
 
 ## Behavior

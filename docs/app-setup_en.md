@@ -48,7 +48,7 @@ avoids that loop. It does **not** widen what users see at first authorization (s
 minimal set); the only cost is a larger declared permission ceiling and more items for
 your admin to approve.
 
-Scope list (217 entries, copy-paste ready):
+Scope list (229 entries, copy-paste ready):
 
 ```json
 {
@@ -67,6 +67,15 @@ Scope list (217 entries, copy-paste ready):
       "base:app:create",
       "base:app:read",
       "base:app:update",
+      "base:appmode:create",
+      "base:appmode:read",
+      "base:appmode_block:create",
+      "base:appmode_block:read",
+      "base:appmode_block:update",
+      "base:appmode_page:create",
+      "base:appmode_page:delete",
+      "base:appmode_page:read",
+      "base:appmode_page:update",
       "base:block:create",
       "base:block:delete",
       "base:block:read",
@@ -101,6 +110,9 @@ Scope list (217 entries, copy-paste ready):
       "base:workflow:create",
       "base:workflow:read",
       "base:workflow:update",
+      "base:workspace:create",
+      "base:workspace:read",
+      "base:workspace:update",
       "bitable:app",
       "board:whiteboard:node:create",
       "board:whiteboard:node:read",

@@ -11,8 +11,24 @@
 // the OAuth authorize base) take that state as parameters rather than closing
 // over module globals, so they stay pure and testable.
 
-const PERMISSION_ERROR_CODE = 99991679;
+const PERMISSION_ERROR_CODE = 99991679;   // user did not grant the required scope
+// "token lacks the required scope" — the token was minted without it. Same remedy
+// as 99991679 (grant it via incremental auth), and unlike the app-scope class this
+// is NOT a console-config problem, so console_url stays stripped. Codes come from
+// lark-cli's internal/output/lark_errors.go; the scope-grant class is exactly
+// {99991672, 99991676, 99991679}. Deliberately NOT here: permission_denied /
+// 91403 (resource-level — a scope link would be misleading), app_disabled and
+// app_unavailable (admin action, no user-side remedy), and the whole
+// authentication category (token missing/invalid/expired), which isAuthError
+// routes to the re-auth response instead.
+const TOKEN_NO_PERMISSION_CODE = 99991676;
 const AUTH_ERROR_CODE = 99991668;
+// "app has not applied for the required scope(s)". The wording blames the app's
+// console config, but Feishu also returns it when the app DOES have the scope and
+// the user_access_token predates the grant — the check runs against the token's
+// effective scope set. The two cases are indistinguishable from the error alone,
+// so this class gets BOTH remedies (see patchPermissionError).
+const APP_SCOPE_NOT_APPLIED_CODE = 99991672;
 
 class ServerBusyError extends Error {
   constructor() { super('server_busy'); this.name = 'ServerBusyError'; }
@@ -33,8 +49,15 @@ function buildInputSchema(def) {
     const prop = { description: flag.description };
     if (flag.type === 'boolean') prop.type = 'boolean';
     else if (flag.type === 'number') prop.type = 'number';
-    else prop.type = 'string';
-    if (flag.enum) prop.enum = flag.enum;
+    else if (flag.type === 'stringArray') {
+      // Repeatable CLI flag. An MCP arguments object cannot repeat a key, so the
+      // schema must say array or the agent has no way to pass more than one
+      // value (and comma-joining silently becomes ONE value — stringArray does
+      // not split). server.js repeats --flag per element.
+      prop.type = 'array';
+      prop.items = { type: 'string', ...(flag.enum ? { enum: flag.enum } : {}) };
+    } else prop.type = 'string';
+    if (flag.enum && prop.type !== 'array') prop.enum = flag.enum;
     properties[key] = prop;
     if (flag.required) required.push(key);
   }
@@ -100,10 +123,20 @@ function findByName(catalogIndex, name) {
 }
 
 // Rewrite a lark-cli permission-denied error into an actionable hint with an
-// incremental-auth URL. Two detection paths:
+// incremental-auth URL. Three detection paths:
 //   1. Legacy/API-classified: error.code === 99991679 or 99991668
 //   2. Typed envelope (lark-cli ≥1.0.50 pre-flight): error.type === "authorization"
 //      with subtype "missing_scope" or "token_scope_insufficient" (no code field)
+//   3. code === 99991672 / subtype "app_scope_not_applied" — the app-scope class
+//
+// Path 3 exists because a scope that is allow-listed but NOT in the deployment's
+// default consent set (FEISHU_SCOPES) is reachable ONLY through incremental auth:
+// /authorize requests FEISHU_SCOPES + extra_scope, so re-authorizing never adds
+// it, and this function is what mints the extra_scope link. Before path 3 those
+// scopes were a dead end — Feishu reports them with 99991672, the tool told the
+// agent "the developer must fix the console", the console was already correct,
+// and no authorize_url was ever offered. First hit: the base:appmode* /
+// base:workspace* scopes added by lark-cli 1.0.87.
 //
 // Scope discovery layers (in priority order):
 //   a. error.missing_scopes array (typed envelope, most authoritative)
@@ -114,10 +147,14 @@ function patchPermissionError(toolScopeMap, authorizeBase, output, toolName, inc
   try {
     const data = JSON.parse(output);
     const code = Number(data.error?.code);
-    const isCodeMatch = code === PERMISSION_ERROR_CODE || code === AUTH_ERROR_CODE;
+    const isCodeMatch = code === PERMISSION_ERROR_CODE || code === TOKEN_NO_PERMISSION_CODE || code === AUTH_ERROR_CODE;
     const isTypedMatch = data.error?.type === 'authorization' &&
       (data.error.subtype === 'missing_scope' || data.error.subtype === 'token_scope_insufficient');
-    if (isCodeMatch || isTypedMatch) {
+    // The app-scope class: keep the console link (the developer may genuinely
+    // need it) AND offer the authorize link (the token may just predate the grant).
+    const isAppScopeMatch = code === APP_SCOPE_NOT_APPLIED_CODE ||
+      (data.error?.type === 'authorization' && data.error.subtype === 'app_scope_not_applied');
+    if (isCodeMatch || isTypedMatch || isAppScopeMatch) {
       const missing = new Set();
       // Layer 1: typed envelope carries authoritative missing_scopes array
       if (Array.isArray(data.error.missing_scopes)) {
@@ -151,11 +188,16 @@ function patchPermissionError(toolScopeMap, authorizeBase, output, toolName, inc
         const authUrl = `${authorizeBase}/authorize?extra_scope=${encodeURIComponent(scopeList.join(','))}${tokenParam}`;
         data.error.authorize_url = authUrl;
         data.error.required_scopes = scopeList;
-        data.error.user_action = `Ask the user to open authorize_url to grant: ${scopeList.join(', ')}. Do not retry until authorized.`;
+        data.error.user_action = isAppScopeMatch
+          ? `Ask the user to open authorize_url to grant: ${scopeList.join(', ')}. If that page reports the permission does not exist, the app itself is missing it — the developer must enable it at console_url and publish a new app version. Do not retry until one of those is done.`
+          : `Ask the user to open authorize_url to grant: ${scopeList.join(', ')}. Do not retry until authorized.`;
       } else {
         data.error.user_action = 'This tool requires a permission not automatically determined. Contact the admin.';
       }
-      delete data.error.console_url;
+      // console_url is noise once an authorize_url exists — EXCEPT for the
+      // app-scope class, where enabling the scope in the console is one of the
+      // two possible remedies and the agent cannot tell which applies.
+      if (!isAppScopeMatch) delete data.error.console_url;
       return JSON.stringify(data, null, 2);
     }
   } catch {}
@@ -215,10 +257,69 @@ function createSingleFlight(fn) {
 // and lark-cli rejects it downstream with an opaque error. Accept BOTH
 // conventions: a string passes through; an object/array is stringified;
 // primitives keep String() (ordinary CLI flag values).
+// Every server-generated failure payload carries ok:false, so a caller has ONE
+// predicate (`ok === false`) that covers both families of error: the envelopes
+// lark-cli produces itself (which already carry ok:false) and the ones this
+// server mints before/around the spawn. `isError` answers a DIFFERENT question —
+// terminal vs self-correctable — and deliberately does NOT track ok:false: a
+// lenient MCP client hides the content of an isError:true result, which would
+// bury exactly the hint a self-correctable failure exists to deliver.
+function errorText(payload) {
+  return JSON.stringify({ ok: false, ...payload });
+}
+
 function coerceFlagValue(value) {
   if (typeof value === 'string') return value;
   if (typeof value === 'object' && value !== null) return JSON.stringify(value);
   return String(value);
+}
+
+// Normalize a repeatable flag's value into the list of scalars server.js emits
+// as `--flag v` pairs. Accepts an array, a JSON-array string (some clients
+// stringify arguments), or a bare scalar. Never comma-splits: values legitimately
+// contain commas, so splitting would silently corrupt them. Objects inside an
+// array are dropped rather than stringified into "[object Object]" — a repeatable
+// flag only ever takes scalars, so an object there is a caller mistake that
+// lark-cli would reject anyway.
+function toFlagList(value) {
+  let list = value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) list = parsed;
+      } catch { /* not JSON — treat as a single literal value */ }
+    }
+  }
+  if (!Array.isArray(list)) list = [list];
+  return list
+    .filter(v => v !== undefined && v !== null && typeof v !== 'object' && v !== '')
+    .map(v => (typeof v === 'string' ? v : String(v)));
+}
+
+// Detect a projection that was entirely rejected. lark-cli answers ok with the
+// correct records_count but exports record_id only, listing the unknown names in
+// `ignored_fields` — so an analysis step downstream reads null for every column it
+// asked for and produces a plausible wrong answer. Returns {parameter, unknown}
+// when EVERY requested value was ignored, else null: a partial rejection means
+// part of the projection worked and `ignored_fields` already reports the rest.
+// Scoped to repeatable projection flags (`field-id`) so it never fires on the
+// write paths, where `ignored_fields` legitimately reports read-only columns.
+function allProjectedFieldsDropped(output, def, args) {
+  const flag = (def?.flags || []).find(f => f.name === 'field-id' && f.type === 'stringArray');
+  if (!flag) return null;
+  const parameter = toSchemaKey(flag.name);
+  const requested = toFlagList(args?.[parameter]);
+  if (requested.length === 0) return null;
+  let data;
+  try { data = JSON.parse(output); } catch { return null; }
+  if (data?.ok === false) return null;
+  const ignored = data?.ignored_fields || data?.data?.ignored_fields;
+  if (!Array.isArray(ignored) || ignored.length === 0) return null;
+  const ignoredNames = new Set(ignored.map(e => e?.name ?? e?.id).filter(Boolean));
+  if (!requested.every(r => ignoredNames.has(r))) return null;
+  return { parameter, unknown: requested };
 }
 
 // Pre-spawn payload validation against the embedded --print-schema contract
@@ -415,6 +516,9 @@ module.exports = {
   PERMISSION_ERROR_CODE,
   ServerBusyError,
   coerceFlagValue,
+  errorText,
+  toFlagList,
+  allProjectedFieldsDropped,
   validatePayload,
   translateCliError,
   stripCliNotice,

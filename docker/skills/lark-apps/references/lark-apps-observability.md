@@ -22,9 +22,9 @@ metric / analytics 的 `environment` 只是 online-only 校验：`lark_apps_metr
 ## 示例
 
 ```
-lark_apps_log_list(app_id="<app_id>", level="error", keyword="timeout", since="0.5h")
+lark_apps_log_list(app_id="<app_id>", level=["error"], keyword="timeout", since="0.5h")
 lark_apps_log_get(app_id="<app_id>", log_id="<log_id>")
-lark_apps_trace_list(app_id="<app_id>", trace_id="<trace_id>")
+lark_apps_trace_list(app_id="<app_id>", trace_id=["<trace_id>"])
 lark_apps_trace_get(app_id="<app_id>", trace_id="<trace_id>")
 lark_apps_metric_list(app_id="<app_id>", metric="requests", series="total", since="1d")
 lark_apps_metric_list(app_id="<app_id>", metric="requests", since="1h")

@@ -428,6 +428,41 @@ Include all changed files:
   `docker/__tests__/generate-tools.test.js`. (A genuine boolean whose *description prose*
   happens to match the grep — e.g. `--allow-sensitive` mentioning file paths — is fine;
   verify against `--help` and move on.)
+- [ ] **Repeatable flags are arrays in schema AND in skill docs** — a flag whose
+  `--help` type token is `stringArray`/`stringSlice` is repeated on the command
+  line, which an MCP `arguments` object cannot express. `flagTypeFromRest` types
+  those as `stringArray`, `buildInputSchema` emits `{type:"array"}`, and server.js
+  repeats `--flag` per element. A doc that writes `field_id="A,B"` fails SILENTLY
+  (stringArray does not comma-split → one bogus value → `ignored_fields` → still
+  `ok`; `base +record-list` projected `record_id` only). A bump can add repeatable
+  flags or flip an existing one, so re-scan the built catalog and diff it against
+  the skill docs:
+
+  ```bash
+  docker run --rm --entrypoint cat lark-mcp-bump:tmp /app/generated-tools.json > /tmp/gt.json
+  python3 - <<'PY'
+  import json, re, glob
+  gt = json.load(open('/tmp/gt.json'))
+  targets = {}
+  for t in gt['tools']:
+      name = f"lark_{t['service']}_{t['command'].lstrip('+').replace('-','_')}"
+      for f in t['flags']:
+          if f['type'] == 'stringArray':
+              targets.setdefault(name, set()).add(f['name'].replace('-', '_'))
+  bad = 0
+  for path in glob.glob('docker/skills/**/*.md', recursive=True):
+      for i, line in enumerate(open(path).read().split('\n'), 1):
+          for tool, keys in targets.items():
+              if tool + '(' not in line: continue
+              for k in keys:
+                  if re.search(rf'\b{k}\s*=\s*["\']', line):
+                      bad += 1; print(f'  X {path}:{i} {tool} {k}= (string, must be an array)')
+  print(f'{bad} non-array call sites'); print('repeatable flags:', sum(len(v) for v in targets.values()))
+  PY
+  ```
+
+  Expected: `0 non-array call sites`. Also grep the parameter tables for
+  "repeatable" / "逗号分隔" / "可重复" on those flags — the prose must say array.
 - [ ] **No CLI-speak leaked into catalog descriptions** — `translateFlagDescription`
   rewrites the `--help` prose for agents (strips `@file`/stdin hints, maps `--flag` →
   `snake_case`, `lark-cli skills read` → `lark_get_skill`), but a NEW lark-cli version can

@@ -191,8 +191,8 @@ describe('parseFlags', () => {
     expect(flags[0]).toMatchObject({ name: 'ratio', type: 'number' });
   });
 
-  it('keeps string-like type tokens (string, stringArray, duration) as string', () => {
-    expect(parseFlags('Flags:\n      --tags stringArray   labels').flags[0]).toMatchObject({ name: 'tags', type: 'string' });
+  it('keeps other string-like type tokens (string, duration) as string', () => {
+    expect(parseFlags('Flags:\n      --title string   doc title').flags[0]).toMatchObject({ name: 'title', type: 'string' });
     expect(parseFlags('Flags:\n      --wait duration   timeout').flags[0]).toMatchObject({ name: 'wait', type: 'string' });
   });
 
@@ -217,6 +217,23 @@ describe('parseFlags', () => {
   it('treats a JSON-array example token ([["alice",95]]) as string', () => {
     const { flags } = parseFlags('Flags:\n      --values [["alice",95]]   Untyped initial data as one 2D JSON array');
     expect(flags[0]).toMatchObject({ name: 'values', type: 'string' });
+  });
+
+  // Regression: cobra's repeatable flags (`stringArray`) were collapsed to
+  // 'string'. An MCP arguments object cannot repeat a key, so the agent could
+  // only send a JSON array (stringified into one literal value) or a comma
+  // string (stringArray does NOT comma-split) — either way lark-cli saw ONE
+  // bogus value, put it in ignored_fields, and returned ok. base +record-list
+  // then silently projected record_id only. They must surface as arrays so
+  // server.js can repeat the flag per element.
+  it('detects a repeatable stringArray flag as stringArray, not string', () => {
+    const { flags } = parseFlags('Flags:\n      --field-id stringArray   field ID or name to include; repeat to project only needed fields');
+    expect(flags[0]).toMatchObject({ name: 'field-id', type: 'stringArray' });
+  });
+
+  it('detects stringSlice as stringArray too', () => {
+    const { flags } = parseFlags('Flags:\n      --tags stringSlice   comma or repeatable tag list');
+    expect(flags[0]).toMatchObject({ name: 'tags', type: 'stringArray' });
   });
 
   it('treats a range example token (A1:Z200) as string', () => {

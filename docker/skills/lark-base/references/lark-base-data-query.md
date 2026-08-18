@@ -3,9 +3,7 @@
 
 > **入口指南**: `lark_get_skill(domain="base", section="data-query-guide")`
 
-本文档是 `lark_base_data_query()` JSON DSL 的单一事实来源（SSOT），用于说明完整字段、操作符、限制、返回和错误恢复。常用 fewshot 与命令选择先读 `lark_get_skill(domain="base", section="data-query-guide")`。
-
-查询类任务还必须先遵守 `lark_get_skill(domain="base", section="data-analysis-sop")`。`lark_base_data_query()` 适合让筛选、分组、聚合、排序和 TopN 在 Base 云端查询服务中执行；不要用默认分页的 `lark_base_record_list()` 替代聚合查询。
+本文档是 `lark_base_data_query()` JSON DSL 的单一事实来源（SSOT），用于说明完整字段、操作符、限制、返回和错误恢复。数据表查询与分析先由 `lark_get_skill(domain="base", section="data-analysis-sop")` 选路；Cloud SOP 选定 `lark_base_data_query()` 后先读 `lark_get_skill(domain="base", section="data-query-guide")`，guide 未覆盖需求或用户明确要求完整 DSL/API reference 时再读本文。
 
 ## 限制
 
@@ -391,12 +389,12 @@ value 使用预定义关键字机制，第一个元素为字符串常量名称�
 
 1. 用 `lark_base_data_query` 在 Base 云端查询服务中完成全局筛选、分组、聚合、排序和 TopN，得到业务 key、分组值或候选范围。
 2. 如果已经拿到候选记录的 `record_id`，用 `lark_base_record_get` 读取明细字段。
-3. 如果拿到的是结构化业务 key（例如编号、状态、日期、金额等），用 `lark_base_record_list(filter_json="...")` 做精确过滤后读取；不要用 `lark_base_record_search` 代替结构化条件。
+3. 如果拿到的是结构化业务 key（例如编号、状态、日期、金额等），用 `lark_base_record_list(filter_json="...")` 做精确过滤后读取；`lark_base_record_search()` 用于文本展示值关键词。
 4. 只有候选条件本身是文本展示值关键词时，才使用 `lark_base_record_search`，并用 `search_fields` 限定范围、`select_fields` 做投影。
 5. 若候选记录包含 link 字段，提取关联 `record_id` 后到关联表用 `lark_base_record_get` 批量读取展示字段。
-6. 最终回答业务字段，不要把内部 `record_id` 当作用户可读答案。
+6. 最终回答展示真实业务字段；内部 `record_id` 用于连接或定位。
 
-不要把 `data-query pagination.limit` 理解为分页扫描；它只限制 Base 云端查询服务返回的聚合结果行数，不支持 offset。需要全量明细导出时回到 data analysis SOP 的 record 分页规则。
+不要把 `data-query pagination.limit` 理解为分页扫描；它只限制 Base 云端查询服务返回的聚合结果行数，不支持 offset。需要逐条原始记录时按 Cloud SOP 的 `lark_base_record_list()` / `lark_base_record_search()` 回查规则处理。
 
 ## 坑点
 
@@ -409,11 +407,10 @@ value 使用预定义关键字机制，第一个元素为字符串常量名称�
 - ⚠️ **数据表标识 `tableId` vs `tableName`**：datasource 中可以用 `tableId`（如 `tblXXX`）或 `tableName`（数据表的用户自定义显示名称），二选一，不要混用
 - ⚠️ **`pagination.limit` 最大 5000**：超过会报错，且不支持 offset，只支持 limit
 - ⚠️ **所有 alias 必须全局唯一**：dimensions 和 measures 之间的 alias 也不能重名
-- ⚠️ **不要用本地分页结果替代 data-query**：凡是全局计数、分组、聚合、排序 TopN，优先让 `lark_base_data_query` 在 Base 云端查询服务中执行；默认页 `lark_base_record_list` 后本地统计只能得到已读取范围内的结果
 
 ## 参考
 
 - `lark_get_skill(domain="base")` — 多维表格全部命令
-- `lark_get_skill(domain="base", section="data-analysis-sop")` — 查询范围、选路、下推、分页、`lark_base_record_list()` / `lark_base_record_search()` 回查和关系查询 SOP
+- `lark_get_skill(domain="base", section="data-analysis-cloud")` — Cloud 路径的查询范围、下推、分页、`lark_base_record_list()` / `lark_base_record_search()` 回查和关系查询 SOP
 - `lark_get_skill(domain="base", section="cell-value")` — CellValue 格式规范
 - `lark_get_skill(domain="base", section="field-json")` — 字段类型与 JSON 结构

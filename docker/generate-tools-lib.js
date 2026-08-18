@@ -49,6 +49,15 @@ function flagTypeFromRest(rest) {
   if (token === 'true' || token === 'false') return 'boolean';
   if (/^--\S+=(true|false)$/.test(token)) return 'boolean';
   if (NUMBER_TYPE_TOKENS.has(token)) return 'number';
+  // Cobra's repeatable flags. Collapsing them to 'string' is a SILENT data
+  // loss: an MCP `arguments` object cannot repeat a key, so the agent's only
+  // options were a JSON array (stringified into one literal `--field-id
+  // '["a","b"]'`) or a comma string (stringArray does NOT comma-split, so it
+  // stays one literal value). lark-cli then reports the whole thing as one
+  // unknown field in `ignored_fields` and returns ok — e.g. base +record-list
+  // silently projected record_id only. Surfacing them as arrays lets server.js
+  // repeat the flag per element.
+  if (token === 'stringArray' || token === 'stringSlice') return 'stringArray';
   return 'string';
 }
 

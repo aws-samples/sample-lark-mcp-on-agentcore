@@ -72,7 +72,7 @@ description: "飞书邮箱：Use when user mentions 起草邮件、写邮件、�
 
 1. `lark_mail_triage(filter="{\"from\":[\"spam@x.com\"]}")` → 列出 N 条结果
 2. 展示："将删除 N 封邮件（发件人 spam@x.com，主题：…），确认？"
-3. 用户确认后 → `lark_mail_message_trash(message_ids="...", _confirm=true)`
+3. 用户确认后 → `lark_mail_message_trash(message_ids=["..."], _confirm=true)`
 
 ## 身份选择
 
