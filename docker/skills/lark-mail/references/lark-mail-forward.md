@@ -210,7 +210,7 @@ lark_invoke(tool_name="lark_mail_user_mailbox_drafts_cancel_scheduled_send", arg
 **2. 标记已读**（可选）— 询问用户是否需要将原邮件标记为已读。如果用户同意：
 
 ```
-lark_mail_message_modify(message_ids="<原邮件ID>", remove_label_ids="UNREAD")
+lark_mail_message_modify(message_ids=["<原邮件ID>"], remove_label_ids="UNREAD")
 ```
 
 ## 编辑转发草稿

@@ -24,7 +24,7 @@ lark_drive_copy(token="<WIKI_TOKEN>", type="wiki", name="副本名称", folder_t
 | `type` | 裸 token 时必填 | 源文件类型：`doc`、`docx`、`sheet`、`file`、`mindnote`、`slides`、`bitable`（`base` 为兼容别名）或 `wiki`；传 URL 时可省略，显式传入时必须与 URL 类型一致 |
 | `name` | 是 | 副本名称，最长 256 字节 |
 | `folder_token` | 是 | 目标文件夹 token、文件夹 URL，或常量 `my_space`（复制到"我的空间"根目录，内部自动解析根 token）|
-| `extra` | 否 | 可重复的 `key=value` 对，原样透传给 API 的 `extra` 自定义复制参数；典型用法 `extra="target_type=docx"`（复制旧版 doc 时转换为 docx 副本）|
+| `extra` | 否 | `key=value` 对数组，原样透传给 API 的 `extra` 自定义复制参数；典型用法 `extra=["target_type=docx"]`（复制旧版 doc 时转换为 docx 副本）|
 
 ## 输入规则
 

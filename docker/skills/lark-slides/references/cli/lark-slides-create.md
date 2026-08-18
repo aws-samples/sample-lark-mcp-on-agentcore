@@ -56,7 +56,7 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `title` | 否 | 演示文稿标题（不传则默认 "Untitled"） |
-| `slide` | 否 | 一页 `<slide>` XML；与 `slides` 二选一，同时传会报错 |
+| `slide` | 否 | `<slide>` XML 数组，每项一页；与 `slides` 二选一，同时传会报错 |
 | `slides` | 否 | 页面 XML 的 JSON 字符串数组，最多 10 个；与 `slide` 二选一 |
 
 10 页是上限，服务端每次只接收一页。超过 10 页时先创建空白 PPT，再用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")`）逐页添加。

@@ -17,7 +17,7 @@
 若用户需要会议室，先调用 `lark_calendar_room_find`。详见 lark_get_skill(domain="calendar", section="room-find")。
 
 ```
-lark_calendar_room_find(slot="<start>~<end>", attendee_ids="<ids>", city="<city>", building="<building>", floor="<F2>", room_name="<room_name>")
+lark_calendar_room_find(slot=["<start>~<end>"], attendee_ids="<ids>", city="<city>", building="<building>", floor="<F2>", room_name="<room_name>")
 ```
 
 时间块确定规则：

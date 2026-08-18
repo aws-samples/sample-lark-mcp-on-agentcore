@@ -7,10 +7,10 @@ Use it instead of raw `user_mailbox.messages batch_modify` when the operation ta
 ## Common Commands
 
 ```
-lark_mail_message_modify(message_ids="<id1>,<id2>", add_label_ids="unread")
-lark_mail_message_modify(message_ids="<id>", remove_label_ids="FLAGGED")
-lark_mail_message_modify(message_ids="<id>", add_folder="archive")
-lark_mail_message_modify(mailbox="shared@example.com", message_ids="<id>", add_folder="folder_xxx")
+lark_mail_message_modify(message_ids=["<id1>", "<id2>"], add_label_ids="unread")
+lark_mail_message_modify(message_ids=["<id>"], remove_label_ids="FLAGGED")
+lark_mail_message_modify(message_ids=["<id>"], add_folder="archive")
+lark_mail_message_modify(mailbox="shared@example.com", message_ids=["<id>"], add_folder="folder_xxx")
 ```
 
 ## Parameters
@@ -18,12 +18,12 @@ lark_mail_message_modify(mailbox="shared@example.com", message_ids="<id>", add_f
 | Parameter | Required | Notes |
 | --- | --- | --- |
 | `mailbox` | No | Mailbox that owns the messages. Defaults to `me`. |
-| `message_ids` | Yes | Supports comma-separated values. |
+| `message_ids` | Yes | Array of message IDs; pass one element per ID (a comma-joined string is treated as ONE id). |
 | `add_label_ids` | No | Adds labels. System labels `unread`, `important`, `other`, `flagged` normalize to upper case. |
 | `remove_label_ids` | No | Removes labels. Cannot overlap with `add_label_ids`. |
 | `add_folder` | No | Moves to one folder. `inbox`, `sent`, `spam`, `archive`, `archived` normalize to system folder IDs. |
 
-`TRASH` is intentionally rejected by this tool. Use `lark_mail_message_trash(message_ids="<id>", _confirm=true)` for soft deletion.
+`TRASH` is intentionally rejected by this tool. Use `lark_mail_message_trash(message_ids=["<id>"], _confirm=true)` for soft deletion.
 
 ## Behavior
 

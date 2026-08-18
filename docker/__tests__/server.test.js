@@ -19,6 +19,7 @@ import {
   createSemaphore,
   createSingleFlight,
   coerceFlagValue,
+  toFlagList,
   validatePayload,
   translateCliError,
   stripCliNotice,
@@ -114,6 +115,26 @@ describe('buildInputSchema', () => {
     const schema = buildInputSchema(FAKE_CATALOG.tools[3]);
     expect(schema.properties.type.enum).toEqual(['docx', 'sheet', 'bitable']);
   });
+  it('maps a repeatable stringArray flag to an array-of-string schema', () => {
+    // An MCP arguments object cannot repeat a key, so a repeatable CLI flag has
+    // to be declared as an array or the agent has no way to pass >1 value.
+    const schema = buildInputSchema({
+      service: 'base', command: '+record-list', description: 'x', risk: 'read',
+      flags: [{ name: 'field-id', type: 'stringArray', description: 'stringArray field ID or name to include' }],
+    });
+    expect(schema.properties.field_id.type).toBe('array');
+    expect(schema.properties.field_id.items).toEqual({ type: 'string' });
+  });
+
+  it('puts a stringArray flag enum on items, not on the array itself', () => {
+    const schema = buildInputSchema({
+      service: 'apps', command: '+log-list', description: 'x', risk: 'read',
+      flags: [{ name: 'level', type: 'stringArray', description: 'log level', enum: ['INFO', 'WARN'] }],
+    });
+    expect(schema.properties.level.items.enum).toEqual(['INFO', 'WARN']);
+    expect(schema.properties.level.enum).toBeUndefined();
+  });
+
   it('adds _confirm property for high-risk-write tools', () => {
     const schema = buildInputSchema(FAKE_CATALOG.tools[1]);
     expect(schema.properties._confirm).toBeDefined();
@@ -123,6 +144,36 @@ describe('buildInputSchema', () => {
   it('does NOT add _confirm for non-high-risk tools', () => {
     const schema = buildInputSchema(FAKE_CATALOG.tools[0]);
     expect(schema.properties._confirm).toBeUndefined();
+  });
+});
+
+describe('toFlagList (repeatable flags)', () => {
+  it('passes an array through as separate values', () => {
+    expect(toFlagList(['门店名称', '区域', '月度销售目标'])).toEqual(['门店名称', '区域', '月度销售目标']);
+  });
+
+  it('parses a JSON-array string (clients that stringify arguments)', () => {
+    expect(toFlagList('["a","b"]')).toEqual(['a', 'b']);
+  });
+
+  it('treats a bare scalar as a single value (pre-array-schema callers)', () => {
+    expect(toFlagList('区域')).toEqual(['区域']);
+    expect(toFlagList(7)).toEqual(['7']);
+  });
+
+  it('does NOT comma-split: commas are legitimate inside a single value', () => {
+    // --extra key=a,b and localized text both contain commas. Splitting would
+    // corrupt the value silently, which is worse than the caller passing one
+    // string when they meant several.
+    expect(toFlagList('key=a,b')).toEqual(['key=a,b']);
+  });
+
+  it('drops empty and non-scalar elements instead of emitting [object Object]', () => {
+    expect(toFlagList(['a', '', null, { x: 1 }, 'b'])).toEqual(['a', 'b']);
+  });
+
+  it('leaves a non-JSON string starting with [ as one literal value', () => {
+    expect(toFlagList('[unparseable')).toEqual(['[unparseable']);
   });
 });
 

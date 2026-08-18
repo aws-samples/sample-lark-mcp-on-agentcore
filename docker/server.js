@@ -23,6 +23,7 @@ const {
   createSemaphore,
   createSingleFlight,
   coerceFlagValue,
+  toFlagList,
   validatePayload,
   translateCliError,
   stripCliNotice,
@@ -375,6 +376,16 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     const value = args[key];
     if (value === undefined || value === null || value === '') continue;
     if (flag.type === 'boolean') { if (value) cliArgs.push(`--${flag.name}`); continue; }
+    // Repeatable flag: emit `--flag v` once per element. Accepts a real array
+    // (the schema's shape), a JSON-array string (clients that stringify args),
+    // or a bare scalar (one value — the pre-array-schema behaviour, kept so
+    // existing single-value callers don't break). Deliberately NOT comma-split:
+    // legitimate values contain commas (--extra key=a,b / localized text), and
+    // splitting them would corrupt data instead of losing it loudly.
+    if (flag.type === 'stringArray') {
+      for (const item of toFlagList(value)) cliArgs.push(`--${flag.name}`, item);
+      continue;
+    }
     // Accept both conventions for JSON parameters: string passes through,
     // object/array is stringified (String() would corrupt it to "[object
     // Object]"/comma-joins and fail deep inside lark-cli).

@@ -136,9 +136,9 @@ text 字段的 `style.type` 影响单元格检查逻辑：
 
 读取单元格时，附件为数组，每个元素为 `{file_token, size, name}`，例如 `[{"file_token":"box_xxx","size":1024,"name":"report.pdf"}]`。
 
-- 追加附件：使用 `lark_base_record_upload_attachment(record_id="<record_id>", field_id="<field_id>", file="<path>")`；可传多个文件路径一次追加多个附件，不能用普通记录操作接口写附件值。
-- 删除附件：使用 `lark_base_record_remove_attachment(record_id="<record_id>", field_id="<field_id>", file_token="<file_token>", _confirm=true)`；可传多个 `file_token` 一次删除同一单元格里的多个附件。
-- 下载附件：使用 `lark_base_record_download_attachment(record_id="<record_id>", file_token="<file_token>", output="<dir>")`；不传 `file_token` 时下载整行所有附件，也可传多个 `file_token` 只下载指定附件。Base 附件必须用这个命令下载，用其他下载入口可能失败。
+- 追加附件：使用 `lark_base_record_upload_attachment(record_id="<record_id>", field_id="<field_id>", file=["<path>"])`；可传多个文件路径一次追加多个附件，不能用普通记录操作接口写附件值。
+- 删除附件：使用 `lark_base_record_remove_attachment(record_id="<record_id>", field_id="<field_id>", file_token=["<file_token>"], _confirm=true)`；可传多个 `file_token` 一次删除同一单元格里的多个附件。
+- 下载附件：使用 `lark_base_record_download_attachment(record_id="<record_id>", file_token=["<file_token>"], output="<dir>")`；不传 `file_token` 时下载整行所有附件，也可传多个 `file_token` 只下载指定附件。Base 附件必须用这个命令下载，用其他下载入口可能失败。
 
 ## 3. 只读字段（不要写）
 

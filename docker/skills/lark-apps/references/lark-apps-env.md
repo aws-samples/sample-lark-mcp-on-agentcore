@@ -34,9 +34,9 @@ lark_apps_env_set(app_id="<app_id>", environment="online", key="FOO", value="<va
 `lark_apps_env_delete` 是 high-risk-write。尊重确认协议：先让用户确认 app/env/key 和删除后果，再传 `_confirm=true`。不要自动补 `_confirm=true`。如果只是认证失败后让用户重登，重登完成不等于删除确认；继续删除前仍需确认。
 
 ```
-lark_apps_env_delete(app_id="<app_id>", key="FOO", dry_run=true)
-lark_apps_env_delete(app_id="<app_id>", key="FOO", _confirm=true)
-lark_apps_env_delete(app_id="<app_id>", environment="online", key="FOO", _confirm=true)
+lark_apps_env_delete(app_id="<app_id>", key=["FOO"], dry_run=true)
+lark_apps_env_delete(app_id="<app_id>", key=["FOO"], _confirm=true)
+lark_apps_env_delete(app_id="<app_id>", environment="online", key=["FOO"], _confirm=true)
 ```
 
 ## 反模式

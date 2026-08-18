@@ -166,7 +166,7 @@ lark_invoke(tool_name="lark_mail_user_mailbox_messages_send_status", args={param
 **2. 标记已读**（可选）— 询问用户是否需要将原邮件标记为已读。如果用户同意：
 
 ```
-lark_mail_message_modify(message_ids="<原邮件ID>", remove_label_ids="UNREAD")
+lark_mail_message_modify(message_ids=["<原邮件ID>"], remove_label_ids="UNREAD")
 ```
 
 ## 相关工具

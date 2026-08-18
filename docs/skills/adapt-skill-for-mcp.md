@@ -199,8 +199,20 @@ Original skills often have tables with `--flag` column. Convert to snake_case:
 | `--page-all` (boolean) | `page_all` (boolean) |
 | `--as <identity>` | _(delete row)_ |
 | `--yes` | _(delete row — server handles)_ |
+| `--field-id` (repeatable, cobra `stringArray`) | `field_id` — **array**: `field_id=["A", "B"]` |
 
 Keep the description and required/optional columns intact.
+
+**Repeatable flags are arrays, never comma-joined strings.** A flag whose `--help`
+type token is `stringArray`/`stringSlice` is repeated on the command line
+(`--field-id A --field-id B`); an MCP `arguments` object cannot repeat a key, so
+`generate-tools.js` types it as an array and server.js emits one `--flag` per
+element. Writing `field_id="A,B"` in a skill doc is a **silent** failure:
+`stringArray` does not comma-split, so lark-cli receives one bogus value, reports
+it in `ignored_fields`, and still returns `ok` — `base +record-list` quietly
+projected `record_id` only. Any upstream wording like "repeatable" / "逗号分隔" /
+"可重复传入" on such a flag becomes "array, one element per value". The exact set
+changes per lark-cli release; the bump runbook's catalog scan re-checks it.
 
 ### 6. Clean up CLI terminology and pipelines
 

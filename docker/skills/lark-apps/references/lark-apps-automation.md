@@ -24,7 +24,7 @@
 用户问「怎么配 / 怎么设置一个 X 触发器」时，**先展示完整调用模板 + 你对核心参数的推断**（让用户能确认你理解对了），再追问缺失的必填项（`name` 之类）或可选项。**不要跳过展示、直接连环追问**，那样用户没法确认你有没有理解意图。
 
 示范：用户说「报销审批一旦通过就自动触发处理，怎么配？」
-- ✅ 正确：先写出「这是 feishu-approval 类型，调用模板：`lark_apps_automation_create(app_id="<id>", name="<name>", trigger_type="feishu-approval", event_type="approval_instance", instance_status="APPROVED", approval_code="<code>")`。需要你确认：(1) 触发器名 `<name>`；(2) 是否限定特定审批流程——限定就传 `approval_code`（从飞书审批管理后台拿），不传则匹配所有审批定义」。
+- ✅ 正确：先写出「这是 feishu-approval 类型，调用模板：`lark_apps_automation_create(app_id="<id>", name="<name>", trigger_type="feishu-approval", event_type="approval_instance", instance_status=["APPROVED"], approval_code="<code>")`。需要你确认：(1) 触发器名 `<name>`；(2) 是否限定特定审批流程——限定就传 `approval_code`（从飞书审批管理后台拿），不传则匹配所有审批定义」。
 - ❌ 错误：直接问「叫什么名字？监听哪个审批？」——用户没法确认你有没有把「审批通过」映射到 `event_type="approval_instance"` + `instance_status="APPROVED"`。
 
 同理，cron/record-change/webhook 三类的「怎么配」都遵循此模式：先给调用 + 参数推断，后追问缺项。
@@ -79,7 +79,7 @@ lark_apps_automation_create(app_id="<id>", name="hook", trigger_type="webhook", 
 ### feishu-approval（飞书审批）
 
 ```
-lark_apps_automation_create(app_id="<id>", name="apv", trigger_type="feishu-approval", event_type="approval_instance", instance_status="APPROVED", approval_code="<code>")
+lark_apps_automation_create(app_id="<id>", name="apv", trigger_type="feishu-approval", event_type="approval_instance", instance_status=["APPROVED"], approval_code="<code>")
 ```
 
 - `event_type` 必填，取 `approval_instance` 或 `approval_task`，决定状态用哪个参数：

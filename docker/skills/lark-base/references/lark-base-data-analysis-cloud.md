@@ -20,9 +20,9 @@
 
 | 用户意图 | 首选路径 | 关键规则 |
 | --- | --- | --- |
-| 看几条、预览、示例 | `lark_base_record_list(limit=N, field_id="...")` | 保持局部语义 |
+| 看几条、预览、示例 | `lark_base_record_list(limit=N, field_id=["..."])` | 保持局部语义 |
 | 已知 `record_id` | `lark_base_record_get()` | 直接读取 |
-| 明确关键词 | `lark_base_record_search(keyword="...", search_field="...", field_id="...")` | 必须显式指定 `search_field`；可叠加 `filter_json` |
+| 明确关键词 | `lark_base_record_search(keyword="...", search_field=["..."], field_id=["..."])` | 必须显式指定 `search_field`；可叠加 `filter_json` |
 | 按条件找原始记录 | `lark_base_record_list(filter_json="...")` | `filter_json` 与视图筛选结构一致，支持文本、数字、日期、选项、人员、群组、关联等值 |
 | 排序 / TopN 原始记录 | `lark_base_record_list(filter_json="...", sort_json="...", limit=N)` | 最高/最新用 `desc:true`，最低/最早用 `desc:false`；数组顺序表达优先级；最多 10 个排序条件 |
 | 聚合 / 分组 / 分组排序 | `lark_base_data_query()` | 读取 `lark_get_skill(domain="base", section="data-query-guide")`，使用 filters/dimensions/measures/sort/limit |
@@ -44,7 +44,7 @@
 Example: 结构化筛选 + TopN；示例展示文本包含、数字比较和 Select 集合相交三个常用谓词：
 
 ```
-lark_base_record_list(base_token="<base_token>", table_id="<table_id>", filter_json='{"logic":"and","conditions":[["Title","intersects","Launch plan"],["Score",">=",80],["Status","intersects",["Doing"]]]}', sort_json='[{"field":"Updated","desc":true}]', field_id="Name,Title,Score", limit=20)
+lark_base_record_list(base_token="<base_token>", table_id="<table_id>", filter_json='{"logic":"and","conditions":[["Title","intersects","Launch plan"],["Score",">=",80],["Status","intersects",["Doing"]]]}', sort_json='[{"field":"Updated","desc":true}]', field_id=["Name", "Title", "Score"], limit=20)
 ```
 
 常用 `filter_json` condition fewshot 统一见 `lark_get_skill(domain="base", section="data-analysis-sop")`；完整协议见 `lark_get_skill(domain="base", section="filter-condition")`。
@@ -56,7 +56,7 @@ lark_base_record_list(base_token="<base_token>", table_id="<table_id>", filter_j
 使用 `lark_base_record_search()` 做关键词命中，结构化条件仍用 `filter_json` 下推：
 
 ```
-lark_base_record_search(base_token="<base_token>", table_id="<table_id>", keyword="Alice", search_field="Name", filter_json='{"logic":"and","conditions":[["Status","intersects",["Doing"]]]}', sort_json='[{"field":"Updated","desc":true}]', field_id="Name,Status", limit=20)
+lark_base_record_search(base_token="<base_token>", table_id="<table_id>", keyword="Alice", search_field=["Name"], filter_json='{"logic":"and","conditions":[["Status","intersects",["Doing"]]]}', sort_json='[{"field":"Updated","desc":true}]', field_id=["Name", "Status"], limit=20)
 ```
 
 金额、状态、日期、空值和关联字段等结构化条件使用 `filter_json`；`lark_base_record_search()` 处理展示文本关键词。

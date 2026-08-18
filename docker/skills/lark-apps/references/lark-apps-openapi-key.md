@@ -49,7 +49,7 @@
 | 参数 | 用途 | 备注 |
 |---|---|---|
 | `scope_all` | `allow_all=true`，放开所有路由 | bool 参数，显式传 `scope_all=false` 也算"已设置" |
-| `scope_api="METHOD /openapi/path"` | 逐条授权一个路由，可重复 | 路由从应用 `docs/openapi.json` 取 |
+| `scope_api=["METHOD /openapi/path"]` | 逐条授权一个路由，数组每项一个路由 | 路由从应用 `docs/openapi.json` 取 |
 | `scope="<raw request_scope JSON>"` | 高级逃生口，直传 request_scope JSON（snake_case） | 只校验合法 JSON；`scope` 与 `scope_all`/`scope_api` 互斥 |
 
 ### scope 值来源
@@ -71,7 +71,7 @@
 | "key 泄露了，先停掉" | `lark_apps_openapi_key_disable`（不是 delete） |
 | "key 丢了/忘了，再给我一个" | `lark_apps_openapi_key_reset`（不是 create 新 key；reset 轮换密钥、保留原 key 配置） |
 | "我的 key 密钥是什么" | 解释：list/get 不回显原始密钥，只能用 `lark_apps_openapi_key_reset` 轮换 |
-| "给应用创建一个有权限限制的 key" | `lark_apps_openapi_key_create(name="...", scope_api="GET /openapi/...")`（路由取自应用 `docs/openapi.json`） |
+| "给应用创建一个有权限限制的 key" | `lark_apps_openapi_key_create(name="...", scope_api=["GET /openapi/..."])`（路由取自应用 `docs/openapi.json`） |
 
 ## 不在本 skill 范围
 

@@ -16,7 +16,7 @@
 
 1. 明确所有需要参与分析的表及其 `records_count`。
 2. 如果结论必须依赖 LLM 理解原始内容，例如开放文本打标、情绪或意图识别、主题归纳、语义分类、相似性判断或实体消歧，进入下文"LLM 语义分析"路径。
-3. 对于其余确定性查询，任一分析表超过 2000 行时，先从任务意图中为所有大表提取可在单表内独立执行的谓词，例如日期范围、状态和关键词，再按下文将谓词逐表下推，并用 `field_id="<一个简单标量字段>", limit=2000, format="ndjson", minimal_stdout=true` 探测。目标是每张表都达到 `has_more=false`；任一表无法压缩到 2000 行以内时，转 `lark_get_skill(domain="base", section="data-analysis-cloud")` 用云端的数据分析能力。
+3. 对于其余确定性查询，任一分析表超过 2000 行时，先从任务意图中为所有大表提取可在单表内独立执行的谓词，例如日期范围、状态和关键词，再按下文将谓词逐表下推，并用 `field_id=["<一个简单标量字段>"], limit=2000, format="ndjson", minimal_stdout=true` 探测。目标是每张表都达到 `has_more=false`；任一表无法压缩到 2000 行以内时，转 `lark_get_skill(domain="base", section="data-analysis-cloud")` 用云端的数据分析能力。
 4. 所有分析表都不超过 2000 行后：单表且筛选、计数、简单分组/聚合/排序、TopN 能用一段短 jq 清晰完成时，用 `jq_records` 一次算完。
 5. 其余确定性任务比如多表、日历计算和复杂数据分析：能拆成每表一次 `jq_records`、再把各表小结果在上下文中合并时，走这条路；结果规模或计算复杂度撑不住时，进入 `lark_get_skill(domain="base", section="data-analysis-cloud")`。
 
@@ -179,7 +179,7 @@ NDJSON artifact 无法跨调用复用（文件对 agent 不可达），所以每
 NDJSON 每行是一条 record，`jq_records` 表达式面对的是这些 record 组成的数组。下面筛选"状态"包含"进行中"的记录，并统计记录数和金额合计：
 
 ```
-lark_base_record_list(base_token="<base_token>", table_id="<table_id>", field_id="状态,金额", format="ndjson", jq_records='map(select((.["状态"] | index("进行中")) != null)) as $records | ($records | map(.["金额"] | select(. != null))) as $amounts | {records_count: ($records | length), amount_sum: (if ($amounts | length) > 0 then ($amounts | add) else null end)}')
+lark_base_record_list(base_token="<base_token>", table_id="<table_id>", field_id=["状态", "金额"], format="ndjson", jq_records='map(select((.["状态"] | index("进行中")) != null)) as $records | ($records | map(.["金额"] | select(. != null))) as $amounts | {records_count: ($records | length), amount_sum: (if ($amounts | length) > 0 then ($amounts | add) else null end)}')
 ```
 
 `jq_records` 与 `format="ndjson"` 必须同时出现；一个表达式里把该份记录需要的多个指标一起算出来，避免为每个指标重复取数。

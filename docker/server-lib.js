@@ -33,8 +33,15 @@ function buildInputSchema(def) {
     const prop = { description: flag.description };
     if (flag.type === 'boolean') prop.type = 'boolean';
     else if (flag.type === 'number') prop.type = 'number';
-    else prop.type = 'string';
-    if (flag.enum) prop.enum = flag.enum;
+    else if (flag.type === 'stringArray') {
+      // Repeatable CLI flag. An MCP arguments object cannot repeat a key, so the
+      // schema must say array or the agent has no way to pass more than one
+      // value (and comma-joining silently becomes ONE value — stringArray does
+      // not split). server.js repeats --flag per element.
+      prop.type = 'array';
+      prop.items = { type: 'string', ...(flag.enum ? { enum: flag.enum } : {}) };
+    } else prop.type = 'string';
+    if (flag.enum && prop.type !== 'array') prop.enum = flag.enum;
     properties[key] = prop;
     if (flag.required) required.push(key);
   }
@@ -219,6 +226,30 @@ function coerceFlagValue(value) {
   if (typeof value === 'string') return value;
   if (typeof value === 'object' && value !== null) return JSON.stringify(value);
   return String(value);
+}
+
+// Normalize a repeatable flag's value into the list of scalars server.js emits
+// as `--flag v` pairs. Accepts an array, a JSON-array string (some clients
+// stringify arguments), or a bare scalar. Never comma-splits: values legitimately
+// contain commas, so splitting would silently corrupt them. Objects inside an
+// array are dropped rather than stringified into "[object Object]" — a repeatable
+// flag only ever takes scalars, so an object there is a caller mistake that
+// lark-cli would reject anyway.
+function toFlagList(value) {
+  let list = value;
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) list = parsed;
+      } catch { /* not JSON — treat as a single literal value */ }
+    }
+  }
+  if (!Array.isArray(list)) list = [list];
+  return list
+    .filter(v => v !== undefined && v !== null && typeof v !== 'object' && v !== '')
+    .map(v => (typeof v === 'string' ? v : String(v)));
 }
 
 // Pre-spawn payload validation against the embedded --print-schema contract
@@ -415,6 +446,7 @@ module.exports = {
   PERMISSION_ERROR_CODE,
   ServerBusyError,
   coerceFlagValue,
+  toFlagList,
   validatePayload,
   translateCliError,
   stripCliNotice,
