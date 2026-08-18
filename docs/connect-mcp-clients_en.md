@@ -35,6 +35,23 @@ refreshed automatically.
 | **Claude Code** | `claude mcp add` generates the config above | [Remote MCP servers](https://docs.anthropic.com/en/docs/claude-code/mcp#remote-mcp-connections) |
 | **Codex** | CLI and Desktop App both supported | [Codex](https://openai.com/index/introducing-codex/) |
 
+## Error contract
+
+Two independent signals, on purpose — don't read either as the other.
+
+| Signal | Question it answers |
+|--------|--------------------|
+| `ok: false` in the result text | **Did this call fail?** Present on every failure, both the envelopes lark-cli produces and the ones this server mints (`invalid_argument`, `projection_dropped`, `unknown_tool`, `server_busy`, `timeout`, …). This is the predicate to branch on programmatically. |
+| `isError: true` on the CallToolResult | **Is it terminal?** Set only when the caller cannot fix it from the response — timeout, buffer overrun, revoked authorization, a real crash. |
+
+A self-correctable failure is deliberately `isError: false` with `ok: false`: the
+response carries what the fix is (the right parameter shape, the field names that
+did not exist, an `authorize_url`, the tool name to use instead). Several MCP
+clients render their own generic message and drop the content when `isError` is
+set, which would bury exactly that. The primary consumer here is an agent that
+reads the text, so the hint wins. `status: "user_approval_required"` carries no
+`ok` at all — it is a confirmation prompt, not a failure.
+
 ## Troubleshooting
 
 | Symptom | Fix |
