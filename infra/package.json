@@ -22,7 +22,7 @@
     "esbuild": "^0.28.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.6"
+    "vitest": "^4.1.10"
   },
   "comment:overrides": "Pin transitive dev-only deps to patched versions to clear advisories without a vitest major bump. CDK build/test-time only; never enters the production container. NOTE: brace-expansion (GHSA-jxxr-4gwj-5jf2, moderate) is bundled inside aws-cdk-lib (inBundle:true via minimatch) and CANNOT be overridden — it clears only when aws-cdk-lib ships a rebuilt bundle. Risk is build-time glob over our own files, not untrusted input.",
   "overrides": {
