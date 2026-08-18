@@ -11,7 +11,17 @@
 // the OAuth authorize base) take that state as parameters rather than closing
 // over module globals, so they stay pure and testable.
 
-const PERMISSION_ERROR_CODE = 99991679;
+const PERMISSION_ERROR_CODE = 99991679;   // user did not grant the required scope
+// "token lacks the required scope" — the token was minted without it. Same remedy
+// as 99991679 (grant it via incremental auth), and unlike the app-scope class this
+// is NOT a console-config problem, so console_url stays stripped. Codes come from
+// lark-cli's internal/output/lark_errors.go; the scope-grant class is exactly
+// {99991672, 99991676, 99991679}. Deliberately NOT here: permission_denied /
+// 91403 (resource-level — a scope link would be misleading), app_disabled and
+// app_unavailable (admin action, no user-side remedy), and the whole
+// authentication category (token missing/invalid/expired), which isAuthError
+// routes to the re-auth response instead.
+const TOKEN_NO_PERMISSION_CODE = 99991676;
 const AUTH_ERROR_CODE = 99991668;
 // "app has not applied for the required scope(s)". The wording blames the app's
 // console config, but Feishu also returns it when the app DOES have the scope and
@@ -137,7 +147,7 @@ function patchPermissionError(toolScopeMap, authorizeBase, output, toolName, inc
   try {
     const data = JSON.parse(output);
     const code = Number(data.error?.code);
-    const isCodeMatch = code === PERMISSION_ERROR_CODE || code === AUTH_ERROR_CODE;
+    const isCodeMatch = code === PERMISSION_ERROR_CODE || code === TOKEN_NO_PERMISSION_CODE || code === AUTH_ERROR_CODE;
     const isTypedMatch = data.error?.type === 'authorization' &&
       (data.error.subtype === 'missing_scope' || data.error.subtype === 'token_scope_insufficient');
     // The app-scope class: keep the console link (the developer may genuinely

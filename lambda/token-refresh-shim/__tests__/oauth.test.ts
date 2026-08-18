@@ -65,6 +65,47 @@ afterEach(() => { vi.restoreAllMocks(); });
 // /authorize
 // =============================================================================
 
+// Pins the incremental-auth contract: the t= branch requests ONLY extra_scope,
+// never the default set. Feishu accumulates granted scopes across authorizations
+// (docs/faq_{en,zh}.md — "existing permissions are preserved"), so re-sending
+// FEISHU_SCOPES here buys nothing and costs two things: the consent screen grows
+// from "grant this one permission" to all ~60, which is exactly the broadening
+// that scope-allowlist.ts exists to bound, and it contradicts the documented UX.
+// Do not "fix" this into a union without first proving Feishu replaces rather
+// than accumulates — a previous attempt assumed it did, on OAuth general
+// precedent, and was wrong.
+describe('/authorize — incremental auth requests only the delta', () => {
+  const incrTokenFor = (userId: string) => {
+    const expiresAt = Math.floor(Date.now() / 1000) + 600;
+    const key = createHmac('sha256', 'test-state-secret-value').update('mcp-incr-auth-v1').digest();
+    const sig = createHmac('sha256', key).update(`${userId}:${expiresAt}`).digest('hex');
+    return Buffer.from(`${userId}:${expiresAt}:${sig}`).toString('base64url');
+  };
+
+  it('sends extra_scope alone, not the default set', async () => {
+    const result = await call({
+      path: '/authorize',
+      httpMethod: 'GET',
+      queryStringParameters: { t: incrTokenFor('ou_test_user'), extra_scope: 'base:workspace:create' },
+    });
+    expect(result.statusCode).toBe(302);
+    const scope = decodeURIComponent(new URL(result.headers!.Location as string).searchParams.get('scope') || '');
+    expect(scope).toBe('base:workspace:create');
+    expect(scope).not.toContain('im:message');
+  });
+
+  it('falls back to the default set when no extra_scope is given', async () => {
+    const result = await call({
+      path: '/authorize',
+      httpMethod: 'GET',
+      queryStringParameters: { t: incrTokenFor('ou_test_user') },
+    });
+    expect(result.statusCode).toBe(302);
+    const scope = decodeURIComponent(new URL(result.headers!.Location as string).searchParams.get('scope') || '');
+    expect(scope).toContain('im:message');
+  });
+});
+
 describe('/authorize — extra_scope validation', () => {
   it('accepts comma-separated scopes that are in the allowlist', async () => {
     const { challenge } = pkce();

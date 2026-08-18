@@ -559,6 +559,25 @@ describe('patchPermissionError', () => {
   const ERROR_CODE = 99991679;
   const patch = (output, toolName, tok) => patchPermissionError(toolScopeMap, AUTHORIZE_BASE, output, toolName, tok);
 
+  // The scope-grant class is exactly {99991672, 99991676, 99991679} per lark-cli's
+  // internal/output/lark_errors.go. 99991676 ("token lacks the required scope") was
+  // missing — same remedy as 99991679, so it must mint an authorize_url too.
+  it('treats 99991676 (token lacks the scope) as a grantable scope error', () => {
+    const output = JSON.stringify({ error: { code: 99991676, message: 'x', missing_scopes: ['base:appmode_page:read'] } });
+    const parsed = JSON.parse(patch(output, 'lark_base_app_page_create', 'tok'));
+    expect(parsed.error.authorize_url).toContain('extra_scope=base%3Aappmode_page%3Aread');
+    expect(parsed.error.required_scopes).toEqual(['base:appmode_page:read']);
+    // Not the app-scope class: console_url is noise here, so it stays stripped.
+    expect(parsed.error.user_action).not.toContain('publish a new app version');
+  });
+
+  // Resource-level denial is NOT a scope problem — offering a consent link would
+  // send the agent to grant a permission that was never missing.
+  it('does not touch a resource-level permission_denied (91403 class)', () => {
+    const output = JSON.stringify({ error: { type: 'authorization', subtype: 'permission_denied', code: 91403, message: 'no access to this base' } });
+    expect(patch(output, 'lark_base_record_list', 'tok')).toBe(output);
+  });
+
   // Regression: a scope that is allow-listed but NOT in the deployment's default
   // consent set can only be granted through incremental auth, and this function is
   // what mints that link. Feishu reports those with 99991672 /
