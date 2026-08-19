@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.87",
-    "extracted_at": "2026-08-17",
+    "lark_cli_version": "1.0.88",
+    "extracted_at": "2026-08-19",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -3311,6 +3311,13 @@
     },
     {
       "service": "sheets",
+      "command": "+sheet-list",
+      "scopes": [
+        "sheets:spreadsheet:read"
+      ]
+    },
+    {
+      "service": "sheets",
       "command": "+sheet-move",
       "scopes": [
         "sheets:spreadsheet:read",
@@ -3591,7 +3598,8 @@
       "scopes": [
         "slides:presentation:update",
         "slides:presentation:write_only",
-        "wiki:node:read"
+        "wiki:node:read",
+        "docs:document.media:upload"
       ]
     },
     {

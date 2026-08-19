@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.87",
+    "lark_cli_version": "1.0.88",
     "source": "lark-cli schema _meta.scopes"
   },
   "rawApis": [
@@ -825,6 +825,27 @@
       "method": "forward",
       "scopes": [
         "im:message"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "messages",
+      "method": "read_status",
+      "scopes": [
+        "im:message:get_as_user",
+        "im:message",
+        "im:message:readonly"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "messages",
+      "method": "read_users",
+      "scopes": [
+        "im:message:basic",
+        "im:message:readonly",
+        "im:message",
+        "im:message:get_as_user"
       ]
     },
     {

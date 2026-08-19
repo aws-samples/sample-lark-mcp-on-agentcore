@@ -3,7 +3,7 @@
 本文档是 Workflow `steps` JSON 的单一事实来源（SSOT），定义完整数据结构，适用于：
 - **查询场景**：理解 `lark_base_workflow_get` 返回的 `steps` 结构
 - **创建/修改场景**：构造 `lark_base_workflow_create()` / `lark_base_workflow_update()` 的 `json` 参数
-> 💡 **本文档是纯字段参考**。如需**创建/修改**工作流的完整示例，请阅读 `lark_get_skill(domain="base", section="workflow-guide")`。
+> 💡 **本文档是纯字段参考**。如需**创建/修改**工作流的完整示例，请阅读 `lark_get_skill(domain="base", section="workflow")`。
 ---
 ## 📖 快速导航
 
@@ -1063,5 +1063,5 @@ $.{stepId}.{fieldId}.fileToken    → 文件 Token 列表（array<string>，仅�
 
 ## 参考
 
-- `lark_get_skill(domain="base", section="workflow-guide")` — 完整示例和构造技巧
+- `lark_get_skill(domain="base", section="workflow")` — 完整示例和构造技巧
 - 创建/更新时外层只承载 workflow 元信息，核心校验对象是 `steps`；列表只用于拿 workflow ID 和启停状态

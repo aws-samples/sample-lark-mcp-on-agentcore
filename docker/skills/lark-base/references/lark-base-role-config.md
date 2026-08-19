@@ -1,6 +1,6 @@
-# Base role permission JSON SSOT
+# Base Role Permission Schema
 
-> **入口指南**: `lark_get_skill(domain="base", section="role-guide")` | **相关命令**: `lark_base_role_create()` · `lark_base_role_update()` · `lark_base_role_get()`
+> **模块入口**: `lark_get_skill(domain="base", section="advanced-permission-and-role")` | **相关命令**: `lark_base_role_create()` · `lark_base_role_update()` · `lark_base_role_get()`
 
 本文档是角色权限 JSON（AdvPermBaseRoleConfig）的单一事实来源（SSOT），供 `lark_base_role_create()` 和 `lark_base_role_update()` 构造 `json` 参数时参考。
 

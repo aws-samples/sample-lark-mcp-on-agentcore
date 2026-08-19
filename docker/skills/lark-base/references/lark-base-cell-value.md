@@ -1,15 +1,14 @@
 # base CellValue 规范（lark-base-cell-value）
 
-> 适用命令：`lark_base_record_upsert`、`lark_base_record_batch_create`、`lark_base_record_batch_update`
+> 适用命令：`lark_base_record_batch_create`、`lark_base_record_batch_update`
 
 本文件定义 **shortcut 写记录** 时 `CellValue` 的推荐格式，目标是让 AI 一次写对。不同命令的外层 JSON 形状不同，但每个 cell 都以本文为 source of truth。
 
 ## 1. 顶层规则（必须遵守）
 
 - `json` 必须是 JSON 对象。
-- `lark_base_record_upsert()`：顶层直接传字段映射：`{"字段名或字段ID": CellValue}`。
-- `lark_base_record_batch_create()`：使用 `create_records`，其每个元素都是 `Map<FieldNameOrID, CellValue>`。
-- `lark_base_record_batch_update()`：使用 `update_records`，其每个 value 都是 `Map<FieldNameOrID, CellValue>`。
+- `lark_base_record_batch_create()` 的 `json` 使用 `{"create_records":[{"字段名或字段ID": CellValue}, ...]}`，数组中的每个对象代表一条新 Record。
+- `lark_base_record_batch_update()` 的 `json` 使用 `{"update_records":{"rec_xxx":{"字段名或字段ID": CellValue}, ...}}`，以 `record_id` 定位每条待更新 Record。
 - 一次 payload 里同一字段只用一种 key（字段名或字段 ID），不要重复。
 - 写入前先 `lark_base_field_list()` 获取字段 `type/style/multiple`，再构造值。
 - 需要清空字段时优先传 `null`（字段允许清空时）。

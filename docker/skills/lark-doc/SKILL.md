@@ -1,6 +1,6 @@
 ---
 name: lark-doc
-description: "飞书云文档（Docx / Wiki）内容操作：读取、创建、编辑文档，插入或下载图片附件，以及操作思维笔记。用户提供文档 URL/token（包括 doubao.com 的 /docx/、/wiki/）时使用；按 URL 路径/token 而非域名路由。文档内嵌资源按读取参考中的统一规则分流。文档评论走 lark-drive；表格或 Base 内部数据操作不在本 skill。"
+description: "飞书云文档（Docx / Wiki）内容操作：读取、创建、编辑文档，插入或下载图片附件，以及操作思维笔记。用户提供文档 URL/token（包括 doubao.com 的 /docx/、/wiki/）时使用；按 URL 路径/token 而非域名路由。文档内嵌资源按读取参考中的统一规则分流。独立评论操作走 lark-drive；随正文读取评论使用 lark_docs_fetch。表格或 Base 内部数据操作不在本 skill。"
 ---
 
 # docs
@@ -28,7 +28,7 @@ description: "飞书云文档（Docx / Wiki）内容操作：读取、创建、�
 ### 资源、画板与思维笔记
 
 - **插入本地素材 — `lark_docs_media_insert`**：在文末插入本地图片或文件，见 `lark_get_skill(domain="doc", section="media-insert")`。
-- **预览素材 — `lark_docs_media_preview`**：预览文档中的图片、附件或素材。
+- **预览素材 — `lark_docs_media_preview`**：预览文档或评论中的图片、附件或素材。
 - **下载素材 — `lark_docs_media_download`**：下载文档中的图片、附件、素材或画板缩略图；画板缩略图只能用 `type="whiteboard"`（不要用 preview）。
 - **Docx 封面 — `lark_docs_resource_download` / `lark_docs_resource_update` / `lark_docs_resource_delete`**：`type="cover"`，见 `lark_get_skill(domain="doc", section="resource-cover")`；仅支持 Docx 封面，其他素材走 `lark_docs_media_*`。
 - **画板 — 画板工作流**：创建或更新画板时先读 `lark_get_skill(domain="doc", section="whiteboard")`；更新已有画板必须复用现有 token，禁止新建空白画板；用 `lark_whiteboard_update` 写入。
@@ -55,5 +55,5 @@ description: "飞书云文档（Docx / Wiki）内容操作：读取、创建、�
 ## 不在本 Skill 范围
 
 - **Drive 文件级操作**：找文档、导入导出、云空间文件上传 / 下载 / 权限管理 → `lark_get_skill(domain="drive")`。复制文档、创建副本或另存为副本时用 `lark_drive_copy`（见 `lark_get_skill(domain="drive", section="copy")`）；不要用 `lark_docs_fetch` + `lark_docs_create` 重建正文。
-- **文档评论**：添加、查看、回复评论或增删 reaction → `lark_get_skill(domain="drive")`。
+- **独立评论操作**：添加、分页查看、回复评论或增删 reaction → `lark_get_skill(domain="drive")`；只需紧凑评论上下文时，直接使用默认 JSON 响应的 `lark_docs_fetch`。
 - **电子表格或 Base 的数据操作** → `lark_get_skill(domain="sheets")` / `lark_get_skill(domain="base")`。

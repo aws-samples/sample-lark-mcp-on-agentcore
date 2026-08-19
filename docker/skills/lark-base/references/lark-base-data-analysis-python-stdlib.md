@@ -2,7 +2,7 @@
 
 仅在统一数据分析 SOP 已选择 Python 标准库后读取。本页不重复 Base 的粒度与关系规则，只展示对应实现。
 
-> ⚠️ MCP server 不运行这些代码，也不能把 NDJSON artifact 交给它们：`format="ndjson"` 生成的文件在服务端容器内不可读取，`lark_exec_script` 只执行随 skill 打包的脚本。这些示例适用于 agent 在**自己的运行环境**里分析已经拿到手的记录——把 `jq_records` 结果或 `format="json"` 返回的记录先落成本地 `.ndjson`（每行一条 record），再套用下面的写法。只在服务端一次算完更划算时，用 `jq_records` 表达同样的逻辑，见 `lark_get_skill(domain="base", section="data-analysis-sop")`。
+> ⚠️ MCP server 不运行这些代码，也不能把 NDJSON artifact 交给它们：`format="ndjson"` 生成的文件在服务端容器内不可读取，`lark_exec_script` 只执行随 skill 打包的脚本。这些示例适用于 agent 在**自己的运行环境**里分析已经拿到手的记录——把 `jq_records` 结果或 `format="json"` 返回的记录先落成本地 `.ndjson`（每行一条 record），再套用下面的写法。只在服务端一次算完更划算时，用 `jq_records` 表达同样的逻辑，见 `lark_get_skill(domain="base", section="record-query-and-analysis-sop")`。
 
 示例假设 `records.ndjson` 包含 `record_id`、`日期`、`状态`、`金额`、`负责人`、`标签`、`关联客户`；`customers.ndjson` 包含 `record_id`、`客户名称`。多值列使用统一数据分析 SOP 定义的数组结构。
 

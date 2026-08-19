@@ -1,9 +1,9 @@
 
-# Base data-query DSL SSOT
+# Base data-query DSL reference
 
-> **入口指南**: `lark_get_skill(domain="base", section="data-query-guide")`
+> **前置路由**: `lark_get_skill(domain="base", section="record-query-and-analysis-sop")`
 
-本文档是 `lark_base_data_query()` JSON DSL 的单一事实来源（SSOT），用于说明完整字段、操作符、限制、返回和错误恢复。数据表查询与分析先由 `lark_get_skill(domain="base", section="data-analysis-sop")` 选路；Cloud SOP 选定 `lark_base_data_query()` 后先读 `lark_get_skill(domain="base", section="data-query-guide")`，guide 未覆盖需求或用户明确要求完整 DSL/API reference 时再读本文。
+本文档合并常用 fewshot 与完整 DSL 协议。只有 `lark_get_skill(domain="base", section="record-query-and-analysis-sop")` 的 Cloud 路径选定 `lark_base_data_query()` 后才读取，并优先定位与当前查询有关的示例、字段或错误协议。
 
 ## 限制
 
@@ -411,6 +411,6 @@ value 使用预定义关键字机制，第一个元素为字符串常量名称�
 ## 参考
 
 - `lark_get_skill(domain="base")` — 多维表格全部命令
-- `lark_get_skill(domain="base", section="data-analysis-cloud")` — Cloud 路径的查询范围、下推、分页、`lark_base_record_list()` / `lark_base_record_search()` 回查和关系查询 SOP
+- `lark_get_skill(domain="base", section="record-query-and-analysis-cloud-sop")` — Cloud 路径的查询范围、下推、分页、`lark_base_record_list()` / `lark_base_record_search()` 回查和关系查询 SOP
 - `lark_get_skill(domain="base", section="cell-value")` — CellValue 格式规范
-- `lark_get_skill(domain="base", section="field-json")` — 字段类型与 JSON 结构
+- `lark_get_skill(domain="base", section="field-schema")` — 字段类型与 JSON 结构

@@ -7,6 +7,8 @@ description: "飞书会议纪要（Note）直查：已知 note_id 时查询纪�
 
 （认证由 MCP server 自动处理，始终以 user 身份执行。）
 
+`lark_note_detail` 返回的 `note_doc_token` / `verbatim_doc_token` / `shared_doc_tokens` 交给 lark-doc（`lark_get_skill(domain="doc")`）读正文时，这些 token 绑定的身份与获取 note 详情时一致。lark-doc 对普通文档默认以 user 身份操作，**不覆盖这些纪要文档 token 的来源身份**。
+
 **CRITICAL — 开始前 MUST 先调用 `lark_get_skill(domain="vc", section="vc-domain-boundaries")`**，不读将导致命令使用、会议产物决策、领域边界职责判断错误：
 > 1. 了解日历 & VC、会议产物 & 文档的关联关系和职责划分
 > 2. 了解会议产物（妙记和纪要）之间的关联关系，例如：**妙记和纪要产生条件相互独立**

@@ -56,4 +56,4 @@ lark_base_view_set_filter(json='{"logic":"and","conditions":[["状态","intersec
 ## 6. 参考
 
 - `lark_get_skill(domain="base", section="filter-condition")`：filter/visible_rule 条件结构公共协议 SSOT
-- `lark_get_skill(domain="base", section="lookup-field-guide")`
+- `lark_get_skill(domain="base", section="field-lookup")`

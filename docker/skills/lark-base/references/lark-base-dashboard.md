@@ -13,8 +13,8 @@ Dashboard 是 Base 中的数据可视化看板，可以把表格数据变成**�
 | 你想做什么 | 用这些命令 | 关键文档 |
 |------|-----------|---------|
 | 创建/删除/改名称 | `lark_base_dashboard_create` / `lark_base_dashboard_delete` / `lark_base_dashboard_update` | 本页下方「仪表盘管理」 |
-| 在仪表盘里添加组件 | `lark_base_dashboard_block_create` | 先定位 dashboard、表和字段，再读 `lark_get_skill(domain="base", section="dashboard-block-data-config")` 构造 `data_config` |
-| 修改组件 | `lark_base_dashboard_block_update` | 先读 block 现状，再读 `lark_get_skill(domain="base", section="dashboard-block-data-config")` 决定替换哪些顶层 key |
+| 在仪表盘里添加组件 | `lark_base_dashboard_block_create` | 先定位 dashboard、表和字段，再读 `lark_get_skill(domain="base", section="dashboard-block-config")` 构造 `data_config` |
+| 修改组件 | `lark_base_dashboard_block_update` | 先读 block 现状，再读 `lark_get_skill(domain="base", section="dashboard-block-config")` 决定替换哪些顶层 key |
 | 查看仪表盘有哪些组件 | `lark_base_dashboard_get` 或 `lark_base_dashboard_block_list` | 本页下方「查看仪表盘」 |
 | 读取图表计算结果 | `lark_base_dashboard_block_get_data` | 返回图表最终数据协议；需要 block 元数据先用 `lark_base_dashboard_block_get()` |
 | 智能重排组件布局 | `lark_base_dashboard_arrange` | 用户明确要求重排，或本次会话新建仪表盘的收尾整理；无法指定 `x/y/w/h`、精确位置或尺寸 |
@@ -45,7 +45,7 @@ lark_base_field_list(base_token="xxx", table_id="<table_id>")
 
 # 第 4 步：顺序创建每个组件（必须串行执行，不能并发）
 # 重要：创建组件前，先确定 dashboard_id、组件 name/type 和真实表字段
-# 再阅读 lark_get_skill(domain="base", section="dashboard-block-data-config") 了解 data_config 结构、组件类型和 filter 规则
+# 再阅读 lark_get_skill(domain="base", section="dashboard-block-config") 了解 data_config 结构、组件类型和 filter 规则
 
 # 第 1 个组件
 lark_base_dashboard_block_create(data_config='{"table_name":"订单表","series":[{"field_name":"金额","rollup":"SUM"}]}', base_token="xxx", dashboard_id="blk_xxx", name="总销售额", type="statistics")
@@ -78,7 +78,7 @@ lark_base_field_list(base_token="xxx", table_id="<table_id>")
 
 # 第 4 步：顺序创建每个新组件（必须串行执行，不能并发）
 # 重要：先确定 dashboard_id、组件 name/type 和真实表字段
-# 再阅读 lark_get_skill(domain="base", section="dashboard-block-data-config") 了解 data_config 结构
+# 再阅读 lark_get_skill(domain="base", section="dashboard-block-config") 了解 data_config 结构
 lark_base_dashboard_block_create(data_config='{...}', base_token="xxx", dashboard_id="blk_xxx", name="新组件名", type="column")
 ```
 
@@ -107,7 +107,7 @@ lark_base_field_list(base_token="xxx", table_id="<table_id>")
 
 # 第 5 步：执行更新
 # 重要：先读取当前 block 的 name/type/data_config
-# 再阅读 lark_get_skill(domain="base", section="dashboard-block-data-config") 了解 data_config 更新规则
+# 再阅读 lark_get_skill(domain="base", section="dashboard-block-config") 了解 data_config 更新规则
 lark_base_dashboard_block_update(data_config='{...}', base_token="xxx", dashboard_id="blk_xxx", block_id="chtxxxxxxxx")
 ```
 
@@ -142,7 +142,7 @@ lark_base_dashboard_arrange(base_token="xxx", dashboard_id="blk_xxx")
 
 1. 图表或指标卡：使用方式 D 读取计算结果。
 2. `text`：使用方式 C，正文位于 `data_config.text`；text 没有计算结果，但属于完整仪表盘内容。
-3. get-data 返回不支持的图表类型：先用方式 C 读取真实 `data_config`，确认 `table_name`、维度、指标、聚合与筛选，再按 `lark_get_skill(domain="base", section="data-analysis-sop")` 使用 `lark_base_data_query()` 重建同口径结果。字段必须来自真实配置和表结构，不得猜测；无法等价重建时明确报告限制，不能静默省略该 block。
+3. get-data 返回不支持的图表类型：先用方式 C 读取真实 `data_config`，确认 `table_name`、维度、指标、聚合与筛选，再按 `lark_get_skill(domain="base", section="record-query-and-analysis-sop")` 使用 `lark_base_data_query()` 重建同口径结果。字段必须来自真实配置和表结构，不得猜测；无法等价重建时明确报告限制，不能静默省略该 block。
 
 ```
 # 第 1 步：列出仪表盘，定位到当前仪表盘
@@ -179,14 +179,14 @@ lark_base_dashboard_block_get_data(base_token="xxx", block_id="chtxxxxxxxx")
 | 单个关键指标 | statistics | 指标卡组件 |
 | 富文本说明/标题/注释 | text | 文本组件（支持 Markdown） |
 
-详细组件类型和 data_config 完整规则：`lark_get_skill(domain="base", section="dashboard-block-data-config")`
+详细组件类型和 data_config 完整规则：`lark_get_skill(domain="base", section="dashboard-block-config")`
 
 ## 常见问题
 
 **Q: 创建组件的命令和 data_config 怎么写？**
 A:
 1. 先确定 `dashboard_id`、组件 `name`、组件 `type` 和真实表字段
-2. 再读 `lark_get_skill(domain="base", section="dashboard-block-data-config")` 了解：
+2. 再读 `lark_get_skill(domain="base", section="dashboard-block-config")` 了解：
    - 全部组件类型的可复制模板
    - filter 筛选条件格式
    - 字段类型与操作符对应表
@@ -207,7 +207,7 @@ A: 不能。`lark_base_dashboard_block_update` 只能修改 `name` 和 `data_con
 **Q: 更新组件的命令和 data_config 怎么写？**
 A:
 1. 先读取当前 block，确认 `block_id`、当前 `type` 和已有 `data_config`
-2. 再读 `lark_get_skill(domain="base", section="dashboard-block-data-config")` 了解 data_config 结构
+2. 再读 `lark_get_skill(domain="base", section="dashboard-block-config")` 了解 data_config 结构
 
 **data_config 更新策略（顶层 key merge）**：
 - 只传入需要修改的顶层字段（如 `series`、`filter`）

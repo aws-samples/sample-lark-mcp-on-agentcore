@@ -1,6 +1,6 @@
-# Base advanced permission and role guide
+# Base Advanced Permission 与 Role
 
-This guide is the entry point for Base advanced permissions and roles. Use it to choose commands and understand safety boundaries. For the permission JSON itself, use `lark_get_skill(domain="base", section="role-config")` as the SSOT.
+This is the module entry point for Base advanced permissions and roles. Use it to choose commands and understand safety boundaries. For the permission JSON itself, use `lark_get_skill(domain="base", section="role-config")` as the SSOT.
 
 ## Command selection
 

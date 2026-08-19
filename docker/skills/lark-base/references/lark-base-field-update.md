@@ -38,7 +38,7 @@ PUT /open-apis/base/v3/bases/:base_token/tables/:table_id/fields/:field_id
 - `json` 必须是 **JSON 对象**，顶层直接传字段定义。
 - 更新语义是 `PUT`（全量字段配置更新），不要只传零散片段；至少显式包含 `name`、`type`，并补齐该类型所需关键配置。
 - 所有字段类型都支持可选 `description`；支持纯文本，也支持 Markdown 链接。
-- 需要字段默认值时传 `default_value`，直接使用字段对应 CellValue；传 `null` 清空，省略表示不修改现有默认值。完整规则见 `lark_get_skill(domain="base", section="field-json")`。
+- 需要字段默认值时传 `default_value`，直接使用字段对应 CellValue；传 `null` 清空。完整规则见 `lark_get_skill(domain="base", section="field-schema")`。
 - `select` 更新时：`options` 仍按对象数组传，避免混入无效字段。
 - `link` 更新限制：
   - 不能把非 `link` 字段改成 `link`，也不能把 `link` 改成非 `link`。
@@ -165,6 +165,6 @@ PUT /open-apis/base/v3/bases/:base_token/tables/:table_id/fields/:field_id
 ## 参考
 
 - 更新前读取当前字段，确认现有 `type` 和具体配置细节，再决定是原地更新还是新建字段迁移。
-- `lark_get_skill(domain="base", section="field-json")` — 字段 JSON 规范（推荐）
-- `lark_get_skill(domain="base", section="formula-field-guide")` — formula 指南（更新公式前必读）
-- `lark_get_skill(domain="base", section="lookup-field-guide")` — lookup 指南（更新查找引用前必读）
+- `lark_get_skill(domain="base", section="field-schema")` — 字段 JSON 规范（推荐）
+- `lark_get_skill(domain="base", section="field-formula")` — 更新公式前必读
+- `lark_get_skill(domain="base", section="field-lookup")` — 更新查找引用前必读

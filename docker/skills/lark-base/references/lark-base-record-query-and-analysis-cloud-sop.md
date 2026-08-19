@@ -1,4 +1,4 @@
-# Base cloud data analysis SOP
+# Base Record 查询与分析 Cloud SOP
 
 统一数据分析 SOP 将任务路由到 Cloud 时使用本 SOP。覆盖记录读取、筛选、排序、Top/Bottom N、聚合统计、分组聚合、多表关联和查询后写入前的目标定位。
 
@@ -25,7 +25,7 @@
 | 明确关键词 | `lark_base_record_search(keyword="...", search_field=["..."], field_id=["..."])` | 必须显式指定 `search_field`；可叠加 `filter_json` |
 | 按条件找原始记录 | `lark_base_record_list(filter_json="...")` | `filter_json` 与视图筛选结构一致，支持文本、数字、日期、选项、人员、群组、关联等值 |
 | 排序 / TopN 原始记录 | `lark_base_record_list(filter_json="...", sort_json="...", limit=N)` | 最高/最新用 `desc:true`，最低/最早用 `desc:false`；数组顺序表达优先级；最多 10 个排序条件 |
-| 聚合 / 分组 / 分组排序 | `lark_base_data_query()` | 读取 `lark_get_skill(domain="base", section="data-query-guide")`，使用 filters/dimensions/measures/sort/limit |
+| 聚合 / 分组 / 分组排序 | `lark_base_data_query()` | 读取 `lark_get_skill(domain="base", section="data-query")`，使用 filters/dimensions/measures/sort/limit |
 | 聚合后输出逐条记录 | `lark_base_data_query()` 得到业务 key 或候选字段组合 -> `lark_base_record_list(filter_json="...")` / `lark_base_record_get()` 回查 | `lark_base_data_query()` 维度行按字段组合去重且不返回 `record_id` |
 | 多表 / 多跳关联 | 以候选数最小的事实表为驱动表，沿业务 key 或 Link 逐跳回查 | 读出 Link 单元格的 `id`（目标表 `record_id`）后，到被关联表批量 `lark_base_record_get()` 展示字段 |
 | 查询后写入 / 视图化 | 先用本 SOP 得到可复核的目标记录 id 集合 | 再进入记录写入或视图配置；高价值可复用查询可沉淀为持久视图 |
@@ -47,7 +47,7 @@ Example: 结构化筛选 + TopN；示例展示文本包含、数字比较和 Sel
 lark_base_record_list(base_token="<base_token>", table_id="<table_id>", filter_json='{"logic":"and","conditions":[["Title","intersects","Launch plan"],["Score",">=",80],["Status","intersects",["Doing"]]]}', sort_json='[{"field":"Updated","desc":true}]', field_id=["Name", "Title", "Score"], limit=20)
 ```
 
-常用 `filter_json` condition fewshot 统一见 `lark_get_skill(domain="base", section="data-analysis-sop")`；完整协议见 `lark_get_skill(domain="base", section="filter-condition")`。
+常用 `filter_json` condition fewshot 统一见 `lark_get_skill(domain="base", section="record-query-and-analysis-sop")`；完整协议见 `lark_get_skill(domain="base", section="filter-condition")`。
 
 `sort_json` 传排序数组，数组顺序就是优先级，`desc:true` 为降序，`desc:false` 为升序，最多 10 个排序条件。
 
@@ -67,7 +67,7 @@ lark_base_record_search(base_token="<base_token>", table_id="<table_id>", keywor
 
 - 让 Base 云端查询服务完成 filters、dimensions、measures、sort、pagination.limit。
 - `pagination.limit` 是 Base 云端查询服务中的结果限制，不是本地分页扫描。
-- 先读 `lark_get_skill(domain="base", section="data-query-guide")`；需要 guide 未覆盖的字段类型、日期 value、DSL shape、限制或响应协议时再读 `lark_get_skill(domain="base", section="data-query")`。
+- 读取 `lark_get_skill(domain="base", section="data-query")` 中与当前查询有关的 fewshot、字段和协议。
 - `lark_base_data_query()` 可返回聚合结果或维度字段行；维度字段行按字段组合去重且不返回 `record_id`，不能当逐条原始记录结果使用。
 - 需要输出逐条记录、记录定位或完整行级字段时，先用 `lark_base_data_query()` 得到业务 key、分组值或候选字段组合，再用 `lark_base_record_list(filter_json="...")` / `lark_base_record_get()` 回查。
 
