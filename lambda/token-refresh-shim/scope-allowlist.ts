@@ -145,6 +145,8 @@ export const SCOPE_ALLOWLIST: ReadonlySet<string> = new Set([
   "im:message.reactions:read",
   "im:message.reactions:write_only",
   "im:message.send_as_user",
+  "im:message:basic",
+  "im:message:get_as_user",
   "im:message:readonly",
   "im:message:recall",
   "im:resource",

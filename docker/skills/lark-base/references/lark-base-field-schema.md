@@ -1,4 +1,4 @@
-# Base field JSON SSOT
+# Base Field Schema
 
 > 适用工具：`lark_base_field_create()`、`lark_base_field_update()`
 
@@ -377,7 +377,7 @@
 
 ### 3.9 formula
 
-公式字段；`expression` 必填。创建/更新前先读 `lark_get_skill(domain="base", section="formula-field-guide")` 学习公式语法。
+公式字段；`expression` 必填。创建/更新前先读 `lark_get_skill(domain="base", section="field-formula")` 学习公式语法。
 
 ```json
 {
@@ -389,7 +389,7 @@
 
 ### 3.10 lookup
 
-查找引用字段；`from`、`select`、`where` 必填，`aggregate` 可选。创建/更新前先读 `lark_get_skill(domain="base", section="lookup-field-guide")`。
+查找引用字段；`from`、`select`、`where` 必填，`aggregate` 可选。创建/更新前先读 `lark_get_skill(domain="base", section="field-lookup")`。
 
 支持字段：`from`、`select`、`where`、`aggregate`
 

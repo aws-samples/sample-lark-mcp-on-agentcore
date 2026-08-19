@@ -45,7 +45,7 @@ POST /open-apis/base/v3/bases/:base_token/tables/:table_id/fields
 - 数组按顺序创建字段，遇到首个失败即停止且不自动回滚已创建字段；需要原子写入时不要假设数组具备事务语义。
 - 每个字段对象最少包含：`name`、`type`。
 - 所有字段类型都支持可选 `description`；支持纯文本，也支持 Markdown 链接，如 `协作约定可参考[团队字段约定](https://example.com/field-spec)`。
-- 需要字段默认值时传 `default_value`，直接使用字段对应 CellValue；`datetime` / `user` 的动态填充用 `$slot`。完整规则见 `lark_get_skill(domain="base", section="field-json")`。
+- 需要字段默认值时传 `default_value`，直接使用字段对应 CellValue；`datetime` / `user` 的动态填充用 `$slot`。完整规则见 `lark_get_skill(domain="base", section="field-schema")`。
 - `type` 不同，必填子字段不同：
   - `select`：`multiple` 控制是否多选，`options` 定义静态选项，`dynamic_options_source` 定义动态选项来源。静态与动态选项配置二选一，不能同时传。
   - `link`：必须有 `link_table`，可选 `bidirectional`、`bidirectional_link_field_name`。
@@ -100,6 +100,6 @@ POST /open-apis/base/v3/bases/:base_token/tables/:table_id/fields
 
 ## 参考
 
-- `lark_get_skill(domain="base", section="field-json")` — 字段 JSON 规范（推荐）
-- `lark_get_skill(domain="base", section="formula-field-guide")` — formula 指南（创建公式必读）
-- `lark_get_skill(domain="base", section="lookup-field-guide")` — lookup 指南（创建查找引用必读）
+- `lark_get_skill(domain="base", section="field-schema")` — 字段 JSON 规范（推荐）
+- `lark_get_skill(domain="base", section="field-formula")` — 创建公式必读
+- `lark_get_skill(domain="base", section="field-lookup")` — 创建查找引用必读

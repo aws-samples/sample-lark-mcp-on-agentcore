@@ -48,7 +48,7 @@ avoids that loop. It does **not** widen what users see at first authorization (s
 minimal set); the only cost is a larger declared permission ceiling and more items for
 your admin to approve.
 
-Scope list (229 entries, copy-paste ready):
+Scope list (231 entries, copy-paste ready):
 
 ```json
 {
@@ -193,6 +193,8 @@ Scope list (229 entries, copy-paste ready):
       "im:message.reactions:read",
       "im:message.reactions:write_only",
       "im:message.send_as_user",
+      "im:message:basic",
+      "im:message:get_as_user",
       "im:message:readonly",
       "im:message:recall",
       "im:resource",

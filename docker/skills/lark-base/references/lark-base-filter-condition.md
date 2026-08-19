@@ -192,4 +192,4 @@ location 筛选只按 `full_address` 字符串匹配，不能直接按经纬度�
 - `formula` / `lookup` 的 value 形状不固定；拿不准时先读当前配置或字段定义，或根据错误提示修正类型。
 
 ## 5. 参考
-- `lark_get_skill(domain="base", section="lookup-field-guide")`
+- `lark_get_skill(domain="base", section="field-lookup")`

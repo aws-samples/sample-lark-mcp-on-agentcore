@@ -676,4 +676,4 @@ lark_base_dashboard_block_get_data(base_token="xxx", block_id="chtxxxxxxxx")
 
 - `lark_get_skill(domain="base", section="dashboard")` — dashboard 模块总指引
 - `lark_base_dashboard_block_get()` — 获取 block 元数据
-- `lark_get_skill(domain="base", section="dashboard-block-data-config")` — data_config 结构和组件类型说明
+- `lark_get_skill(domain="base", section="dashboard-block-config")` — data_config 结构和组件类型说明
