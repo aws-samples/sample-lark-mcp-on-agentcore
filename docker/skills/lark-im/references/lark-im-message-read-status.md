@@ -5,6 +5,8 @@ Two focused tools cover message read-status queries:
 - `lark_im_messages_read_status` queries whether the current user has read 1–50 messages.
 - `lark_im_message_read_users` lists users who have read one message and supports automatic pagination.
 
+The two answer different questions and can disagree on the same message without either being wrong. For a message the current user sent, `lark_im_messages_read_status` reports `is_read: true` (the sender has seen their own message) while `lark_im_message_read_users` can still return `total: 0` — the recipient list is empty because nobody else has opened it yet. Do not treat that pair as a contradiction, and do not use one to sanity-check the other.
+
 Both underlying OpenAPIs support user identity, which is the only identity the MCP server uses (authentication is handled automatically by the MCP server).
 
 ## Identity and scopes
