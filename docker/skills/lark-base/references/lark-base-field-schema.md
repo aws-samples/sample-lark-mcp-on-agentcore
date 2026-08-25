@@ -41,6 +41,7 @@
 | `lookup` | `type` `name` `from` `select` `where` | `aggregate` |
 | `auto_number` | `type` `name` | `style.rules` |
 | `attachment` / `location` / `checkbox` | `type` `name` | 无 |
+| `button` | `type` `name` `button_config.title` | 无 |
 
 所有类型都可额外传 `description`；上表的"常见补充字段"只列类型特有配置。
 
@@ -510,6 +511,14 @@
 { "type": "checkbox", "name": "完成" }
 ```
 
+### 3.13 button
+
+```json
+{ "type": "button", "name": "按钮", "button_config": { "title": "点击按钮" } }
+```
+
+绑定 Workflow 时，使用 `lark_base_button_rule_bind()`；读取绑定关系时，使用 `lark_base_button_rule_get()`；解除绑定用 `lark_base_button_rule_unbind()`。这三个工具都用 `base_token` + `table_id` + `field_id` 定位按钮字段，`lark_base_button_rule_bind()` 另需 `workflow_id`（必须是 `lark_base_workflow_create()` / `lark_base_workflow_list()` 返回的 `wkf` 公共 ID，不是内部数字 ID）；不要把 `workflow_id` 塞进字段 JSON。绑定与 workflow 启停相互独立，需要启用时另调 `lark_base_workflow_enable()`。
+
 ## 4. 创建与更新
 
 - `lark_base_field_create()`：按目标字段配置直接构造 `json`。
@@ -517,7 +526,7 @@
 
 ## 5. 暂不支持字段
 
-Object（对象字段）、Button（按钮字段）、Stage（流程字段）暂时都没有被支持。这些字段会展示为 `not_support` 字段并被保护：不允许修改，不允许读取内容。
+Object（对象字段）、Stage（流程字段）暂时没有被支持。这些字段会展示为 `not_support` 字段并被保护：不允许修改，不允许读取内容。
 
 遇到暂不支持的字段类型时，直接说明当前工具不支持并停止；不要猜测未注册的字段 JSON 或 schema，也不要用其他字段类型冒充目标能力。
 

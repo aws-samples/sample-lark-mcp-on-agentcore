@@ -154,7 +154,7 @@ lark_docs_fetch(doc="<doc_token_or_url>", detail="with-ids")
 - 如果 `quote` 是 `C3`、`A1` 这类单元格坐标，可拆出 `spreadsheet_token` / `sheet_id` 后切到 `lark_get_skill(domain="sheets")` 读取该单元格确认：
 
 ```
-lark_sheets_read(spreadsheet_token="<spreadsheet_token>", sheet_id="<sheet_id>", range="<cell>")
+lark_sheets_cells_get(spreadsheet_token="<spreadsheet_token>", sheet_id="<sheet_id>", range="<cell>")
 ```
 
 - 准确度口径：父级 sheet block 可由 relation/parent token 精确定位；单元格坐标若只来自 `quote`，应说明“单元格来自 quote，已通过 sheets 读取验证”，不要说它来自 `positionInfo`。

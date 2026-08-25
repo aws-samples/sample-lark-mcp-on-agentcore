@@ -38,7 +38,7 @@
 3. **解析 `from_speaker_id`**
    - 根据用户描述的原说话人（展示名，如「说话人1」「张三」），在 `speakers[]` 里按 `name` **精确匹配**，取对应的 **`speaker_id`** 作为 `from_speaker_id` 的值。
    - **`from_speaker_id` 只传 `speaker_id`，不传展示名。**
-   - 若同名有多条（`name` 相同、`speaker_id` 不同）：**不要擅自挑选**。可结合 `lark_vc_notes(minute_tokens="...")` 对照各人发言内容，请用户确认后再用精确的 `speaker_id`。
+   - 若同名有多条（`name` 相同、`speaker_id` 不同）：**不要擅自挑选**。可用 `lark_minutes_detail(minute_tokens="<minute_token>", transcript=true)`（详见 `lark_get_skill(domain="meeting", section="lark-minutes-detail")`）对照各人发言内容，请用户确认后再用精确的 `speaker_id`。
    - 若列表中无匹配展示名：告知用户并核对拼写，或请用户在妙记页面确认标签。
 
 4. **解析 `to_user_id`**
@@ -95,6 +95,6 @@ Agent 必须先用 `lark_invoke` 裸调 `.../speakerlist`，再 `lark_minutes_sp
 | `from_speaker_id` | 实际用于替换的不透明说话人标识 |
 | `to_user_id` | 替换后的新说话人 open_id，与输入的 `to_user_id` 一致 |
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="minutes")` -- 妙记相关功能说明
+- `lark_get_skill(domain="meeting", section="scenes/create-and-edit-minutes")` — 生成和修改妙记

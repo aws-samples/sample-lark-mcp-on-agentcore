@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.88",
-    "extracted_at": "2026-08-19",
+    "lark_cli_version": "1.0.89",
+    "extracted_at": "2026-08-25",
     "source": "https://github.com/larksuite/cli"
   },
   "shortcuts": [
@@ -866,6 +866,29 @@
     },
     {
       "service": "base",
+      "command": "+button-rule-bind",
+      "scopes": [
+        "base:field:read",
+        "base:field:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+button-rule-get",
+      "scopes": [
+        "base:field:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+button-rule-unbind",
+      "scopes": [
+        "base:field:read",
+        "base:field:update"
+      ]
+    },
+    {
+      "service": "base",
       "command": "+dashboard-arrange",
       "scopes": [
         "base:dashboard:update"
@@ -939,6 +962,20 @@
       "command": "+dashboard-list",
       "scopes": [
         "base:dashboard:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+dashboard-share-get",
+      "scopes": [
+        "base:dashboard:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+dashboard-share-update",
+      "scopes": [
+        "base:dashboard:update"
       ]
     },
     {
@@ -1056,6 +1093,20 @@
     {
       "service": "base",
       "command": "+form-questions-update",
+      "scopes": [
+        "base:form:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+form-share-get",
+      "scopes": [
+        "base:form:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+form-share-update",
       "scopes": [
         "base:form:update"
       ]
@@ -1252,6 +1303,27 @@
       "command": "+table-update",
       "scopes": [
         "base:table:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+template-categories",
+      "scopes": [
+        "base:template:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+template-list",
+      "scopes": [
+        "base:template:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+template-search",
+      "scopes": [
+        "base:template:read"
       ]
     },
     {
@@ -2112,11 +2184,25 @@
     },
     {
       "service": "im",
+      "command": "+message-read-users",
+      "scopes": [
+        "im:message:readonly"
+      ]
+    },
+    {
+      "service": "im",
       "command": "+messages-mget",
       "scopes": [
         "im:message.group_msg:get_as_user",
         "im:message.p2p_msg:get_as_user",
         "im:message.reactions:read"
+      ]
+    },
+    {
+      "service": "im",
+      "command": "+messages-read-status",
+      "scopes": [
+        "im:message:readonly"
       ]
     },
     {

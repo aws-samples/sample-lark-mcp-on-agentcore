@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.88",
+    "lark_cli_version": "1.0.89",
     "source": "lark-cli schema _meta.scopes"
   },
   "rawApis": [
@@ -591,6 +591,22 @@
     },
     {
       "service": "im",
+      "resource": "chat.join_requests",
+      "method": "handle",
+      "scopes": [
+        "im:chat.membership_application:write"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "chat.join_requests",
+      "method": "list",
+      "scopes": [
+        "im:chat.membership_application:read"
+      ]
+    },
+    {
+      "service": "im",
       "resource": "chat.managers",
       "method": "add_managers",
       "scopes": [
@@ -824,6 +840,15 @@
       "resource": "messages",
       "method": "forward",
       "scopes": [
+        "im:message"
+      ]
+    },
+    {
+      "service": "im",
+      "resource": "messages",
+      "method": "patch",
+      "scopes": [
+        "im:message:update",
         "im:message"
       ]
     },

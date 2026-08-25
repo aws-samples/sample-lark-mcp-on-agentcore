@@ -179,7 +179,7 @@ Risk / Structure: `R2-R3` / `S3`
 | `RESOLVE_TARGET` | `lark_drive_inspect`、`lark_wiki_node_get`、`lark_wiki_space_list`、仅用于查找文件夹候选的 `lark_drive_search` | 解析目标位置 |
 | `SEARCH_RECALL` / `RECALL_ENHANCE` | `lark_drive_search` | 搜索召回和覆盖增强 |
 | `RESOURCE_RESOLVE` | `lark_drive_inspect`、`lark_wiki_node_get`、`lark_invoke(tool_name="lark_drive_metas_batch_query", ...)`、必要时 `lark_invoke(tool_name="lark_drive_permission_members_auth", ...)` | 解析标准 token、owner、权限信号和移动资格 |
-| `CONTENT_VERIFY` | `lark_docs_fetch`、`lark_sheets_read`、`lark_sheets_find`、必要时 `lark_drive_preview` | 验证内容证据 |
+| `CONTENT_VERIFY` | `lark_docs_fetch`、`lark_sheets_cells_get`、`lark_sheets_cells_search`、必要时 `lark_drive_preview` | 验证内容证据 |
 | `EXECUTE` | `lark_drive_create_folder`、`lark_wiki_node_create`、`lark_drive_move`、`lark_wiki_move`、`lark_wiki_move_to_drive`、`lark_drive_task_result` | 执行已确认写操作 |
 | `VERIFY` | `lark_invoke(tool_name="lark_drive_files_list", ...)`、`lark_wiki_node_list`、`lark_wiki_node_get`、`lark_drive_inspect`、`lark_drive_task_result` | 验证执行结果 |
 | `RESTORE` | `lark_drive_move`、`lark_wiki_move`、`lark_drive_delete`、`lark_wiki_node_delete`、`lark_drive_task_result` | 恢复已确认资源并清理本次新建目标 |

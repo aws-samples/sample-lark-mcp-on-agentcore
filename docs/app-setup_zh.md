@@ -38,7 +38,7 @@ Manager。请妥善保管，不要提交到代码库。
 反复。它**不影响**用户首次授权看到的范围（那始终是最小集），代价只是应用声明的权限上限更大、
 管理员审核项更多。
 
-scope 清单（229 条，可直接复制导入）：
+scope 清单（233 条，可直接复制导入）：
 
 ```json
 {
@@ -95,6 +95,7 @@ scope 清单（229 条，可直接复制导入）：
       "base:table:delete",
       "base:table:read",
       "base:table:update",
+      "base:template:read",
       "base:view:read",
       "base:view:write_only",
       "base:workflow:create",
@@ -159,6 +160,8 @@ scope 清单（229 条，可直接复制导入）：
       "im:chat.managers:write_only",
       "im:chat.members:read",
       "im:chat.members:write_only",
+      "im:chat.membership_application:read",
+      "im:chat.membership_application:write",
       "im:chat.moderation:read",
       "im:chat.nickname:read",
       "im:chat.nickname:write",
@@ -185,6 +188,7 @@ scope 清单（229 条，可直接复制导入）：
       "im:message.send_as_user",
       "im:message:readonly",
       "im:message:recall",
+      "im:message:update",
       "im:resource",
       "mail:event",
       "mail:user_mailbox.event.mail_address:read",

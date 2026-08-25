@@ -1,9 +1,8 @@
-
 # vc +recording
 
-通过 meeting_id 或 calendar_event_id 查询对应的 minute_token。这是 VC 域和 Minutes 域之间的桥梁命令。只读操作。
+通过 meeting_id 或 calendar_event_id 查询对应的 minute_token。这是会议与妙记之间的桥梁工具。只读操作。
 
-（authentication is handled automatically by the MCP server）
+（认证由 MCP server 自动处理，始终以用户身份执行。）
 
 > **边界提醒：** 如果用户明确要的是"妙记信息""妙记详情""妙记链接""minute_token""标题""时长""owner"这类妙记元信息，先用本工具拿到 `minute_token`，再调用 `lark_invoke(tool_name="lark_minutes_minutes_get", args={params: {"minute_token":"..."}})`。不要直接切到 `lark_minutes_detail`；`lark_minutes_detail` 只用于纪要内容和逐字稿。
 
@@ -37,7 +36,9 @@ lark_vc_recording(meeting_ids="69xxxxxxxxxxxxx28", format="json")
 
 ### 2. 身份
 
-`meeting_ids` 和 `calendar_event_ids` 两种模式在 MCP server 上都以**用户身份**执行（authentication is handled automatically by the MCP server），只能查当前用户有权限的录制。⚠️ 上游还支持应用身份（只能查机器人有权限的录制），但 MCP server 无法切换身份，该路径不可用。
+`meeting_ids` 和 `calendar_event_ids` 两种模式在 MCP server 上都以**用户身份**执行（认证由 MCP server 自动处理），只能查当前用户有权限的录制。⚠️ 上游还支持应用身份（只能查应用有权限的录制），但 MCP server 无法切换身份，该路径不可用。
+
+拿到 `minute_token` 后可直接传给 `lark_invoke(tool_name="lark_minutes_minutes_get", ...)`、`lark_minutes_detail` 或 `lark_minutes_download`，身份保持一致，无需额外传递。
 
 ### 3. 批量上限
 
@@ -67,64 +68,6 @@ lark_vc_recording(meeting_ids="69xxxxxxxxxxxxx28", format="json")
 | `meeting_id` | 使用 `lark_vc_search` 搜索历史会议，取结果中的 `id` 字段 |
 | `calendar_event_id` | 使用 `lark_calendar_agenda` 查看日程，取结果中的 `event_id` 字段 |
 
-## Agent 组合场景
-
-### 场景 1：知道 meeting_id，想下载录制
-
-```
-# 第 1 步：通过 meeting_id 查询录制，拿到 minute_token
-lark_vc_recording(meeting_ids="xxx")
-
-# 第 2 步：使用上一步返回的 minute_token 下载妙记文件
-lark_minutes_download(minute_tokens="<minute_token>")
-```
-
-### 场景 2：知道 meeting_id，想查询妙记基础信息
-
-```
-# 第 1 步：通过 meeting_id 查询录制，拿到 minute_token
-lark_vc_recording(meeting_ids="xxx")
-
-# 第 2 步：使用上一步返回的 minute_token 查询妙记基础信息
-lark_invoke(tool_name="lark_minutes_minutes_get", args={
-  params: {"minute_token": "<minute_token>"}
-})
-```
-
-### 场景 3：知道 meeting_id，想获取完整纪要（含 AI 产物）
-
-```
-# 第 1 步：通过 meeting_id 查询录制，拿到 minute_token
-lark_vc_recording(meeting_ids="xxx")
-
-# 第 2 步：使用上一步返回的 minute_token 获取完整纪要
-# ⚠️ 必须显式指定要获取的产物 flag（summary, keyword, todo, chapter, transcript）
-lark_minutes_detail(minute_tokens="<minute_token>", summary=true, todo=true, chapter=true, transcript=true)
-```
-
-### 场景 4：先搜索会议，再获取录制并下载
-
-```
-# 第 1 步：搜索历史会议，拿到 meeting_ids
-lark_vc_search(query="周会", start="2026-03-10")
-
-# 第 2 步：使用上一步返回的 meeting_ids 查询录制，拿到 minute_tokens
-lark_vc_recording(meeting_ids="<ids>")
-
-# 第 3 步：使用其中一个 minute_token 下载妙记文件
-lark_minutes_download(minute_tokens="<token>")
-```
-
-### 场景 5：从日历事件获取录制
-
-```
-# 第 1 步：通过日历 event_id 查询录制，拿到 minute_token
-lark_vc_recording(calendar_event_ids="<event_id>")
-
-# 第 2 步：使用上一步返回的 minute_token 下载妙记文件
-lark_minutes_download(minute_tokens="<minute_token>")
-```
-
 ## 常见错误与排查
 
 | 错误现象 | 根本原因 | 解决方案 |
@@ -137,12 +80,9 @@ lark_minutes_download(minute_tokens="<minute_token>")
 
 ## 提示
 
-- 默认使用 `format="json"` 输出，Agent 更擅长解析 JSON 数据。
+- 默认使用 `format="json"` 输出，便于稳定解析。
 - `minute_token` 从录制 URL 尾段解析（`https://meetings.feishu.cn/minutes/{minute_token}`）。
 - 拿到 `minute_token` 后，如果要妙记基础信息，优先传给 `lark_invoke(tool_name="lark_minutes_minutes_get", ...)`；如果要下载媒体文件，传给 `lark_minutes_download`；如果要逐字稿、总结、待办、章节，再传给 `lark_minutes_detail(minute_tokens="...")`。
 
-## 参考
-
-- lark_get_skill(domain="vc") — 视频会议全部命令
-- lark_get_skill(domain="vc", section="search") — 搜索历史会议（获取 meeting_id）
-- lark_get_skill(domain="minutes", section="detail") — 获取会议纪要
+## 相关场景
+- 查询会议及其产物：`lark_get_skill(domain="meeting", section="scenes/query-meeting-and-artifacts")`

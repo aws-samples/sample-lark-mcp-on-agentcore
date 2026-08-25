@@ -49,7 +49,7 @@ description: "飞书云文档（Docx / Wiki）内容操作：读取、创建、�
 | `<bitable token="..." table-id="...">` | `token` -> app_token, `table-id` | `lark_get_skill(domain="base")` |
 | `<cite type="doc" file-type="sheets" token="..." sheet-id="...">` | 同 `<sheet>` | `lark_get_skill(domain="sheets")` |
 | `<cite type="doc" file-type="bitable" token="..." table-id="...">` | 同 `<bitable>` | `lark_get_skill(domain="base")` |
-| `<vc-transcribe-tab vc-node-id="...">` | `vc-node-id` -> note_id | `lark-note`：先 `lark_note_detail(note_id="<vc-node-id>")` |
+| `<vc-transcribe-tab vc-node-id="...">` | `vc-node-id` -> note_id | `lark_get_skill(domain="meeting")`：先 `lark_note_detail(note_id="<vc-node-id>")` |
 | `<synced_reference src-token="..." src-block-id="...">` | `src-token` -> doc_token, `src-block-id` -> block_id | 用 `lark_docs_fetch` 读取 src-token 文档，定位 block |
 
 ## 不在本 Skill 范围

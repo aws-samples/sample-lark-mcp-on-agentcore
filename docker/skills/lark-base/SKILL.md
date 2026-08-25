@@ -1,6 +1,6 @@
 ---
 name: lark-base
-description: "飞书多维表格（Base）操作：建表、字段、记录、视图、统计、公式/lookup、表单、仪表盘、应用模式（BaseApp/AppMode 页面与组件）、Workspace 目录、workflow、角色权限；遇到 Base/多维表格/bitable、BaseApp/AppMode、/base/ 或 /app/ 链接时使用。BaseApp 不走 lark-apps；文件导入/导出转 lark-drive，认证/授权由 MCP server 自动处理。"
+description: "飞书多维表格（Base）操作：建表、字段、记录、视图、统计、公式/lookup、表单、仪表盘、应用模式（BaseApp/AppMode 页面与组件）、Workspace 目录、workflow、角色权限、模板中心（多维表格模板分类/列表/搜索）；遇到 Base/多维表格/bitable、BaseApp/AppMode、/base/ 或 /app/ 链接时使用。BaseApp 不走 lark-apps；文件导入/导出转 lark-drive，认证/授权由 MCP server 自动处理。"
 ---
 
 # base
@@ -14,6 +14,7 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 - 用户要在 Base 内做公式字段、lookup 字段、跨表计算、派生指标、筛选聚合、TopN、统计分析。
 - 用户要管理 Base 表单、仪表盘、workflow、高级权限或角色。
 - 用户要用应用模式（BaseApp）：新建应用、管理应用页面、在页面上加图表/列表/富文本组件，或整理 Workspace 目录。
+- 用户想"用一个现成模板快速搭一个多维表格"，但没有给出任何已有 Base 的锚点（无 URL、无"我的/最近访问的表"、无具体已存在的 Base 名）：走模板中心。
 - 用户明确提到 BaseApp / AppMode / 应用模式 / Workspace 内应用，或给出应用模式的 `/app/` 链接（链接可能同时携带 `/base/workspace/<workspace_token>` 路径信息），并要查询页面或组件；这类应用属于 Base，不走 apps skill。
 - 用户要把旧 Base 聚合式命令或旧写法迁移到当前 `lark_base_*` 工具。
 
@@ -50,8 +51,18 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 - 用户要查询既有 BaseApp，但当前输入和当前会话可信工具返回中都没有真实 `/app/` 链接或 `app_token`，也没有可供 `lark_base_workspace_entity_list(type="baseapp")` 定位的 `workspace_token`：无需调用任何工具；先明确说明当前任务没有提供应用链接或 Workspace 信息、无法可靠定位目标 BaseApp，再请用户补充并停止。不要在此前后调用 apps skill 的工具、`lark_base_title_resolve()`、Drive 搜索或其他全局名称发现，不要默认选择同名候选，也不要把 `base_token` 当作 `app_token`。
 - Base/Wiki URL 的 `table=` query 参数实际表示当前选中的顶层 block，可能是数据表、仪表盘或 workflow；不要按参数名自行当成 `table_id`。以 `lark_base_url_resolve()` 返回的 `block_type` 以及 `table_id` / `dashboard_id` / `workflow_id` 为准；`selection_source=url_query` 只说明 URL 当前选中了该 block，不代表它覆盖用户明确点名的目标。若用户点名的 dashboard 与 `block_name` 不一致，先用 `lark_base_dashboard_list()` 按名称匹配；若只返回中性 `block_id`，按 hint 用 `lark_base_base_block_list()` 确认类型。
 - 用户输入 Base 标题、关键词或不确定名称：先调用 `lark_base_title_resolve(title="<keyword>")`；`title` 传入标题中的短关键词，不超过 30 个字符；过长标题先取最有区分度的短关键词；多候选时先让用户消歧，不要猜。
+- 用户要列出已有 Base 候选，且需要按最近访问、owner、创建人、时间、类型等维度筛选/排序：转 `lark_drive_search(doc_types="bitable")`。按标题/关键词定位单个 Base 仍用 `lark_base_title_resolve()`。常见候选列表写法：
+  - 最近访问：`lark_drive_search(doc_types="bitable", sort="open_time", opened_since="3m", page_size="20")`
+  - 只列我拥有的：加 `mine=true`；要列"我创建的"用 `created_by_me=true`。
+  - 从候选项拿到 URL 或 token 后，再用 `lark_base_url_resolve()` 或 `lark_base_base_get()` 进入 Base 业务工具。
 - 文档嵌入 Base 标签：直接读取 `<bitable>` / `<base_refer>` 的 `token` 作为 `base_token`，`table-id` 作为 `table_id`，`view-id` 作为 `view_id`；孤立 raw token 不走 `lark_base_url_resolve()`。
 - 仍无法定位且用户不是要新建 Base 时，先反问用户要操作哪一个 Base；用户要新建时才用 `lark_base_base_create()`。
+
+## Base 模板中心
+
+模板中心是公开的 Base 模板库，不是用户云空间里的已有 Base。用户想用现成模板创建新 Base，且没有指向已有对象的锚点（没有 Base URL、没有"我的/最近访问的表"、没有具体已存在的 Base 名）时，先读 `lark_get_skill(domain="base", section="template-center")` 查找模板中心模板：`lark_base_template_categories()` 列出公开模板分类，`lark_base_template_list()` 按分类列出公开模板，`lark_base_template_search()` 按业务关键词搜索公开模板。选定模板后用 `lark_base_base_copy(base_token="<模板 token>")` 复制成用户自己的新 Base。
+
+模板中心是独立的公开数据集，`lark_drive_search()` 搜不到它；用户要"我的/最近访问/已有 Base"不要走模板中心。
 
 ## 快速路由
 
@@ -60,12 +71,15 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 | 查 Base 本体 | `lark_base_base_get()` | 用返回确认 Base 名称、owner、权限和可继续操作的 token |
 | 创建/复制 Base | `lark_base_base_create()` / `lark_base_base_copy()` | 新建时强烈推荐用 `table_name` + `fields` 同时配置新 Base 里唯一一个初始数据表的 name 和 schema；写入后报告新 Base 标识和 `permission_grant` |
 | Base 文件导入/导出 | 转 `lark_get_skill(domain="drive")` | 文件格式、参数、路径限制和仅结构导出规则由 drive skill 负责；在线复制走 `lark_base_base_copy()` |
+| 找模板 / 用模板搭新 Base | `lark_base_template_categories()` / `lark_base_template_list()` / `lark_base_template_search()` → `lark_base_base_copy()` | 用户想用现成模板建新 Base 且没有已有 Base 锚点时先读 `lark_get_skill(domain="base", section="template-center")`；模板 `token` 是复制入参，`lark_drive_search()` 搜不到模板中心 |
+| 列出已有 Base 候选 | `lark_drive_search(doc_types="bitable")` | 需要按最近访问、owner、创建人、时间维度筛选/排序时用它；按标题定位单个 Base 仍用 `lark_base_title_resolve()` |
 | 查看 Base 内资源目录 | `lark_base_base_block_list()` | 想先了解一个 Base 里有哪些 table/docx/dashboard/workflow/folder 时优先用它；返回 ID 关系和 fewshot 看 `lark_discover(query="base.base-block.list")` |
 | 管理 Base 内资源目录 | `lark_base_base_block_create/move/rename/delete` | 创建或整理 Base 直接管理的 folder/table/docx/dashboard/workflow；资源内容继续用对应工具 |
 | 管理数据表 | `lark_base_table_list/get/create/update/delete` | 处理 table 的列出、详情、创建、重命名和删除；`lark_base_table_create()` 必须传 `fields` 一次性定义表结构，字段 JSON 读 `lark_get_skill(domain="base", section="field-schema")` |
 | 复制 Base 内单张数据表 | `lark_base_table_copy()` / `lark_base_table_copy_status()` | 在线复制单张数据表；复制范围和异步任务参数查看工具 schema（`lark_discover(query="base.table-copy")`） |
 | 列/查/删字段 | `lark_base_field_list/get/delete/search_options` | 写入前用 list/get 确认字段类型、选项、ID；删除前确认目标字段 |
 | 创建/更新字段 | `lark_base_field_create()` / `lark_base_field_update()` | 同一表创建多个字段时，默认一次向 `lark_base_field_create()` 的 `json` 传字段对象数组；预计串行运行时间超过调用方超时时按时间预算拆分，不按固定条数切块；仅创建一个或多个只含 `name` + `type:text` 的简单字段时看工具 schema 即可，其他类型或属性必读 `lark_get_skill(domain="base", section="field-schema")`；公式读 `lark_get_skill(domain="base", section="field-formula")`，lookup 读 `lark_get_skill(domain="base", section="field-lookup")`；仍需逐项恢复或工具细节时读 `lark_get_skill(domain="base", section="field-create")`，更新细节读 `lark_get_skill(domain="base", section="field-update")` |
+| 按钮字段绑定 workflow | `lark_base_button_rule_bind()` / `lark_base_button_rule_get()` / `lark_base_button_rule_unbind()` | `button` 字段本身用 `lark_base_field_create()` 创建（`lark_get_skill(domain="base", section="field-schema")` 的 button 小节）；绑定关系单独用这组工具，不要把 `workflow_id` 塞进字段 JSON；`workflow_id` 必须是 workflow 工具返回的 `wkf` 公共 ID；绑定与 workflow 启停相互独立 |
 | 读取已知记录 | `lark_base_record_get()` | 已知具体 `record_id` 时可以直接读取记录 |
 | 查询或分析数据表记录 | 由 `lark_get_skill(domain="base", section="record-query-and-analysis-sop")` 选择 | 数据表记录查询和分析任务先读 SOP |
 | 解释、编写或排错 `lark_base_data_query` DSL | `lark_get_skill(domain="base", section="data-query")` | 用户明确询问该工具或其 DSL 时也先由 SOP 确认口径和路径，再读取 DSL reference |
@@ -78,8 +92,11 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 | 表单提交 | `lark_base_form_submit()` | 先读 `lark_get_skill(domain="base", section="form-detail")` 获取题目、filter 和附件所需 `base_token`；提交 JSON 读 `lark_get_skill(domain="base", section="form-submit")` |
 | 表单题目创建/更新 | `lark_base_form_questions_create()` / `lark_base_form_questions_update()` | Base 内表单按 table 管理；先确定并复用真实 `table_id`。读 `lark_get_skill(domain="base", section="form-questions-create")` / `lark_get_skill(domain="base", section="form-questions-update")`；题目显隐条件 `visible_rule` 结构见公共协议 `lark_get_skill(domain="base", section="filter-condition")` |
 | Base 内表单管理 | `lark_base_form_list/get/create/update/delete` / `lark_base_form_questions_list/delete` | 缺少或不确定归属时，先用 `lark_base_table_list()` 或 `lark_base_base_block_list()` 取得真实 `table_id`；这些工具使用 `base_token` + `table_id` 并在整个工作流中复用同一 `table_id`，删除前确认目标表单 |
+| 表单分享设置 | `lark_base_form_share_get()` / `lark_base_form_share_update()` | 管理表单启停、访问范围和匿名/登录要求；更新前先 get 现状，每次调用只改一个字段（`enabled` / `access_scope` / `allow_anonymous` / `require_login`），布尔值显式传 `true` 或 `false` |
 | 分享表单详情 | `lark_base_form_detail(share_token="<share_token>")` | 使用表单分享链接里的 `share_token`；提交前读 `lark_get_skill(domain="base", section="form-detail")` |
 | 仪表盘与组件 | `lark_base_dashboard_*` / `lark_base_dashboard_block_*` | 提到图表/看板/block 时先读 `lark_get_skill(domain="base", section="dashboard")`；组件 `data_config` 读 `lark_get_skill(domain="base", section="dashboard-block-config")`；读取一个或多个图表计算结果用 `lark_base_dashboard_block_get_data()`；读取完整仪表盘时按 block 类型分流，文本和不支持直接取数的图表按 reference 恢复 |
+| 组件精确位置/大小 | `lark_base_dashboard_block_create(position=...)` / `lark_base_dashboard_block_update(position=...)` | 只有用户明确给出组件级 `x/y/w/h`、行列顺序或可换算尺寸时才用 `position`；泛化的"调整布局/美化/撑满"用 `lark_base_dashboard_arrange()`。规则读 `lark_get_skill(domain="base", section="dashboard")` |
+| 仪表盘分享设置 | `lark_base_dashboard_share_get()` / `lark_base_dashboard_share_update()` | 管理仪表盘启停、访问范围、返回源 Base 入口和智能分析；更新前先 get 现状，每次调用只改一个字段（`enabled` / `access_scope` / `show_source` / `enable_auto_analysis`），显式 `false` 会被保留 |
 | 查询 BaseApp 与关联 Base | `lark_base_url_resolve()` → `lark_base_app_get()` → `lark_base_base_get()` | 只把 `/app/` URL 传给 `lark_base_url_resolve()`，不要把 `/base/workspace/` URL 传给它；用 `lark_base_app_get()` 返回 `ref` 的 key 作为 `base_token` 再调用 `lark_base_base_get()`。最终答复忠实保留应用 `name` / `app_token`，以及每个关联 Base 的 `name` / `base_token` |
 | 管理应用模式（BaseApp/AppMode）页面与组件 | `lark_base_app_page_*` / `lark_base_app_block_*` | BaseApp/AppMode、Workspace 内应用或带 base/workspace 上下文的 `/app/` 链接直接走本路由，不走 apps skill；没有 app-list 工具，列 Workspace 内应用必须用 `lark_base_workspace_entity_list(workspace_token="<token>", type="baseapp")`；先读 `lark_get_skill(domain="base", section="app")`。组件 `data_config` 读 `lark_get_skill(domain="base", section="app-block-data-config")`；`lark_base_app_block_get_data()` 除 `app_token` 外还需要图表数据源的 `base_token` |
 | 复制 Page / 设置页面图标 | 当前不支持 | 不产生任何写入，不得用 `lark_base_app_page_create()` 冒充完整复制；单独说明"可新建空 Page"仅是替代能力，须等用户明确要求后再执行 |
@@ -122,7 +139,9 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 
 - Base 内表单 list/get/create/update/delete 和题目管理都属于具体数据表：第一个管理工具调用前必须已有归属明确的真实 `table_id`；缺失或归属不明确时才用 `lark_base_table_list()` 或 `lark_base_base_block_list()` 定位，已有真实 ID 时直接复用。后续管理调用始终传同一 `base_token` + `table_id`。
 - 表单问题由数据表字段承载，question `id` 就是 `field_id`。创建问题前先 `lark_base_form_questions_list()`；除非用户明确要求同名的独立问题，否则标题已存在时优先用 `lark_base_form_questions_update()` 修改必填状态、标题或描述，不要先创建同名问题再删除旧问题。
-- `lark_base_form_questions_delete()` 用于删除非主字段问题；主字段问题使用 `lark_base_form_questions_update()` 修改。
+- `lark_base_form_questions_create()` 支持两种形态：新建字段题目需要 `title` + `type`；已有字段题目需要 `use_existing_field:true` + `field_id`。已有字段题目只是把该字段加入表单，不创建新字段，也不改变已有记录数据；不要给该形态携带 `type`、`style`、`options` 等字段定义属性。要把表里已有字段加进表单时，先用 `lark_base_field_list()` 确认真实字段 ID 和类型。
+- `lark_base_form_questions_delete()` 是高风险写操作，默认会删除承载问题的底层字段及该字段所有记录数据；只想把题目移出表单并保留字段/数据时必须传 `keep_field=true`。保留字段后可用 `lark_base_form_questions_create(questions='[{"use_existing_field":true,"field_id":"<field_id>"}]')` 加回表单。主字段问题不能删除，用 `lark_base_form_questions_update()` 修改。
+- 表单分享启停、访问范围和匿名/登录要求用 `lark_base_form_share_get()` / `lark_base_form_share_update()` 管理；更新前先读现状，每次调用只修改一个字段，布尔值显式传 `true` 或 `false`。
 - `lark_base_form_submit()` 是高风险写操作，必须带 `_confirm=true` 确认；调用前必须先跑 `lark_base_form_detail()`，读取 `questions[].type`、`required`、`filter` 和附件场景需要的 `base_token`；不要填写被 filter 隐藏的问题。
 - `lark_base_form_questions_update()` 是题目配置全量覆盖，不是 patch；未传字段会回落默认值，传空字符串 / `null` / 空数组会直接写入空或清空。更新前先 `lark_base_form_questions_list()` 读取当前题目，把要保留的 `title` / `description` / `required` / `option_display_mode` / `visible_rule` 等字段带回请求。
 - 表单附件不要写进 `fields`，放在 `json` 的 `attachments` 中；提交附件时必须同时传表单所属 Base 的 `base_token`。
@@ -131,8 +150,10 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 
 ## Dashboard / Workflow / Role
 
-- Dashboard 的复杂点是 block 的 `data_config`，不是 list/get/create/delete 命令参数。创建或更新 block 前先读 `lark_get_skill(domain="base", section="dashboard-block-config")`，组件必须串行创建；`lark_base_dashboard_arrange()` 是服务端智能布局，仅在用户明确要求重排/美化、或对本次会话从零新建的仪表盘做收尾整理时执行。`lark_base_dashboard_block_get_data()` 读取图表最终计算结果，不返回 block 名称、类型、布局或 `data_config`；需要元数据先用 `lark_base_dashboard_block_get()`。用户要求"全部/完整"仪表盘内容时不得跳过 text 或不支持直接取数的 block，按 `lark_get_skill(domain="base", section="dashboard")` 的完整读取分支恢复。
-- Dashboard 工具不支持指定组件的 `x/y/w/h`、精确位置或尺寸，不能把 `lark_base_dashboard_arrange()` 静默当作等价实现。用户只要求一般性重排/美化时可执行一次智能重排；用户要求精确结果时先说明限制并询问是否接受自适应布局，接受后才执行。不要改用 `lark_invoke` 探测裸 API、源码或未公开布局参数。
+- Dashboard 的复杂点是 block 的 `data_config`，不是 list/get/create/delete 命令参数。创建或更新 block 前先读 `lark_get_skill(domain="base", section="dashboard-block-config")`，组件必须串行创建；`lark_base_dashboard_arrange()` 是服务端智能整盘编排，用户没有给出组件级坐标或尺寸时，用它做重排、美化、撑满这类诉求，或对本次会话从零新建的仪表盘做一次收尾整理。`lark_base_dashboard_block_get_data()` 读取图表最终计算结果，不返回 block 名称、类型、布局或 `data_config`；需要元数据先用 `lark_base_dashboard_block_get()`。用户要求"全部/完整"仪表盘内容时不得跳过 text 或不支持直接取数的 block，按 `lark_get_skill(domain="base", section="dashboard")` 的完整读取分支恢复。
+- 组件精确布局用 `lark_base_dashboard_block_create()` / `lark_base_dashboard_block_update()` 的可选 `position`（12 列栅格 `{"x","y","w","h"}`，四个 key 必须齐全且为数字，整体提交不做逐字段合并）。只有用户明确给出组件级坐标、行列顺序、每个组件宽高或可直接换算的尺寸比例时才用 `position`；"调整布局""美化""撑满""铺满"本身不算精确约束，这类诉求用一次 `lark_base_dashboard_arrange()` 整盘编排。坐标取值不做本地校验，越界或重叠会由服务端自动重排，所以调用方应自己规划 12 列内不重叠的坐标。任一组件用了显式 `position` 时不要再 arrange，除非用户明确同意放弃精确布局。不要改用 `lark_invoke` 探测裸 API、源码或未公开布局参数。
+- `statistics` 指标卡可在 `data_config.number_format` 里设 `formatName`（`digital` / `digital_without_separator` / `percentage_rounded` / `cyn_rounded` / `dollar_rounded`，区分大小写）和 `precision`（0-9 整数）。create 会按组件类型本地校验；update 不接收 `type`，只校验 `number_format` 子字段，再由服务端结合现有 block 类型裁决。`number_format` 是 `data_config` 顶层 key merge 的例外，按子字段合并。枚举与模板读 `lark_get_skill(domain="base", section="dashboard-block-config")`。
+- 仪表盘分享启停、访问范围、返回源 Base 入口和智能分析用 `lark_base_dashboard_share_get()` / `lark_base_dashboard_share_update()` 管理；更新前先读现状，每次调用只修改一个字段，显式 `false` 会被保留。
 - 创建接口成功返回即表示写入成功；只有结果不确定时才额外执行一次 `lark_base_dashboard_get()` 或 `lark_base_dashboard_block_list()`。不要仅为确认创建而逐组件调用 `lark_base_dashboard_block_get_data()`。
 - 用户要读取多个组件的计算结果时，先完整列出组件（`lark_base_dashboard_block_list(base_token="xxx", dashboard_id="blk_xxx", page_size="100")`；若 `has_more=true`，继续把返回的 `page_token` 传给 `page_token` 参数，直到 `has_more=false`），再按 `lark_get_skill(domain="base", section="dashboard-block-get-data")` 在同一轮里连续串行调用，逐个读取；不要把每个 block 拆成独立模型轮次。
 - BaseApp（应用模式）把 Base 数据组织成页面和组件。`lark_base_app_create()` 是只创建 App 的原子工具，必须传目标 `workspace_token`；Workspace 选择以及是否创建备用 Base 由 `lark_get_skill(domain="base", section="app")` 的自然语言流程编排。应用查询使用 `lark_base_app_get()`，页面使用 `lark_base_app_page_*`。页面工具使用 `app_token`，组件工具使用 `app_token` + `page_id`；表、字段和记录工具使用 `base_token`。`lark_base_app_block_get_data()` 是组件工具中的例外：使用 `app_token` + `base_token` + `chart_token`，其中 `base_token` 来自该图表的 `data_config.base_token`，`chart_token` 通过 `block_id` 传入。不要把组件的普通 `block_id` 传给该工具。同一 Page 内组件名称必须唯一；列表使用 `type="list"` + `sub_type`，每个列表至多一个同 Workspace Base。组件配置详见 `lark_get_skill(domain="base", section="app-block-data-config")`。
@@ -174,6 +195,7 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 - `lark_get_skill(domain="base", section="view-set-filter")`：视图筛选 JSON
 - `lark_get_skill(domain="base", section="filter-condition")`：视图 filter、记录 `filter_json`、表单 `visible_rule` 的 tuple 条件结构公共协议 SSOT
 - `lark_get_skill(domain="base", section="form-detail")` / `lark_get_skill(domain="base", section="form-submit")` / `lark_get_skill(domain="base", section="form-questions-create")` / `lark_get_skill(domain="base", section="form-questions-update")`：表单详情、提交和复杂 JSON
+- `lark_get_skill(domain="base", section="template-center")`：模板中心分类/列表/搜索，以及用模板 token 复制成新 Base
 - `lark_get_skill(domain="base", section="dashboard")` / `lark_get_skill(domain="base", section="dashboard-block-config")` / `lark_get_skill(domain="base", section="dashboard-block-get-data")`：仪表盘、组件配置与图表结果协议
 - `lark_get_skill(domain="base", section="app")` / `lark_get_skill(domain="base", section="app-block-data-config")`：应用模式（Workspace / 应用 / 页面 / 组件）入口与组件配置 SSOT
 - `lark_get_skill(domain="base", section="workflow")` / `lark_get_skill(domain="base", section="workflow-schema")`：workflow 入口与 steps JSON SSOT

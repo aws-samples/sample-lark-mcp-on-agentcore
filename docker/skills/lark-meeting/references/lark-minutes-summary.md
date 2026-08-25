@@ -70,7 +70,7 @@ lark_minutes_summary(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", summary="**会议�
 
 | 身份 | 所需权限 |
 |------|---------|
-| user | `minutes:minutes:update` |
+| 用户身份 | `minutes:minutes:update` |
 
 ## 输出结果
 
@@ -100,10 +100,8 @@ lark_minutes_summary(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", summary="**会议�
 |---------|--------|---------|---------|
 | 总结展示为原始 Markdown 文本 | — | 总结含链接、四级标题等妙记端无法渲染的语法 | 改用标题（#～###）、加粗、列表等可展示格式；接口不会因此报错 |
 | 参数无效 | — | `minute_token` 缺失或格式错误 | 检查 token 是否完整 |
-| 权限不足 | — | 缺少 `minutes:minutes:update` | 联系妙记所有者授权（认证由 MCP server 自动处理） |
+| 权限不足 | — | 缺少 `minutes:minutes:update` | 这不是妙记资源权限问题，找所有者授权无效：需要管理员为 MCP server 补齐该 OAuth scope，Agent 侧无法自助补权限 |
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="minutes")` — 妙记全部命令
-- `lark_get_skill(domain="minutes", section="todo")` — 编辑待办项
-- `lark_get_skill(domain="minutes", section="detail")` — 读取总结、待办等 AI 产物
+- `lark_get_skill(domain="meeting", section="scenes/create-and-edit-minutes")` — 生成和修改妙记

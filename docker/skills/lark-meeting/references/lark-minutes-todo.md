@@ -1,6 +1,6 @@
 # minutes todo
 
-> **路由**：本工具操作**妙记内的 AI 待办**，不是飞书任务（Task）。用户说「在妙记里新建待办」时**必须**用本工具，**禁止**走 `lark_task_create` / `lark_invoke(tool_name="lark_task_tasklists_list")`。详见 `lark_get_skill(domain="minutes")` 第 6 节。
+> **路由**：本工具操作**妙记内的 AI 待办**，不是飞书任务（Task）。用户说「在妙记里新建待办」时**必须**用本工具，**禁止**走 `lark_task_create` / `lark_invoke(tool_name="lark_task_tasklists_list")`。详见 `lark_get_skill(domain="meeting", section="scenes/create-and-edit-minutes")`。
 
 对妙记中的待办做新增 / 更新 / 删除（单条或批量）。写操作。
 
@@ -23,17 +23,10 @@
 lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", operation="add", todo="跟进预算审批", is_done=false)
 
 # 批量：一次新增两条
-lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", todos=[
-  {"operation":"add","content":"晚上好1","is_done":true},
-  {"operation":"add","content":"晚上好2","is_done":false}
-])
+lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", todos=[{"operation":"add","content":"晚上好1","is_done":true},{"operation":"add","content":"晚上好2","is_done":false}])
 
 # 批量：混合增删改
-lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", todos=[
-  {"operation":"add","content":"新待办","is_done":false},
-  {"operation":"update","todo_id":"1234567890","content":"已更新","is_done":true},
-  {"operation":"delete","todo_id":"9876543210"}
-])
+lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", todos=[{"operation":"add","content":"新待办","is_done":false},{"operation":"update","todo_id":"1234567890","content":"已更新","is_done":true},{"operation":"delete","todo_id":"9876543210"}])
 
 # 单条：更新 / 删除
 lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", operation="update", todo_id="1234567890", todo="整理会议纪要", is_done=true)
@@ -97,7 +90,7 @@ lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", operation="delete", t
 
 | 身份 | 所需 scope |
 |------|-----------|
-| user | `minutes:minutes:update` |
+| 用户身份 | `minutes:minutes:update` |
 
 ## 输出结果
 
@@ -119,10 +112,8 @@ lark_minutes_todo(minute_token="obcnxxxxxxxxxxxxxxxxxxxx", operation="delete", t
 | `todos` 与单条参数冲突 | 二选一 |
 | `todos[i]` 校验失败 | 检查该条 `operation` 与字段组合 |
 | `error.subtype` = `permission_denied` | **妙记资源无编辑权**：向妙记所有者申请该妙记的编辑/协作权限 |
-| 缺少 OAuth scope（`error.missing_scopes` 含 `minutes:minutes:update`） | 联系妙记所有者授权（认证由 MCP server 自动处理） |
+| 缺少 OAuth scope（`error.missing_scopes` 含 `minutes:minutes:update`） | 这不是妙记资源权限问题，找所有者授权无效：需要管理员为 MCP server 补齐该 OAuth scope，Agent 侧无法自助补权限 |
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="minutes")`
-- `lark_get_skill(domain="minutes", section="summary")`
-- `lark_get_skill(domain="minutes", section="detail")`
+- `lark_get_skill(domain="meeting", section="scenes/create-and-edit-minutes")` — 生成和修改妙记
