@@ -172,6 +172,15 @@ exists in the allowlist (a bump renamed/dropped it). If a bumped lark-cli adds a
 console-rejected scope, that is the one case tests can't catch statically — a real
 bulk-import into a test app is the ground truth; add it to `console-rejected-scopes.json`.
 
+The console reports an unknown scope in **two** ways, and only one is loud. Pasting the
+JSON may flag it inline as `该权限不存在` with an error count — that one is obvious. But it
+can also validate cleanly and then simply omit the scope from the confirmation dialog,
+which shows `本次新增权限 (N)` and `以下权限已申请，本次不会重复申请 (M)`. Nothing looks
+wrong, so check the arithmetic: **N + M must equal the entry count of the list you
+pasted.** A shortfall is a silently-dropped scope. Before concluding it was rejected,
+search the permission list for it — a scope already granted to the app counts toward M
+rather than N, which produces the same shortfall for an entirely benign reason.
+
 ### 7. Update CDK snapshot
 
 ```bash
