@@ -154,8 +154,8 @@ The MCP server handles authentication transparently. Remove or neutralize:
 | `MUST 先用 Read 工具读取以下文件` | Delete or replace with `先调用 lark_get_skill(domain="...", section="...")` |
 | `[../lark-shared/SKILL.md](...)` | Delete (auth is automatic) |
 | `lark_get_skill(domain="shared")` | Delete — shared is excluded, this is a dead reference. Replace with "(MCP server 自动处理认证)" |
-| `[../lark-vc/SKILL.md](...)` | `lark_get_skill(domain="vc")` |
-| `[vc +recording](../lark-vc/references/lark-vc-recording.md)` | `lark_get_skill(domain="vc", section="recording")` |
+| `[../lark-vc/SKILL.md](...)` | `lark_get_skill(domain="meeting")` — vc/minutes/note/vc-agent were merged into `meeting` upstream at 1.0.89 |
+| `[vc +recording](../lark-vc/references/lark-vc-recording.md)` | `lark_get_skill(domain="meeting", section="lark-vc-recording")` — the merged domain keeps upstream filenames, so the `references/lark-<domain>-<section>.md` path never matches and `section` must be the full filename |
 | `[text](references/local-file.md)` (intra-skill) | `lark_get_skill(domain="<current>", section="<filename-without-prefix>")` |
 | `[text](../SKILL.md)` (parent ref within same skill) | `lark_get_skill(domain="<current>")` |
 

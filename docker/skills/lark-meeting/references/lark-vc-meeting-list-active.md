@@ -34,13 +34,7 @@ lark_vc_meeting_list_active(format="json")
 
 用户身份返回空，表示当前登录用户没有可见的进行中会议。
 
-常见流程（用户身份，MCP server 可用）：
-
-```
-# 只回答当前登录用户所在会议发生了什么
-lark_vc_meeting_list_active(format="json")
-lark_vc_meeting_events(meeting_id="<meeting_id>", page_all=true, format="pretty")
-```
+应用身份返回空，不代表目标用户不在任何会议中，只能说明没有找到"目标用户在会中且应用机器人也在会中"的当前会。
 
 ## 多会议选择
 
@@ -51,11 +45,6 @@ lark_vc_meeting_events(meeting_id="<meeting_id>", page_all=true, format="pretty"
 ## 9 位会议号匹配
 
 用户提供 9 位会议号但只是询问会中内容时，把会议号当作 active meeting 的筛选条件，而不是写操作指令。
-
-```
-# 用户问"我当前这个会讲了什么"
-lark_vc_meeting_list_active(format="json")
-```
 
 匹配规则：
 
@@ -70,11 +59,11 @@ lark_vc_meeting_list_active(format="json")
 |---------|---------|---------|
 | 用户身份返回空列表 | 当前登录用户没有可见的进行中会议 | 确认用户是否在会中 |
 | 用户身份无权限 / 不可见 | 当前登录用户没有可见的进行中会议，或当前身份无法读取该会议 | 先确认当前登录用户是否在会中、是否切错身份。⚠️ 若需要查询应用机器人可见的会议，该模式依赖应用身份，在 MCP server 上不可用 |
-| 应用身份相关报错 | 应用权限、租户安装、权限可访问的数据范围或 VC Agent privilege 未配置完整 | ⚠️ 应用身份模式在 MCP server 上不可用，以下仅供排查参考：需应用开发者开通 `vc:meeting.bot.join:write`，再检查应用发布/安装和权限可访问的数据范围，仍失败时排查内测灰度权限；详见 `lark_get_skill(domain="vc-agent")` 中"应用身份权限配置检查" |
+| 应用身份返回空列表 | 没有满足"目标用户在会中且应用机器人也在会中"的当前会 | ⚠️ 应用身份模式在 MCP server 上不可用；该路径下需先让应用机器人入会，或确认 `user_id` 和会议状态 |
+| `user_id` 格式错误 | 传入了 internal user_id 或其他非 `ou_...` 值 | 改传目标用户 open_id（⚠️ 仅应用身份模式使用，MCP server 不可用） |
+| 应用身份权限不足 | 应用权限、租户安装或权限可访问的数据范围未配置完整 | ⚠️ 应用身份模式在 MCP server 上不可用，以下仅供排查参考：请应用开发者开通 `vc:meeting.bot.join:write`；再检查应用发布/安装和权限可访问的数据范围；配置正确仍失败时，保留错误码和 `log_id`，按服务端权限异常排查。详见 `lark_get_skill(domain="meeting", section="scenes/live-meeting-attend")` 中"应用身份权限配置检查" |
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="vc-agent", section="meeting-join")` — ⚠️ 应用身份入会能力（MCP server 不可用）
-- `lark_get_skill(domain="vc", section="meeting-events")` — 使用 `meeting_id` 读取会中事件
-- `lark_get_skill(domain="vc-agent")` — Agent 会中编排能力（应用机器人入会 / 离会）
-- `lark_get_skill(domain="vc")` — 视频会议原子域（Meeting / Note 等核心概念，本 skill）
+- `lark_get_skill(domain="meeting", section="scenes/live-meeting-interact")` — 会中事件与会中互动
+- `lark_get_skill(domain="meeting", section="scenes/live-meeting-attend")` — 应用机器人参会与会中互动（⚠️ 其中入会 / 离会为应用身份写操作，MCP server 不可用）

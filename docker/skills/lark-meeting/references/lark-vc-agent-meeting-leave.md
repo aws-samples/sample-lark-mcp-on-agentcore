@@ -1,4 +1,3 @@
-
 # lark_vc_meeting_leave
 
 (authentication is handled automatically by the MCP server)
@@ -14,9 +13,6 @@
 ```
 # 通过 meeting_id 离会
 lark_vc_meeting_leave(meeting_id="69xxxxxxxxxxxxx28")
-
-# 输出格式
-lark_vc_meeting_leave(meeting_id="69xxxxxxxxxxxxx28", format="json")
 ```
 
 ## 参数
@@ -41,7 +37,7 @@ lark_vc_meeting_leave(meeting_id="69xxxxxxxxxxxxx28", format="json")
 
 ### 4. 离会立即生效，对其他参会人可见
 
-机器人会立刻从参会列表消失；若会议启用了录制/纪要，bot 的参会时段到此截止。只有在用户明确要求退出 / 离开 / 结束参会时才涉及此能力（而该能力在 MCP server 上不可用）。
+机器人会立刻从参会列表消失；若会议启用了录制/纪要，bot 的参会时段到此截止。只有在用户明确要求退出 / 离开 / 结束参会时才涉及此能力（而该能力在 MCP server 上不可用）；离会后如需重新参会，仍需应用身份重新入会，因此并非真正"不可逆"。
 
 ## 输出结果
 
@@ -53,19 +49,6 @@ lark_vc_meeting_leave(meeting_id="69xxxxxxxxxxxxx28", format="json")
 | 输入参数 | 获取方式 |
 |---------|---------|
 | `meeting_id` | 应用机器人入会返回的 `meeting.id`；或应用身份 `lark_vc_meeting_list_active`（带 `user_id`）返回的 `meeting_id` |
-
-## Agent 组合场景
-
-### 场景 1：会后补拉产物（不需要离会，用户身份可用）
-
-如果用户只是要求会议结束后拉录制、纪要或逐字稿，不要先离会；直接跨到 lark-vc 查询会后产物（用户身份即可）。
-
-```
-# 会议结束后进入 lark-vc 获取会议产物信息
-lark_vc_detail(meeting_ids="<meeting.id>")
-```
-
-后续按 `lark_get_skill(domain="vc")` 的产物决策处理：根据 `note_display_type`、`note_id`、`minute_token` 和用户意图选择纪要正文、逐字稿或妙记。
 
 ## 常见错误与排查
 
@@ -80,13 +63,6 @@ lark_vc_detail(meeting_ids="<meeting.id>")
 - 此能力需应用身份，MCP server 上不可用。离会会让机器人从参会列表消失，对其他参会人可见，并非真正"不可逆"。
 - `meeting_id` 优先使用应用机器人入会返回的 `meeting.id`；如果来自 `lark_vc_meeting_list_active`，必须来自应用身份，并确认应用机器人就在该会议中。不要用 9 位会议号。
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="vc-agent", section="meeting-join")` — ⚠️ 对应的应用身份入会能力（MCP server 不可用）
-- `lark_get_skill(domain="vc", section="meeting-list-active")` — 发现当前可读事件的进行中会议 ID
-- `lark_get_skill(domain="vc", section="meeting-events")` — 会中事件流
-- `lark_get_skill(domain="vc", section="search")` — 搜索历史会议（获取 meeting_id）
-- `lark_get_skill(domain="vc", section="recording")` — 查询 minute_token
-- `lark_get_skill(domain="vc", section="detail")` — 获取会议详情
-- `lark_get_skill(domain="vc-agent")` — Agent 会中编排能力（本 skill）
-- `lark_get_skill(domain="vc")` — 视频会议原子域（Meeting / Note 等核心概念）
+- `lark_get_skill(domain="meeting", section="scenes/live-meeting-attend")` — 应用机器人参会与会中互动（其中入会 / 离会为应用身份写操作，MCP server 不可用）

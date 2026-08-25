@@ -290,7 +290,7 @@ const GET_SKILL_TOOL = {
     type: 'object',
     required: ['domain'],
     properties: {
-      domain: { type: 'string', description: 'Domain name (e.g. calendar, im, drive, base, sheets, task, doc, wiki, mail, vc, contact, slides, okr, minutes, whiteboard, markdown, approval, apps)' },
+      domain: { type: 'string', description: 'Domain name (e.g. calendar, im, drive, base, sheets, task, doc, wiki, mail, meeting, contact, slides, okr, attendance, whiteboard, markdown, approval, apps)' },
       section: { type: 'string', description: 'Specific guide section for detailed workflows and parameter reference (e.g. "schedule-meeting", "create", "upload", "search"). Omit to get the main domain overview which lists all available sections.' },
     },
   },

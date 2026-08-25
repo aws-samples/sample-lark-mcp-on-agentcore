@@ -1,0 +1,121 @@
+# 应用机器人参会与会中互动
+
+> ⚠️ **本场景通篇编排的是应用机器人（应用身份 / bot identity）的真实入会、会中读写和离会，而 MCP server 始终以用户身份（user identity）调用，无法切换为应用身份——因此本场景的入会（`lark_vc_meeting_join`）、离会（`lark_vc_meeting_leave`）以及应用身份的活跃会议发现（`lark_vc_meeting_list_active(user_id=...)`）在 MCP server 上不可用。**
+>
+> 完整编排在此保留，用于解释这条链路的语义、风险和排查方式，便于向用户说明为什么请求无法在 MCP server 上完成；不要把标注为应用身份的步骤当作可直接调用的工具向用户承诺执行。
+>
+> MCP server 上可用的替代路径是用户身份：用不带 `user_id` 的 `lark_vc_meeting_list_active` 发现当前登录用户正在参加的会议，再读取会中事件或发送会中消息——见 `lark_get_skill(domain="meeting", section="scenes/live-meeting-interact")`。用户要求“代我入会”“让机器人进会旁听”“退出会议”时，说明这些是应用身份操作、当前不支持，并改为提供用户身份可用的能力。
+
+编排应用机器人的完整会中流程：发现已在参加的会议，或在用户明确授权后真实入会；随后拉取会中事件、发送文本或会中表情，并仅在用户明确要求时离会。
+
+## 选择入口
+
+| 当前条件 | 起点 |
+|---|---|
+| 已有应用身份取得的 `meeting_id` | 直接拉取事件，不重复查询或入会 |
+| 应用机器人可能已在会中 | 已知目标用户 `user_open_id` 时，先用应用身份的 `lark_vc_meeting_list_active(user_id="<user_open_id>")` 发现会议（⚠️ 应用身份，MCP server 不可用） |
+| 用户明确要求机器人入会、旁听或代参会 | 使用 `lark_vc_meeting_join`（⚠️ 应用身份写操作，MCP server 不可用） |
+| 只想查当前用户所在会议 | 使用 `lark_get_skill(domain="meeting", section="scenes/live-meeting-interact")` 的用户身份路径，不让应用机器人入会（这是 MCP server 上可用的路径） |
+
+用户只提供 9 位会议号或询问会议内容，不等于授权机器人入会。
+
+## 发现应用机器人已在参加的会议
+
+> ⚠️ 应用身份读操作，MCP server 不可用。
+
+已知目标用户 `ou_` open_id 时，先查询“目标用户正在参会且应用机器人也在同一会议”的活跃会议：
+
+```
+lark_vc_meeting_list_active(user_id="<user_open_id>", format="json")
+```
+
+- 返回多个会议时，展示主题、会议号和 `meeting_id` 让用户选择；不擅自取第一个。
+- 返回空不代表目标用户没有在开会，只表示没有找到应用机器人也在会中的可见会议。
+- 用户提供 9 位会议号时，在结果中按 `meeting_no` 匹配；匹配失败时不自动入会。
+- 保存选定的长整数 `meeting_id`，后续事件、消息和离会都沿用同一条应用身份路径。
+
+身份可见范围、多会议选择和会议号匹配见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-list-active")`。
+
+## 加入会议
+
+> ⚠️ 应用身份写操作，MCP server 不可用。
+
+只有用户明确要求应用机器人加入、旁听或代参会时才执行。入会需要 9 位会议号，不是长整数 `meeting_id`。
+
+```
+lark_vc_meeting_join(meeting_number="<9_digit_meeting_number>")
+```
+
+- 入会前确认目标会议号和用户意图；这是对其他参会人可见的写操作。
+- 保存返回的 `meeting.id`；后续拉取事件、发送会中消息和离会都使用该 ID 并沿用应用身份。
+- 应用机器人可以同时加入多场会议；加入新会议前不需要退出其他会议。
+- 根据返回状态确认入会成功，不要把“请求已发起”当作已入会。
+
+会议密码、等候室、写操作风险和异常恢复见 `lark_get_skill(domain="meeting", section="lark-vc-agent-meeting-join")`。
+
+## 拉取会中事件
+
+使用应用身份发现或入会得到的 `meeting_id`（⚠️ 应用身份路径 MCP server 不可用；用户身份下同一工具可用，`meeting_id` 须来自用户身份的活跃会议发现）：
+
+```
+lark_vc_meeting_events(meeting_id="<meeting_id>", page_all=true, format="pretty")
+```
+
+- 默认使用 `page_all=true` 拉取当前完整事件流，并保留返回的 `page_token` 供后续增量查询。
+- 回答“现在、刚刚、最新”或总结当前会议前，重新拉取最新事件；不直接复用旧快照。
+- 应用机器人必须在会中，或在会议结束后的可见宽限窗口内曾经参会；不要用任意 `meeting_id` 尝试读取。
+- 会中事件不能替代已结束会议的参会人快照、纪要、逐字稿或录制。
+
+事件类型、分页、结束后五分钟窗口和文档上下文处理见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-events")`。
+
+## 发送会中文本或表情
+
+每次发送都是对会中参会人可见的写操作。只有用户明确要求发送，并已确认目标会议和内容时才执行。
+
+```
+# 文本消息
+lark_vc_meeting_message_send(meeting_id="<meeting_id>", msg_type="text", text="<message>")
+
+# 普通会中表情
+lark_vc_meeting_message_send(meeting_id="<meeting_id>", msg_type="reaction", emoji_type="THUMBSUP")
+```
+
+- 始终沿用产生 `meeting_id` 的身份路径；不要中途切换身份。通过 MCP server 时身份恒为用户身份，因此只能对用户身份发现的会议发送。
+- reaction 必须使用参考文档中大小写敏感的完整 `emoji_type` 列表；不编造 key。
+- 发送失败时停止并报告；不自动重试或换身份，避免产生重复可见消息。
+- 用户要发绑定群或 IM 消息时改用 `lark_get_skill(domain="im")`，不使用会中消息工具。
+
+文本、reaction 语义、完整 emoji key 和幂等参数见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-message-send")`。
+
+## 离开会议
+
+> ⚠️ 应用身份写操作，MCP server 不可用。
+
+只有用户明确要求机器人退出、离开或结束参会时才执行：
+
+```
+lark_vc_meeting_leave(meeting_id="<meeting_id>")
+```
+
+- 使用入会返回或应用身份活跃会议查询得到的 `meeting_id`，并确认机器人当前在该会议中。
+- 不要因为任务完成而自动离会。
+- 用户只要会后产物时，转入会议产物场景，不为此先执行离会。
+- 根据返回状态确认离会完成。
+
+离会参数、可见副作用和完成判定见 `lark_get_skill(domain="meeting", section="lark-vc-agent-meeting-leave")`。
+
+## 应用身份权限配置检查
+
+> ⚠️ 以下配置检查仅供排查参考；应用身份操作本身在 MCP server 上不可用。
+
+应用身份返回 `no permission`、`missing required scope(s)` 或 `missing_scopes` 时，按顺序检查（认证由 MCP server 自动处理，不需要也无法在会话内重新登录）：
+
+1. 按工具错误中的 `hint` 处理；返回 `console_url` 时将其原样提供给用户。
+2. 确认应用已开通对应权限，已发布并安装到当前租户。入会和应用身份会议查询需要 `vc:meeting.bot.join:write`；会中发消息需要 `vc:meeting.message:write`。
+3. 在开放平台确认“权限可访问的数据范围”已保存为“按条件筛选”，条件为“会议的归属者 包含 与应用的可用范围一致”。
+4. 上述配置均正确仍失败时，保留工具返回的错误码和 `log_id`，按服务端权限异常排查；不要反复重试或改用其他身份。
+
+## 会后边界
+
+- 已结束会议的搜索、参会人快照、智能纪要、逐字稿、妙记或录制，转入 `lark_get_skill(domain="meeting", section="scenes/query-meeting-and-artifacts")`。
+- 会后要把产物发到群或私聊，先使用会议产物场景获取结果，再转 `lark_get_skill(domain="im")`。

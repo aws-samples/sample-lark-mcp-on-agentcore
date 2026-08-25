@@ -48,7 +48,7 @@ MCP server 的身份固定为当前登录用户，不存在"换个身份重新�
 
 | 身份 | 所需权限 |
 |------|---------|
-| user | `minutes:permission:apply` |
+| 用户身份 | `minutes:permission:apply` |
 
 ## 输出结果
 
@@ -80,7 +80,6 @@ MCP server 的身份固定为当前登录用户，不存在"换个身份重新�
 | `missing required scope(s)` | 当前身份缺少 `minutes:permission:apply` | 见上方「missing scope 与资源 ACL」 |
 | 申请后仍无权限 | 所有者尚未同意 | 这是异步申请，需等待所有者处理；不代表调用失败 |
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="minutes")` — 妙记全部命令
-- `lark_get_skill(domain="minutes", section="detail")` — 妙记内容与产物查询
+- `lark_get_skill(domain="meeting", section="scenes/create-and-edit-minutes")` — 生成和修改妙记

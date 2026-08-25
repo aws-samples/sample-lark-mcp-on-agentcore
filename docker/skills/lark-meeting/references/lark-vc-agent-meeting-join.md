@@ -1,9 +1,8 @@
-
 # lark_vc_meeting_join
 
 (authentication is handled automatically by the MCP server)
 
-> ⚠️ **此操作要求应用身份（bot/app identity），通过 MCP server 不可用。** MCP server 始终以用户身份调用，无法让应用机器人入会。本文档保留入会能力的概念说明，便于解释为什么"代我入会 / 让机器人旁听"这类请求无法在 MCP 上完成；不要把它当作可直接调用的工具向用户承诺执行。需要读取进行中会议的事件时，请用用户身份路径：`lark_get_skill(domain="vc", section="meeting-list-active")` 发现会议，再用 `lark_vc_meeting_events` 读取。
+> ⚠️ **此操作要求应用身份（bot/app identity），通过 MCP server 不可用。** MCP server 始终以用户身份调用，无法让应用机器人入会。本文档保留入会能力的概念说明，便于解释为什么"代我入会 / 让机器人旁听"这类请求无法在 MCP 上完成；不要把它当作可直接调用的工具向用户承诺执行。需要读取进行中会议的事件时，请用用户身份路径：`lark_get_skill(domain="meeting", section="lark-vc-meeting-list-active")` 发现会议，再用 `lark_vc_meeting_events` 读取。
 
 通过 9 位会议号让应用机器人加入一场正在进行的视频会议。这是一次**写操作**，会实际让应用机器人加入会议。
 
@@ -16,15 +15,6 @@
 ```
 # 仅指定会议号（无密码）
 lark_vc_meeting_join(meeting_number="123456789")
-
-# 指定会议号 + 密码
-lark_vc_meeting_join(meeting_number="123456789", password="8888")
-
-# 从邀请事件透传 call_id（参见「如何获取输入参数」）
-lark_vc_meeting_join(meeting_number="123456789", call_id="a08e06bf-9a41-44e4-a89c-a7871899e783")
-
-# 输出格式
-lark_vc_meeting_join(meeting_number="123456789", format="json")
 ```
 
 ## 参数
@@ -81,28 +71,6 @@ lark_vc_meeting_join(meeting_number="123456789", format="json")
 | `password` | 若会议设置了入会密码，由主持人提供 |
 | `call_id` | 由 `vc.bot.meeting_invited_v1` 邀请事件的 `call_id` 字段携带，Agent 收到事件时透传过来；无邀请事件场景（如 Agent 主动入会）不传 |
 
-## Agent 组合场景
-
-### 场景 1：入会后查看会中事件（应用身份，MCP server 不可用）
-
-⚠️ 此组合需应用身份，MCP server 上不可用。MCP 上请改用用户身份：先 `lark_vc_meeting_list_active(format="json")` 发现当前用户所在会议，再用 `lark_vc_meeting_events` 读取。
-
-```
-# 应用身份发现已在会中的会议（替代入会）：
-lark_vc_meeting_list_active(user_id="<user_open_id>", format="json")
-```
-
-### 场景 2：入会 → 会后进入 lark-vc 获取会议产物信息
-
-会后产物查询本身用用户身份即可：
-
-```
-# 会议结束后，先查询会议产物
-lark_vc_detail(meeting_ids="<meeting.id>")
-```
-
-后续按 `lark_get_skill(domain="vc")` 的产物决策处理：根据 `note_display_type`、`note_id`、`minute_token` 和用户意图选择纪要正文、逐字稿或妙记。
-
 ## 常见错误与排查
 
 | 错误现象 | 根本原因 | 解决方案 |
@@ -111,7 +79,7 @@ lark_vc_detail(meeting_ids="<meeting.id>")
 | 会议密码错误 | `password` 错误或未提供 | 向主持人确认会议密码 |
 | 会议不存在 / 已结束 | 会议号错误或会议未进行中 | 确认会议正在进行中 |
 | `HTTP 403: no permission` / `121003` | 入会前置条件不满足，通常不是单纯 scope 问题 | 依次确认：1）会议允许智能体加入；2）会议号正确；3）如有密码，已正确传入 `password`；4）会议已开始；5）等候室 / 入会审批已放行；6）会议未禁止当前身份加入（如限制外部、限制应用机器人、仅特定成员可入会）；确认后重试 |
-| 应用身份权限不足 | 应用权限、租户安装、权限可访问的数据范围或 VC Agent privilege 未配置完整 | ⚠️ 应用身份操作在 MCP server 上不可用；权限配置仅供排查参考，以工具返回的 metadata / error envelope 为准确认缺失权限；检查应用发布/安装，以及开放平台"权限可访问的数据范围"：选择"按条件筛选"，条件为"会议的归属者 包含 与应用的可用范围一致"；仍失败再排查内测 privilege / 灰度 |
+| 应用身份权限不足 | 应用权限、租户安装或权限可访问的数据范围未配置完整 | ⚠️ 应用身份操作在 MCP server 上不可用；权限配置仅供排查参考，以工具返回的 metadata / error envelope 为准确认缺失权限；检查应用发布/安装，以及开放平台"权限可访问的数据范围"：选择"按条件筛选"，条件为"会议的归属者 包含 与应用的可用范围一致"；配置正确仍失败时，保留错误码和 `log_id`，按服务端权限异常排查 |
 | 入会被拒绝 | 等候室 / 入会审批 / 限制外部入会 | 联系主持人放行或调整会议设置 |
 
 ## 提示
@@ -119,13 +87,6 @@ lark_vc_detail(meeting_ids="<meeting.id>")
 - 此能力需应用身份，MCP server 上不可用；只拉取会议数据本来也不需要入会，请用用户身份的 `lark_vc_meeting_list_active` + `lark_vc_meeting_events`。
 - 入会会让机器人立即出现在参会列表；若用户要求退出 / 离开 / 结束参会，对应的是应用身份离会能力（同样 MCP server 不可用）。
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="vc-agent", section="meeting-leave")` — ⚠️ 对应的应用身份离会能力（MCP server 不可用）
-- `lark_get_skill(domain="vc", section="meeting-list-active")` — 发现当前可读事件的进行中会议 ID
-- `lark_get_skill(domain="vc", section="meeting-events")` — 会中事件流
-- `lark_get_skill(domain="vc", section="search")` — 搜索历史会议记录
-- `lark_get_skill(domain="vc", section="recording")` — 查询 minute_token
-- `lark_get_skill(domain="vc", section="detail")` — 获取会议详情
-- `lark_get_skill(domain="vc-agent")` — Agent 会中编排能力（本 skill）
-- `lark_get_skill(domain="vc")` — 视频会议原子域（Meeting / Note 等核心概念）
+- `lark_get_skill(domain="meeting", section="scenes/live-meeting-attend")` — 应用机器人参会与会中互动（其中入会 / 离会为应用身份写操作，MCP server 不可用）

@@ -1,4 +1,4 @@
-# minutes +update
+# minutes update
 
 修改飞书妙记的标题（topic）。
 
@@ -24,7 +24,7 @@ lark_minutes_update(minute_token="xxx", topic="周会纪要 2026-05-18")
 ## 认证与权限
 
 - 所需 scope：`minutes:minutes:update`。
-- （authentication is handled automatically by the MCP server）
+- 认证由 MCP server 自动处理。
 
 ## 输出结果
 
@@ -33,6 +33,6 @@ lark_minutes_update(minute_token="xxx", topic="周会纪要 2026-05-18")
 | `minute_token` | 被修改的妙记 Token，与输入的 `minute_token` 一致，可继续用于查询妙记信息、下载媒体或获取纪要产物 |
 | `topic` | 修改后的妙记标题，与输入的 `topic` 一致 |
 
-## 参考
+## 相关场景
 
-- `lark_get_skill(domain="minutes")` -- 妙记相关功能说明
+- `lark_get_skill(domain="meeting", section="scenes/create-and-edit-minutes")` — 生成和修改妙记

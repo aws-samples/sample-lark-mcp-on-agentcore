@@ -102,7 +102,9 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_get_skill(domain="im", section="chat-messages-list")` | List messages in a chat or P2P conversation; user/bot; accepts chat_id or user_id, resolves P2P chat_id, supports time range, order asc/desc sorting, auto-pagination |
 | `lark_get_skill(domain="im", section="chat-search")` | Search visible group chats by query keyword and/or member_ids; user/bot; e.g. look up chat_id by group name; supports type filters, sorting, auto-pagination, and exclude_muted (user identity only) |
 | `lark_get_skill(domain="im", section="chat-update")` | Update group chat name or description; user/bot; updates a chat's name or description |
+| `lark_get_skill(domain="im", section="message-read-status")` | `lark_im_message_read_users` — List users who read one message; user/bot; identity-specific scopes; supports bounded auto-pagination |
 | `lark_get_skill(domain="im", section="messages-mget")` | Batch get messages by IDs; user/bot; fetches up to 50 om_ message IDs, formats sender names, expands thread replies |
+| `lark_get_skill(domain="im", section="message-read-status")` | `lark_im_messages_read_status` — Batch query whether the current user read 1–50 messages; user-only; returns readable items and invalid message IDs |
 | `lark_get_skill(domain="im", section="messages-reply")` | Reply to a message (supports thread replies); user/bot; supports text/markdown/post/media replies, reply-in-thread, idempotency key |
 | `lark_get_skill(domain="im", section="messages-resources-download")` | Download an image or file attached to a message; user/bot |
 | `lark_get_skill(domain="im", section="messages-search")` | Search messages across chats (supports keyword, sender, time range filters) with user or bot identity; filters by chat/sender/attachment/time, supports auto-pagination via `page_all` / `page_limit`, enriches results via batched mget and chats batch_query |
@@ -162,10 +164,11 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 
 ### messages
 
+  - `read_status` — 批量查询当前用户对消息的已读状态。Identity: `user` only (`user_access_token`); accepts up to 50 message IDs and returns readable items plus invalid message IDs. [Must-read] `lark_get_skill(domain="im", section="message-read-status")`
   - `delete` — 撤回消息。Identity: supports `user` and `bot`; for `bot` calls, the bot must be in the chat to revoke group messages; to revoke another user's group message, the bot must be the owner, an admin, or the creator; for user P2P recalls, the target user must be within the bot's availability.
   - `forward` — 转发消息。Identity: supports `user` and `bot`.
   - `merge_forward` — 合并转发消息。⚠️ This operation requires bot identity and is not available via the MCP server.
-  - `read_users` — 查询消息已读信息。⚠️ This operation requires bot identity and is not available via the MCP server.
+  - `read_users` — 查询消息已读信息。Identity: supports `user` and `bot`; the caller must still be in the chat. A user can query messages they sent within the last 7 days. ⚠️ The bot variant (only messages sent by that bot, within the last 7 days) requires bot identity and is not available via the MCP server. [Must-read] `lark_get_skill(domain="im", section="message-read-status")`
   - `urgent_app` — 发送应用内加急。⚠️ This operation requires bot identity and is not available via the MCP server.
   - `urgent_phone` — 发送电话加急。⚠️ This operation requires bot identity and is not available via the MCP server.
   - `urgent_sms` — 发送短信加急。⚠️ This operation requires bot identity and is not available via the MCP server.
@@ -206,6 +209,8 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 
 ## 权限表
 
+> The upstream API docs list `im:message:basic` and `im:message:get_as_user` as alternative scopes for the message read-status endpoints. Neither can be granted in this deployment (the Feishu developer console rejects both with "该权限不存在"), so they are omitted below — grant `im:message:readonly`.
+
 | 方法 | 所需 scope |
 |------|-----------|
 | `chats.create` | `im:chat:create` |
@@ -222,10 +227,13 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 | `chat.managers.delete_managers` | `im:chat.managers:write_only` |
 | `chat.moderation.get` | `im:chat.moderation:read` |
 | `chat.moderation.update` | `im:chat:moderation:write_only` |
+| `lark_im_messages_read_status` | `im:message:readonly` (recommended) or `im:message` |
+| `lark_im_message_read_users` | `im:message:readonly` (recommended) or `im:message` |
+| `messages.read_status` | `im:message:readonly` (recommended) or `im:message` |
 | `messages.delete` | `im:message:recall` |
 | `messages.forward` | `im:message` |
 | `messages.merge_forward` | `im:message` |
-| `messages.read_users` | `im:message:readonly` |
+| `messages.read_users` | `im:message:readonly` (recommended) or `im:message` |
 | `messages.urgent_app` | `im:message.urgent` |
 | `messages.urgent_phone` | `im:message.urgent:phone` |
 | `messages.urgent_sms` | `im:message.urgent:sms` |

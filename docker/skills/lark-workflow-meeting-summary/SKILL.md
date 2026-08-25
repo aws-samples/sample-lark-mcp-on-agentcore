@@ -7,13 +7,7 @@ description: "会议纪要整理工作流：汇总指定时间范围内的会议
 
 (authentication is handled automatically by the MCP server)
 
-调用前先调用 `lark_get_skill(domain="vc")` 了解会议纪要相关操作。
-
-**CRITICAL — 开始前 MUST 先调用 `lark_get_skill(domain="vc", section="vc-domain-boundaries")`**，不读将导致命令使用、会议产物决策、领域边界职责判断错误：
-> 1. 了解日历 & VC、会议产物 & 文档的关联关系和职责划分
-> 2. 了解会议产物（妙记和纪要）之间的关联关系，例如：**妙记和纪要产生条件相互独立**
-> 3. 了解不同会议产物的组成部分，以便根据需求决策使用哪种产物的数据
-> 4. 了解会议总结、分析和信息提取的标准流程
+**CRITICAL — 开始前 MUST 先完整调用 `lark_get_skill(domain="meeting")`**：会议与产物关系、产物选择和逐字稿路由以 meeting 域为准。
 
 ## 适用场景
 
@@ -72,12 +66,21 @@ lark_note_detail(note_id="note_id")
 ```
 - 根据上一步搜集到的 `meeting-id` 查询。
 - 单次最多查询 50 个，超过 50 个需分批调用。
-- 部分会议没有 `note_id` 或报错 `no notes available`，在最终输出中标注"无纪要"。
+- 部分会议没有 `note_id` 或报错 `no notes available`，**不要直接标注"无纪要"**：先看 `lark_vc_detail` 是否返回了 `minute_token`，有则走下面的妙记备选路径；`note_id` 和 `minute_token` 都没有时才标注"无纪要"。
 - 记录每个纪要的 `note_id`（纪要 ID）、`note_display_type`（展示类型：`unknown` / `normal` / `unified`）、`note_doc_token`（纪要文档 Token）和 `verbatim_doc_token`（逐字稿文档 Token）。
 
-> **逐字稿路由按 `note_display_type` 决定**（详见 `lark_get_skill(domain="vc", section="vc-domain-boundaries")` 的 Note 域）：
+> **妙记备选路径（无 `note_id`、有 `minute_token` 时）**：智能纪要与妙记是两条独立产物链路，缺少智能纪要不代表这场会没有内容。
+>
+> ```
+> # minute_tokens 是复数形式（lark_minutes_download 同）；output_dir 只接受相对路径
+> lark_minutes_detail(minute_tokens="<minute_token>", transcript=true, output_dir="./transcripts")
+> ```
+>
+> 逐字稿会落盘，供 Step 4 基于原始发言独立提炼（不要照搬 AI 总结）。若返回 `No read permission`（`2091005`），先把无权限事实告知用户，用户明确同意后再用单数参数申请：`lark_minutes_apply_permission(minute_token="<minute_token>", perm="view")`；申请需 owner 在客户端批准后才可重试。详见 `lark_get_skill(domain="meeting", section="scenes/query-minutes-and-artifacts")`（基于 minute_token 查询妙记及关联产物）。
+
+> **逐字稿路由按 `note_display_type` 决定**（详见 `lark_get_skill(domain="meeting", section="scenes/query-note-and-artifacts")`，基于 note_id 查询智能纪要及关联产物）：
 > - `normal`：逐字稿是独立文档，链接/正文走 `verbatim_doc_token`。
-> - `unified`：逐字稿**不是独立文档**，没有可分享的逐字稿文档链接；需要逐字稿内容时用 `lark_note_transcript(note_id="<note_id>")`（参见 `lark_get_skill(domain="note")`）拉取到本地，报告中标注"unified 纪要"即可。
+> - `unified`：逐字稿**不是独立文档**，没有可分享的逐字稿文档链接；需要逐字稿内容时用 `lark_note_transcript(note_id="<note_id>")`（参见 `lark_get_skill(domain="meeting")`）拉取到本地，报告中标注"unified 纪要"即可。
 
 2. 获取纪要文档和逐字稿文档链接
 ```
@@ -111,6 +114,8 @@ lark_docs_update(doc="<url_or_token>", command="append", doc_format="markdown", 
 
 ## 参考
 
-- `lark_get_skill(domain="vc")` — `lark_vc_search`、`lark_vc_detail` 详细用法
-- `lark_get_skill(domain="note")` — `lark_note_detail`、`lark_note_transcript`（unified 纪要逐字稿）
+- `lark_get_skill(domain="meeting")` — 会议与产物统一路由
+- `lark_get_skill(domain="meeting", section="scenes/query-meeting-and-artifacts")` — 搜索、消歧、产物获取与逐字稿分析流程
+- `lark_get_skill(domain="meeting", section="scenes/query-minutes-and-artifacts")` — 无 `note_id` 时的妙记备选路径
+- `lark_get_skill(domain="meeting", section="lark-vc-search")`、`lark_get_skill(domain="meeting", section="lark-vc-detail")`、`lark_get_skill(domain="meeting", section="lark-note-detail")`、`lark_get_skill(domain="meeting", section="lark-note-transcript")`、`lark_get_skill(domain="meeting", section="lark-minutes-detail")`、`lark_get_skill(domain="meeting", section="lark-minutes-apply-permission")` — 命令细节
 - `lark_get_skill(domain="doc")` — `lark_docs_fetch`、`lark_docs_create`、`lark_docs_update` 详细用法

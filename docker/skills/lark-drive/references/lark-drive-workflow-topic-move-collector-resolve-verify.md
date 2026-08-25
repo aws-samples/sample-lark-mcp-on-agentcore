@@ -145,7 +145,7 @@
 | 资源类型 | 验证方式 |
 |---------------|---------------------|
 | `docx` / `doc` | 允许时使用 `lark_docs_fetch`。 |
-| `sheet` | 使用 `lark_sheets_find` 查关键词证据，或用 `lark_sheets_read` 读取有界范围。 |
+| `sheet` | 使用 `lark_sheets_cells_search` 查关键词证据，或用 `lark_sheets_cells_get` 读取有界范围。 |
 | `bitable` | 只有必要且已加载 Base 能力时验证。 |
 | `slides` | 除非具备幻灯片读取能力，否则使用元数据 / 预览 / 标题证据。 |
 | `file` | 仅在支持时使用标题、元数据、预览或导出文本。 |
