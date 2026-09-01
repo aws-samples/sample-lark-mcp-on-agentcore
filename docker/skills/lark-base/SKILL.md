@@ -69,7 +69,7 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 | 用户目标 | 优先工具 | 何时读 reference |
 |---|---|---|
 | 查 Base 本体 | `lark_base_base_get()` | 用返回确认 Base 名称、owner、权限和可继续操作的 token |
-| 创建/复制 Base | `lark_base_base_create()` / `lark_base_base_copy()` | 新建时强烈推荐用 `table_name` + `fields` 同时配置新 Base 里唯一一个初始数据表的 name 和 schema；写入后报告新 Base 标识和 `permission_grant` |
+| 创建/复制 Base | `lark_base_base_create()` / `lark_base_base_copy()` | 新建时强烈推荐用 `table_name` + `fields` 同时配置新 Base 里唯一一个初始数据表的 name 和 schema；写入后报告新 Base 标识和 `permission_grant`。带 `table_name` / `fields` 的创建是多步写入：初始表配置失败时新建的 Base 会被自动删除，错误里的 `rollback` 说明清理结果；`rollback.succeeded=false` 时按 `partial_resource` 用 `lark_drive_delete()` 清理并如实告知用户 |
 | Base 文件导入/导出 | 转 `lark_get_skill(domain="drive")` | 文件格式、参数、路径限制和仅结构导出规则由 drive skill 负责；在线复制走 `lark_base_base_copy()` |
 | 找模板 / 用模板搭新 Base | `lark_base_template_categories()` / `lark_base_template_list()` / `lark_base_template_search()` → `lark_base_base_copy()` | 用户想用现成模板建新 Base 且没有已有 Base 锚点时先读 `lark_get_skill(domain="base", section="template-center")`；模板 `token` 是复制入参，`lark_drive_search()` 搜不到模板中心 |
 | 列出已有 Base 候选 | `lark_drive_search(doc_types="bitable")` | 需要按最近访问、owner、创建人、时间维度筛选/排序时用它；按标题定位单个 Base 仍用 `lark_base_title_resolve()` |

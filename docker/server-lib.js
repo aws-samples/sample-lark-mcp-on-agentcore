@@ -501,6 +501,198 @@ function stripCliNotice(output) {
   return output.slice(0, start) + output.slice(end);
 }
 
+
+// lark-cli 1.0.92 implements `base +base-create --fields/--table-name` as a
+// multi-step workflow: create the Base first, then customize its default table.
+// If a later table call fails, upstream returns only that error and leaves the
+// newly-created Base behind. Run those steps explicitly so this MCP server knows
+// the exact token it just created and can compensate without title-based search
+// (which could delete an unrelated same-name Base).
+function cliFlagValue(args, flag) {
+  const index = args.lastIndexOf(flag);
+  return index >= 0 && index + 1 < args.length ? args[index + 1] : '';
+}
+
+function withoutCliFlags(args, valueFlags, booleanFlags = new Set()) {
+  const result = args.slice(0, 2);
+  for (let i = 2; i < args.length; i++) {
+    if (valueFlags.has(args[i])) { i++; continue; }
+    if (booleanFlags.has(args[i])) continue;
+    result.push(args[i]);
+  }
+  return result;
+}
+
+function parseCliEnvelope(result, operation) {
+  const raw = String(result?.stdout || '').trim();
+  const jsonStart = raw.startsWith('{') ? 0 : raw.indexOf('\n{') + 1;
+  if (!raw || jsonStart < 0) throw new Error(`${operation} returned no JSON output`);
+  const parsed = JSON.parse(raw.slice(jsonStart));
+  if (parsed.ok === false || parsed.error) {
+    const err = new Error(`${operation} failed`);
+    err.stdout = JSON.stringify(parsed);
+    err.stderr = result?.stderr || '';
+    throw err;
+  }
+  return parsed;
+}
+
+function objectData(envelope) {
+  return envelope && typeof envelope.data === 'object' && envelope.data !== null
+    ? envelope.data
+    : envelope;
+}
+
+function createdBaseToken(envelope) {
+  const data = objectData(envelope) || {};
+  const base = data.base && typeof data.base === 'object' ? data.base : data;
+  return String(base.base_token || base.app_token || data.base_token || data.app_token || '').trim();
+}
+
+function tableId(table) {
+  if (!table || typeof table !== 'object') return '';
+  return String(table.table_id || table.id || '').trim();
+}
+
+function defaultTableId(envelope) {
+  const data = objectData(envelope) || {};
+  const base = data.base && typeof data.base === 'object' ? data.base : data;
+  for (const candidate of [
+    base.default_table_id,
+    base.table_id,
+    tableId(base.default_table),
+    tableId(base.table),
+    data.default_table_id,
+    data.table_id,
+    tableId(data.default_table),
+    tableId(data.table),
+  ]) {
+    if (candidate) return String(candidate);
+  }
+  return '';
+}
+
+function firstListedTableId(envelope) {
+  const data = objectData(envelope) || {};
+  return Array.isArray(data.tables) && data.tables.length > 0 ? tableId(data.tables[0]) : '';
+}
+
+function errorSummary(err) {
+  try {
+    const parsed = JSON.parse(String(err?.stdout || '').trim());
+    return String(parsed.error?.message || parsed.error?.msg || err.message).slice(0, 500);
+  } catch {
+    return String(err?.message || 'rollback failed').slice(0, 500);
+  }
+}
+
+function annotateBaseCreateFailure(err, baseToken, rollback) {
+  let envelope;
+  try {
+    const raw = String(err?.stdout || '').trim();
+    const jsonStart = raw.startsWith('{') ? 0 : raw.indexOf('\n{') + 1;
+    envelope = JSON.parse(raw.slice(jsonStart));
+  } catch {
+    envelope = { ok: false, error: { type: 'base_create_transaction', message: String(err?.message || 'Base customization failed') } };
+  }
+  if (!envelope.error || typeof envelope.error !== 'object') {
+    envelope.error = { type: 'base_create_transaction', message: 'Base customization failed' };
+  }
+  envelope.error.rollback = rollback;
+  if (!rollback.succeeded) {
+    envelope.error.partial_resource = {
+      type: 'bitable',
+      token: baseToken,
+      cleanup_tool: 'lark_drive_delete',
+      cleanup_args: { file_token: baseToken, type: 'bitable', _confirm: true },
+    };
+  }
+  err.stdout = JSON.stringify(envelope);
+  return err;
+}
+
+function needsBaseCreateTransaction(cliArgs) {
+  return cliArgs[0] === 'base' && cliArgs[1] === '+base-create' &&
+    !cliArgs.includes('--dry-run') &&
+    (cliArgs.includes('--fields') || cliArgs.includes('--table-name'));
+}
+
+async function runBaseCreateTransaction(run, cliArgs) {
+  if (!needsBaseCreateTransaction(cliArgs)) return run(cliArgs);
+
+  const fields = cliFlagValue(cliArgs, '--fields');
+  const requestedTableName = cliFlagValue(cliArgs, '--table-name');
+  const tableName = requestedTableName || 'Table 1';
+  const initialArgs = withoutCliFlags(
+    cliArgs,
+    new Set(['--fields', '--table-name', '--format', '--jq']),
+    new Set(['--json']),
+  );
+  initialArgs.push('--format', 'json');
+
+  const initialResult = await run(initialArgs);
+  const initialEnvelope = parseCliEnvelope(initialResult, 'base create');
+  const baseToken = createdBaseToken(initialEnvelope);
+  if (!baseToken) {
+    throw new Error('base create succeeded but returned no base_token/app_token; refusing untracked table customization');
+  }
+
+  try {
+    let oldTableId = defaultTableId(initialEnvelope);
+    if (!oldTableId) {
+      const listEnvelope = parseCliEnvelope(await run([
+        'base', '+table-list', '--base-token', baseToken, '--limit', '100', '--format', 'json',
+      ]), 'default table lookup');
+      oldTableId = firstListedTableId(listEnvelope);
+    }
+    if (!oldTableId) throw new Error('created Base returned no default table ID');
+
+    const data = objectData(initialEnvelope);
+    if (fields) {
+      const createEnvelope = parseCliEnvelope(await run([
+        'base', '+table-create', '--base-token', baseToken, '--name', tableName,
+        '--fields', fields, '--format', 'json',
+      ]), 'replacement table create');
+      const createData = objectData(createEnvelope) || {};
+      const createdTable = createData.table || createData;
+      parseCliEnvelope(await run([
+        'base', '+table-delete', '--base-token', baseToken, '--table-id', oldTableId,
+        '--yes', '--format', 'json',
+      ]), 'default table delete');
+      data.table = createdTable;
+      data.fields = Array.isArray(createdTable.fields) ? createdTable.fields : (createData.fields || []);
+      data.default_table_deleted = true;
+      data.deleted_default_table_id = oldTableId;
+    } else {
+      const updateEnvelope = parseCliEnvelope(await run([
+        'base', '+table-update', '--base-token', baseToken, '--table-id', oldTableId,
+        '--name', tableName, '--format', 'json',
+      ]), 'default table rename');
+      const updateData = objectData(updateEnvelope) || {};
+      data.table = updateData.table || updateData;
+      data.default_table_renamed = true;
+      data.renamed_default_table_id = oldTableId;
+    }
+    return { stdout: JSON.stringify(initialEnvelope), stderr: initialResult.stderr || '' };
+  } catch (stageError) {
+    let rollback;
+    try {
+      parseCliEnvelope(await run([
+        'drive', '+delete', '--file-token', baseToken, '--type', 'bitable', '--yes', '--format', 'json',
+      ]), 'Base rollback');
+      rollback = { attempted: true, succeeded: true, resource_type: 'bitable' };
+    } catch (rollbackError) {
+      rollback = {
+        attempted: true,
+        succeeded: false,
+        resource_type: 'bitable',
+        error: errorSummary(rollbackError),
+      };
+    }
+    throw annotateBaseCreateFailure(stageError, baseToken, rollback);
+  }
+}
+
 // Skill-domain lookup with service-name aliases. The tool namespace says
 // `lark_docs_*` (service "docs") but the skill domain is `doc` — an agent
 // deriving the domain from a tool name naturally guesses "docs" and got
@@ -534,4 +726,6 @@ module.exports = {
   findByName,
   patchPermissionError,
   createSemaphore,
+  needsBaseCreateTransaction,
+  runBaseCreateTransaction,
 };
