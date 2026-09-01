@@ -10,7 +10,7 @@
 
 ```
 # 直接传 xml_presentation_id
-lark_slides_delete_slide(presentation="<PID>", slide_id="<SID>")
+lark_slides_delete_slide(presentation="<PRES_ID>", slide_id="<SID>")
 
 # slides URL / wiki URL 都可以（wiki 会自动解析并校验 obj_type=slides）
 lark_slides_delete_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX", slide_id="<SID>")
@@ -40,7 +40,7 @@ lark_slides_delete_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX", 
 `slide_id` 是服务端短 ID，**不能从 XML 里推导**。两个来源：
 
 1. `lark_slides_create` / `lark_slides_add_slide` 的返回值里存下来；
-2. 事后回读：`lark_slides_xml_get(presentation="<PID>", output=".lark-slides/plan/<deck>/readback.xml")`。
+2. 事后回读：`lark_slides_xml_get(presentation="<PRES_ID>", output=".lark-slides/plan/<deck>/readback.xml")`。
 
 删错页的代价高于多跑一次回读 —— 不确定就先回读 + `lark_slides_screenshot` 看一眼再删。
 

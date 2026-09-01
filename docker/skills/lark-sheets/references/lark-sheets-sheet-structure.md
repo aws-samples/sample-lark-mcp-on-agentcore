@@ -87,7 +87,7 @@ _公共四件套 · high-risk-write（需 _confirm=true）_
 | Flag | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `range` | string | xor | 要删除的行/列闭区间；行用 1-based 数字如 `3:7` 或单行 `5`，列用字母如 `C:F` 或单列 `C`。与 `ranges` 二选一 |
-| `ranges` | 简单 JSON | xor | 要删除的多个行/列区间 JSON 数组（最多 100 个，如 `["5:5","8:8","11:13"]` 或 `["C:C","F:G"]`），全行或全列不可混用，区间不可重叠；与 `range` 二选一。按位置**从大到小逆序**合成一次批量删除（fail-fast、不回滚）——正序删除会因前面的行/列被删导致后续索引前移错位，逆序已自动代劳，无需自行排序 |
+| `ranges` | 简单 JSON | xor | 要删除的多个行/列区间 JSON 数组（最多 100 个，如 `["5:5","8:8","11:13"]` 或 `["C:C","F:G"]`），全行或全列不可混用，区间不可重叠；与 `range` 二选一。按位置**从大到小逆序**合成一次批量删除（fail-fast，失败后先回读再补发）——正序删除会因前面的行/列被删导致后续索引前移错位，逆序已自动代劳，无需自行排序 |
 
 ### `lark_sheets_dim_hide`
 
@@ -170,7 +170,7 @@ lark_sheets_dim_delete(url="...", sheet_id="$SID", range="5:7")
 # 删除 D-F 列
 lark_sheets_dim_delete(url="...", sheet_id="$SID", range="D:F")
 
-# 删除多个散布区间（如按查重结果删行）：ranges 一次批量交付（fail-fast、不回滚，逆序保索引）。
+# 删除多个散布区间（如按查重结果删行）：ranges 一次批量交付（fail-fast，失败后先回读再补发；逆序保索引）。
 # 自动按位置从大到小逆序执行——正序会因前面的行被删导致后续索引前移错位；
 # 无需自行排序，也不要为此拼 lark_sheets_batch_update 的子操作数组
 lark_sheets_dim_delete(url="...", sheet_id="$SID", ranges=["5:5","8:8","11:13"])

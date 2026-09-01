@@ -1,8 +1,36 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.89",
-    "extracted_at": "2026-08-25",
-    "source": "https://github.com/larksuite/cli"
+    "lark_cli_version": "1.0.92",
+    "extracted_at": "2026-09-01",
+    "source": "https://github.com/larksuite/cli",
+    "bot_declared_scopes": [
+      "base:app:copy",
+      "base:app:create",
+      "base:table:create",
+      "base:table:delete",
+      "base:table:read",
+      "base:table:update",
+      "contact:contact.base:readonly",
+      "contact:user.base:readonly",
+      "docs:permission.member:create",
+      "drive:drive.metadata:readonly",
+      "im:chat:create",
+      "im:message.group_msg",
+      "im:message.p2p_msg:readonly",
+      "im:message.reactions:read",
+      "im:message:readonly",
+      "im:message:send_as_bot",
+      "vc:meeting.bot.join:write",
+      "wiki:node:retrieve"
+    ],
+    "bot_exclusive_scopes": [
+      "contact:contact.base:readonly",
+      "contact:user.base:readonly",
+      "im:chat:create",
+      "im:message.group_msg",
+      "im:message.p2p_msg:readonly",
+      "im:message:send_as_bot"
+    ]
   },
   "shortcuts": [
     {
@@ -1008,6 +1036,27 @@
     },
     {
       "service": "base",
+      "command": "+field-extension-get",
+      "scopes": [
+        "base:field:read"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+field-extension-update",
+      "scopes": [
+        "base:field:update"
+      ]
+    },
+    {
+      "service": "base",
+      "command": "+field-extension-update-cells",
+      "scopes": [
+        "base:record:update"
+      ]
+    },
+    {
+      "service": "base",
       "command": "+field-get",
       "scopes": [
         "base:field:read"
@@ -1556,6 +1605,13 @@
     },
     {
       "service": "calendar",
+      "command": "+join-event",
+      "scopes": [
+        "calendar:calendar.event:join"
+      ]
+    },
+    {
+      "service": "calendar",
       "command": "+meeting",
       "scopes": [
         "calendar:calendar.event:read"
@@ -1587,6 +1643,14 @@
       "command": "+suggestion",
       "scopes": [
         "calendar:calendar.free_busy:read"
+      ]
+    },
+    {
+      "service": "calendar",
+      "command": "+transfer",
+      "scopes": [
+        "calendar:calendar.event:transfer",
+        "calendar:calendar.event:read"
       ]
     },
     {
@@ -1827,6 +1891,7 @@
       "command": "+download",
       "scopes": [
         "drive:file:download",
+        "docs:permission.member:auth",
         "drive:drive.metadata:readonly",
         "wiki:node:retrieve"
       ]
@@ -2064,7 +2129,8 @@
     {
       "service": "event",
       "command": "+subscribe",
-      "scopes": []
+      "scopes": [],
+      "userCallable": false
     },
     {
       "service": "im",
@@ -2188,6 +2254,12 @@
       "scopes": [
         "im:message:readonly"
       ]
+    },
+    {
+      "service": "im",
+      "command": "+messages-edit",
+      "scopes": [],
+      "userCallable": false
     },
     {
       "service": "im",
@@ -2683,6 +2755,21 @@
     },
     {
       "service": "sheets",
+      "command": "+batch-chart-create",
+      "scopes": [
+        "sheets:spreadsheet:write_only"
+      ]
+    },
+    {
+      "service": "sheets",
+      "command": "+batch-chart-update",
+      "scopes": [
+        "sheets:spreadsheet:read",
+        "sheets:spreadsheet:write_only"
+      ]
+    },
+    {
+      "service": "sheets",
       "command": "+batch-set-style",
       "scopes": [
         "sheets:spreadsheet:write_only",
@@ -2693,7 +2780,8 @@
       "service": "sheets",
       "command": "+batch-update",
       "scopes": [
-        "sheets:spreadsheet:write_only"
+        "sheets:spreadsheet:write_only",
+        "sheets:spreadsheet:read"
       ]
     },
     {
@@ -2783,8 +2871,31 @@
     },
     {
       "service": "sheets",
+      "command": "+chart-config-update",
+      "scopes": [
+        "sheets:spreadsheet:read",
+        "sheets:spreadsheet:write_only"
+      ]
+    },
+    {
+      "service": "sheets",
       "command": "+chart-create",
       "scopes": [
+        "sheets:spreadsheet:write_only"
+      ]
+    },
+    {
+      "service": "sheets",
+      "command": "+chart-create-basic",
+      "scopes": [
+        "sheets:spreadsheet:write_only"
+      ]
+    },
+    {
+      "service": "sheets",
+      "command": "+chart-data-update",
+      "scopes": [
+        "sheets:spreadsheet:read",
         "sheets:spreadsheet:write_only"
       ]
     },
@@ -2833,6 +2944,13 @@
     {
       "service": "sheets",
       "command": "+cond-format-list",
+      "scopes": [
+        "sheets:spreadsheet:read"
+      ]
+    },
+    {
+      "service": "sheets",
+      "command": "+cond-format-result-get",
       "scopes": [
         "sheets:spreadsheet:read"
       ]
@@ -3646,6 +3764,14 @@
     },
     {
       "service": "slides",
+      "command": "+media-download",
+      "scopes": [
+        "docs:document.media:download",
+        "drive:file:download"
+      ]
+    },
+    {
+      "service": "slides",
       "command": "+media-upload",
       "scopes": [
         "docs:document.media:upload",
@@ -3826,10 +3952,29 @@
     },
     {
       "service": "vc",
+      "command": "+meeting-countdown",
+      "scopes": [
+        "vc:meeting.interaction:write"
+      ]
+    },
+    {
+      "service": "vc",
+      "command": "+meeting-end",
+      "scopes": [],
+      "userCallable": false
+    },
+    {
+      "service": "vc",
       "command": "+meeting-events",
       "scopes": [
         "vc:meeting.meetingevent:read"
       ]
+    },
+    {
+      "service": "vc",
+      "command": "+meeting-invite",
+      "scopes": [],
+      "userCallable": false
     },
     {
       "service": "vc",
@@ -3857,6 +4002,13 @@
       "command": "+meeting-message-send",
       "scopes": [
         "vc:meeting.message:write"
+      ]
+    },
+    {
+      "service": "vc",
+      "command": "+meeting-screenshot",
+      "scopes": [
+        "vc:meeting.realtime:read"
       ]
     },
     {

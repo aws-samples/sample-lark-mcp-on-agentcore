@@ -11,7 +11,12 @@ const tier1: string[] = JSON.parse(
 
 const shortcutScopes: {
   _meta: { lark_cli_version: string };
-  shortcuts: { service: string; command: string; scopes: string[] }[];
+  shortcuts: {
+    service: string;
+    command: string;
+    scopes: string[];
+    userCallable?: boolean;
+  }[];
 } = JSON.parse(
   readFileSync(resolve(ROOT, "docker/shortcut-scopes.json"), "utf-8"),
 );
@@ -165,6 +170,61 @@ describe("scope coverage", () => {
       botScopes,
       "bot-only scopes must be filtered by scripts/extract-rawapi-scopes.sh",
     ).toEqual([]);
+  });
+
+  // Sibling of the rawapi assertion above. shortcut-scopes.json had no equivalent
+  // guard, which is how lark-cli 1.0.92's `im +messages-edit` leaked
+  // im:message:send_as_bot into the allowlist: the shortcut declares no UserScopes,
+  // so extraction fell back to the generic `Scopes` field, where upstream had listed
+  // the bot scope alongside BotScopes. Plain "exclude BotScopes" does not catch that.
+  it("no bot-only scopes in shortcut-scopes.json (user-only project)", () => {
+    const botScopes: string[] = [];
+    for (const s of shortcutScopes.shortcuts) {
+      for (const sc of s.scopes || []) {
+        if (/:send_as_bot$/.test(sc)) botScopes.push(`${s.service} ${s.command}: ${sc}`);
+      }
+    }
+    expect(
+      botScopes,
+      "bot-only scopes must be filtered by scripts/extract-shortcut-scopes.py",
+    ).toEqual([]);
+  });
+
+  // A shortcut whose upstream AuthTypes omits "user" cannot be invoked with a user
+  // token at all. The extractor marks those `userCallable: false`, generate-tools.js
+  // skips them, and the adapted skills tell the agent no tool exists. These three
+  // assertions keep that chain honest — before them the exclusion rested entirely on
+  // lark-cli hiding bot-only commands from `--help`, which it only does when a
+  // user-token env var happens to be set during the image build.
+  const botOnly = shortcutScopes.shortcuts.filter((s) => s.userCallable === false);
+
+  it("bot-only shortcuts are marked and carry no user scopes", () => {
+    // Non-vacuous: 1.0.92 ships four (im +messages-edit, vc +meeting-end,
+    // vc +meeting-invite, event +subscribe). Zero means the AuthTypes gate broke.
+    expect(botOnly.length).toBeGreaterThan(0);
+    expect(
+      botOnly.filter((s) => (s.scopes || []).length > 0).map((s) => `${s.service} ${s.command}`),
+      "a bot-only shortcut must grant no user scopes",
+    ).toEqual([]);
+  });
+
+  it("generate-tools.js filters bot-only shortcuts out of the catalog", () => {
+    const gen = readFileSync(resolve(ROOT, "docker/generate-tools.js"), "utf-8");
+    expect(gen).toContain("userCallable === false");
+    expect(gen).toMatch(/botOnlyShortcuts\.has\(/);
+  });
+
+  // The generator's own env is what makes lark-cli hide bot-only commands. Setting it
+  // only via a `||` default inside generate-tools.js means an unrelated edit there
+  // could silently re-admit them, so the Dockerfile must state it explicitly.
+  it("Dockerfile sets the user-token env var for tool generation", () => {
+    const lines = readFileSync(resolve(ROOT, "docker/Dockerfile"), "utf-8").split("\n");
+    // The invocation line, not the `COPY generate-tools.js` line.
+    const genStep = lines.findIndex((l) => /node\s+\S*generate-tools\.js/.test(l));
+    expect(genStep, "no `node .../generate-tools.js` step in the Dockerfile").toBeGreaterThan(-1);
+    // The RUN is a multi-line continuation; the env assignments precede the node call.
+    const block = lines.slice(Math.max(0, genStep - 4), genStep + 1).join("\n");
+    expect(block).toContain("LARKSUITE_CLI_USER_ACCESS_TOKEN=");
   });
 
   // The console-import scope list embedded in docs/app-setup_{en,zh}.md is a derived

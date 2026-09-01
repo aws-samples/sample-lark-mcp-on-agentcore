@@ -1,0 +1,12 @@
+# Build-context excludes. The image is built from this directory, and
+# `COPY skills /app/skills` would otherwise pick up whatever a local run left
+# behind — notably Python bytecode from the skill scripts under
+# skills/*/scripts/. Those are gitignored, so a clean CI checkout never has
+# them, but a developer's local build would silently ship them.
+#
+# NOTE the `**/` prefixes. .dockerignore does NOT use .gitignore semantics: a
+# bare `__pycache__/` matches only a directory at the context root, not at any
+# depth. Without `**/` these patterns silently match nothing.
+**/__pycache__
+**/*.pyc
+**/*.pyo

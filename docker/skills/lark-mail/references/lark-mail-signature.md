@@ -92,5 +92,5 @@ lark_mail_signature(from="shared@example.com")
 lark_mail_signature()
 
 # 在发送邮件时附加签名
-lark_mail_send(to="alice@example.com", subject="你好", body="<p>内容</p>", signature_id="<签名ID>")
+lark_mail_send(to=["alice@example.com"], subject="你好", body="<p>内容</p>", signature_id="<签名ID>")
 ```

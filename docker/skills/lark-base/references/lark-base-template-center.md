@@ -2,6 +2,8 @@
 
 模板中心是一个**公开的 Base 模板库**。当用户想"用一个现成的模板快速搭一个多维表格"时，这套工具帮助 AI 找到最合适的模板，最终通过 `lark_base_base_copy()` 复制成用户自己的新 Base。
 
+模板中心里也可能返回 BaseApp / 应用模板。若模板预览链接 `templates[].link` 包含 `/app/`，它只是可展示的应用模板预览，不支持通过 `lark_base_base_copy()` 复制创建。用户要求"基于这个应用模板创建 / 复制应用模板"时，应明确拒绝，并说明当前工具集只支持复制 Base 模板，不支持复制应用模板。
+
 三个工具：
 
 - `lark_base_template_categories()`：列出所有模板分类，用于把用户意图对齐到某个类目。
@@ -168,7 +170,7 @@ lark_base_template_search(keyword="AI", limit=10, offset="<上一页返回的 of
 
 - `templates[].name`：模板名称；基于模板创建 Base 且用户没有指定新名称时，直接作为 `lark_base_base_copy()` 的 `name`。
 - `templates[].token`：模板 Base token；复制时传给 `lark_base_base_copy()` 的 `base_token`。
-- `templates[].link`：模板预览链接；可以展示给用户帮助确认，但复制时不要用 link 代替 token。
+- `templates[].link`：模板预览链接；可以展示给用户帮助确认，但复制时不要用 link 代替 token。若链接包含 `/app/`，这是应用模板预览，只能展示，不能复制创建。
 - `templates[].introduction` / `templates[].scenarios`：用于判断模板是否匹配用户业务场景。
 - `data.offset`：下一页游标；只有 `has_more=true` 时才继续传给 `offset`。
 
@@ -183,6 +185,7 @@ lark_base_base_copy(base_token="<模板 token>", name="<新 Base 名>")
 - `name` 用用户想要的新 Base 名；不传则沿用模板名。
 - 只有用户明确说"只要结构 / 不要内容"时，才加 `without_content=true`。
 - `lark_base_base_copy()` 的返回和权限说明见 `lark_get_skill(domain="base")` 中 `lark_base_base_copy()` 的相关规则。
+- 如果选中的模板 `link` 包含 `/app/`，不要调用 `lark_base_base_copy()`。这类应用模板当前仅支持展示给用户，不支持复制创建；用户要求基于应用模板创建时应拒绝并说明能力边界。
 
 ## 注意事项
 
@@ -193,3 +196,4 @@ lark_base_base_copy(base_token="<模板 token>", name="<新 Base 名>")
 - 模板的唯一标识是 `token`（模板 Base token），不要改名成 `id` 或 `key`。
 - `offset` 是服务端返回的不透明游标，翻页时原样回传，不要解析或自行构造。
 - 模板中心只查模板、不创建 Base；创建一律走 `lark_base_base_copy(base_token="<token>")`，不要用模板 token 去调 `lark_base_base_get()` 之类的当前用户 Base 工具。
+- 应用模板链接包含 `/app/`，仅用于预览展示，不支持 `lark_base_base_copy()`；不要承诺可基于应用模板创建。

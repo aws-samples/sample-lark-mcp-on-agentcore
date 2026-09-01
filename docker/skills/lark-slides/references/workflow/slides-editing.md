@@ -18,14 +18,14 @@
 ## 最小读-改-写闭环
 
 ```
-PID = "xml_presentation_id_here"
+PRES_ID = "xml_presentation_id_here"
 SID = "slide_id_here"
 
 # 1. 读原页，从 XML 里挑出要改的块的 3 位 short id（如 bUn / bab）
-lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={params: {"xml_presentation_id": PID, "slide_id": SID}})
+lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={params: {"xml_presentation_id": PRES_ID, "slide_id": SID}})
 
 # 2. 用 lark_slides_replace_slide 直接改那个块（不需要搬原 XML）
-lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"block_replace","block_id":"bUn","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]')
+lark_slides_replace_slide(presentation=PRES_ID, slide_id=SID, parts='[{"action":"block_replace","block_id":"bUn","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]')
 ```
 
 `slide_id` / 页序不会变。`block_replace` 的 `replacement` 根元素 `id` 会自动注入为 `block_id`。
@@ -45,7 +45,7 @@ lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"blo
 适合"已知块 ID，要换这块整体内容"的场景。`replacement` 根元素的 `id="<block_id>"` 自动注入。
 
 ```
-lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"block_replace","block_id":"bab","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]')
+lark_slides_replace_slide(presentation=PRES_ID, slide_id=SID, parts='[{"action":"block_replace","block_id":"bab","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]')
 ```
 
 ### block_insert — 整块插入
@@ -54,10 +54,10 @@ lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"blo
 
 ```
 # 先上传图片拿 file_token
-lark_slides_media_upload(file="./pic.png", presentation=PID)
+lark_slides_media_upload(file="./pic.png", presentation=PRES_ID)
 
 # 再 block_insert
-lark_slides_replace_slide(presentation=PID, slide_id=SID, parts='[{"action":"block_insert","insertion":"<img src=\"<file_token>\" topLeftX=\"500\" topLeftY=\"100\" width=\"200\" height=\"150\"/>"}]')
+lark_slides_replace_slide(presentation=PRES_ID, slide_id=SID, parts='[{"action":"block_insert","insertion":"<img src=\"<file_token>\" topLeftX=\"500\" topLeftY=\"100\" width=\"200\" height=\"150\"/>"}]')
 ```
 
 > **`<img>` 必须用 `file_token`**，不能用外链 URL——先用 `lark_slides_media_upload` 拿 token。

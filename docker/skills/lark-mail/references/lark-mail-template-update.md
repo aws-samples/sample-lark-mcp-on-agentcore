@@ -12,7 +12,7 @@
 |------|------|---------|
 | `print_patch_template=true` | 打印 `patch_file` 的 JSON 骨架 | 否（纯本地） |
 | `inspect=true` | 返回当前模板完整 projection | 否（只 GET） |
-| `set_*` / `attach` | 扁平参数合并后 PUT | 是 |
+| `set_*` / `attach` / `inline` | 扁平参数合并后 PUT | 是 |
 | `patch_file` | 结构化 patch + 扁平参数合并后 PUT | 是 |
 
 ## 调用
@@ -28,10 +28,10 @@ lark_mail_template_update(print_patch_template=true)
 lark_mail_template_update(template_id="712345", set_subject="每周五发布", set_cc="manager@example.com")
 
 # 用 patch 文件做结构化更新
-lark_mail_template_update(template_id="712345", patch_file="/tmp/tpl-patch.json")
+lark_mail_template_update(template_id="712345", patch_file="./tpl-patch.json")
 
 # 追加新附件
-lark_mail_template_update(template_id="712345", attach="./appendix.pdf")
+lark_mail_template_update(template_id="712345", attach=["./appendix.pdf"])
 ```
 
 ## 参数
@@ -61,10 +61,11 @@ lark_mail_template_update(template_id="712345", attach="./appendix.pdf")
 | `set_template_content` | 替换正文。支持 `<img src="./local.png" />` 相对路径自动上传并改写 |
 | `set_template_content_file` | 从文件加载替换正文；与 `set_template_content` 互斥 |
 | `set_plain_text` | 标为纯文本模式（置 true）。**不提供不会置 false**；要把 HTML 模板翻回 false，请用 `patch_file` 的 `{"is_plain_text_mode": false}` |
-| `set_to` | 替换默认收件人列表 |
-| `set_cc` | 替换默认抄送 |
-| `set_bcc` | 替换默认密送 |
-| `attach` | 追加非 inline 附件（按书写顺序），不替换已有附件 |
+| `set_to` | 用单次参数值替换默认收件人列表（**字符串**，不是数组）；多个地址在该值内用逗号分隔，传 `set_to=""` 可清空 |
+| `set_cc` | 用单次参数值替换默认抄送（**字符串**，不是数组）；多个地址在该值内用逗号分隔，传 `set_cc=""` 可清空 |
+| `set_bcc` | 用单次参数值替换默认密送（**字符串**，不是数组）；多个地址在该值内用逗号分隔，传 `set_bcc=""` 可清空 |
+| `attach` | 追加非 inline 附件，不替换已有附件。**数组**，一个元素放一个相对路径（不要写成逗号分隔的字符串）；按数组顺序上传 |
+| `inline` | 追加 inline 图片，不替换已有附件。**数组**，一个元素放一个 JSON object（不要把整个 JSON 数组塞进单个字符串）：`inline=["{\"cid\":\"mycid\",\"file_path\":\"./logo.png\"}"]`；`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在模板正文中用 `<img src="cid:mycid">` 引用；最终模板为纯文本模式时会被拒绝 |
 
 ### 结构化 patch
 

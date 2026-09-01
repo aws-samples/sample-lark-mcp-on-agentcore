@@ -1,12 +1,12 @@
 # 应用机器人参会与会中互动
 
-> ⚠️ **本场景通篇编排的是应用机器人（应用身份 / bot identity）的真实入会、会中读写和离会，而 MCP server 始终以用户身份（user identity）调用，无法切换为应用身份——因此本场景的入会（`lark_vc_meeting_join`）、离会（`lark_vc_meeting_leave`）以及应用身份的活跃会议发现（`lark_vc_meeting_list_active(user_id=...)`）在 MCP server 上不可用。**
+> ⚠️ **本场景通篇编排的是应用机器人（应用身份 / bot identity）的真实发起、入会、邀请、会中读写、结束和离会，而 MCP server 始终以用户身份（user identity）调用，无法切换为应用身份——因此本场景的发起 / 入会（`lark_vc_meeting_join`）、离会（`lark_vc_meeting_leave`）以及应用身份的活跃会议发现（`lark_vc_meeting_list_active(user_id=...)`）在 MCP server 上不可用；邀请参会人和结束会议只接受应用身份，MCP server 的工具目录里连对应工具都没有。**
 >
 > 完整编排在此保留，用于解释这条链路的语义、风险和排查方式，便于向用户说明为什么请求无法在 MCP server 上完成；不要把标注为应用身份的步骤当作可直接调用的工具向用户承诺执行。
 >
-> MCP server 上可用的替代路径是用户身份：用不带 `user_id` 的 `lark_vc_meeting_list_active` 发现当前登录用户正在参加的会议，再读取会中事件或发送会中消息——见 `lark_get_skill(domain="meeting", section="scenes/live-meeting-interact")`。用户要求“代我入会”“让机器人进会旁听”“退出会议”时，说明这些是应用身份操作、当前不支持，并改为提供用户身份可用的能力。
+> MCP server 上可用的替代路径是用户身份：用不带 `user_id` 的 `lark_vc_meeting_list_active` 发现当前登录用户正在参加的会议，再读取会中事件、发送会中消息或操作会中倒计时——见 `lark_get_skill(domain="meeting", section="scenes/live-meeting-interact")`。用户要求“代我入会”“让机器人进会旁听”“让机器人把会结束掉”“退出会议”时，说明这些是应用身份操作、当前不支持，并改为提供用户身份可用的能力。
 
-编排应用机器人的完整会中流程：发现已在参加的会议，或在用户明确授权后真实入会；随后拉取会中事件、发送文本或会中表情，并仅在用户明确要求时离会。
+编排应用机器人的完整会中流程：发现已在参加的会议，或在用户明确授权后发起或加入会议；随后拉取会中事件、发送文本或会中表情、操作倒计时，并仅在用户明确要求时结束会议或离会。
 
 ## 选择入口
 
@@ -15,6 +15,7 @@
 | 已有应用身份取得的 `meeting_id` | 直接拉取事件，不重复查询或入会 |
 | 应用机器人可能已在会中 | 已知目标用户 `user_open_id` 时，先用应用身份的 `lark_vc_meeting_list_active(user_id="<user_open_id>")` 发现会议（⚠️ 应用身份，MCP server 不可用） |
 | 用户明确要求机器人入会、旁听或代参会 | 使用 `lark_vc_meeting_join`（⚠️ 应用身份写操作，MCP server 不可用） |
+| 用户明确要求机器人发起日程会议 | 使用 `lark_vc_meeting_join(action="start")`（⚠️ 应用身份写操作，MCP server 不可用） |
 | 只想查当前用户所在会议 | 使用 `lark_get_skill(domain="meeting", section="scenes/live-meeting-interact")` 的用户身份路径，不让应用机器人入会（这是 MCP server 上可用的路径） |
 
 用户只提供 9 位会议号或询问会议内容，不等于授权机器人入会。
@@ -32,26 +33,45 @@ lark_vc_meeting_list_active(user_id="<user_open_id>", format="json")
 - 返回多个会议时，展示主题、会议号和 `meeting_id` 让用户选择；不擅自取第一个。
 - 返回空不代表目标用户没有在开会，只表示没有找到应用机器人也在会中的可见会议。
 - 用户提供 9 位会议号时，在结果中按 `meeting_no` 匹配；匹配失败时不自动入会。
-- 保存选定的长整数 `meeting_id`，后续事件、消息和离会都沿用同一条应用身份路径。
+- 保存选定的长整数 `meeting_id`，后续事件、消息、倒计时和离会都沿用同一条应用身份路径。
 
 身份可见范围、多会议选择和会议号匹配见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-list-active")`。
 
-## 加入会议
+## 发起或加入会议
 
 > ⚠️ 应用身份写操作，MCP server 不可用。
 
-只有用户明确要求应用机器人加入、旁听或代参会时才执行。入会需要 9 位会议号，不是长整数 `meeting_id`。
+只有用户明确要求应用机器人发起、加入、旁听或代参会时才执行。输入是 9 位会议号，不是长整数 `meeting_id`。
 
 ```
+# 发起日程会议并加入
+lark_vc_meeting_join(meeting_number="<9_digit_meeting_number>", action="start")
+
+# 加入正在进行的会议
 lark_vc_meeting_join(meeting_number="<9_digit_meeting_number>")
 ```
 
 - 入会前确认目标会议号和用户意图；这是对其他参会人可见的写操作。
-- 保存返回的 `meeting.id`；后续拉取事件、发送会中消息和离会都使用该 ID 并沿用应用身份。
+- `action="start"` 仅用于发起符合条件的日程会议；未传时保持加入正在进行的会议。
+- 保存返回的 `meeting.id`；后续邀请、拉取事件、发送会中消息、操作倒计时、结束或离会都使用该 ID 并沿用应用身份。
 - 应用机器人可以同时加入多场会议；加入新会议前不需要退出其他会议。
 - 根据返回状态确认入会成功，不要把“请求已发起”当作已入会。
 
 会议密码、等候室、写操作风险和异常恢复见 `lark_get_skill(domain="meeting", section="lark-vc-agent-meeting-join")`。
+
+## 邀请参会人
+
+> ⚠️ 应用身份写操作，MCP server 不可用。
+
+只有用户明确要求邀请时才执行。输入是长数字 `meeting_id`，不是 9 位会议号。
+
+MCP server 的工具目录里没有邀请参会人的工具，因此这一步在 MCP 上无法执行——请求形状仅作说明：邀请范围为 `SELECTED` 时另需被邀请人的 `open_id` 列表，`ALL_SUGGESTED` 时由服务端筛选。
+
+- 应用机器人必须已在目标 Calendar VC 中。
+- `SELECTED` 接收用户 `open_id`；`ALL_SUGGESTED` 由服务端筛选合格日程参会人。
+- 以返回结果确认邀请状态，不把请求提交当作参会人已入会。
+
+邀请类型、人数上限和结果语义见 `lark_get_skill(domain="meeting", section="lark-vc-agent-meeting-invite")`。
 
 ## 拉取会中事件
 
@@ -87,6 +107,42 @@ lark_vc_meeting_message_send(meeting_id="<meeting_id>", msg_type="reaction", emo
 
 文本、reaction 语义、完整 emoji key 和幂等参数见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-message-send")`。
 
+## 操作会中倒计时
+
+> ⚠️ 本节编排的是应用身份倒计时操作，MCP server 不可用；`lark_vc_meeting_countdown` 本身在用户身份下可用，`meeting_id` 须来自用户身份的活跃会议发现（见 `lark_get_skill(domain="meeting", section="scenes/live-meeting-interact")`）。
+
+每次倒计时操作都是对会中参会人可见的写操作。只有用户明确要求设置、延长、提前结束或关闭倒计时时才执行。
+
+```
+# 设置倒计时
+lark_vc_meeting_countdown(meeting_id="<meeting_id>", action="set", duration=<minutes>)
+
+# 延长倒计时
+lark_vc_meeting_countdown(meeting_id="<meeting_id>", action="prolong", duration=<minutes>)
+```
+
+- 始终沿用产生 `meeting_id` 的身份路径；不要中途切换身份。通过 MCP server 时身份恒为用户身份。
+- 用户只给 9 位会议号时，先按当前身份的活跃会议列表匹配；匹配失败时不要为了倒计时自动入会。
+- `end_in_advance` 和 `close_window` 不携带 `duration`、提醒点或结束音频参数。
+- 操作失败时停止并报告；不自动重试或换身份，避免重复可见副作用。
+
+动作、提醒点和权限规则见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-countdown")`。
+
+## 结束会议
+
+> ⚠️ 应用身份高风险写操作，MCP server 不可用。
+
+只有用户明确要求结束整场会议时才执行；不要把结束会议和机器人离会混用。
+
+MCP server 的工具目录里没有结束会议的工具，因此这一步在 MCP 上无法执行——请求形状仅作说明：只需要标识该会议的长数字 `meeting_id`。
+
+- 输入是长数字 `meeting_id`。
+- 当前应用机器人必须是 Host；结束成功会结束整场会议。
+- 这是高风险写操作，上游要求一次显式确认。
+- 根据返回状态确认会议已结束。
+
+身份、权限和失败原因见 `lark_get_skill(domain="meeting", section="lark-vc-agent-meeting-end")`。
+
 ## 离开会议
 
 > ⚠️ 应用身份写操作，MCP server 不可用。
@@ -111,7 +167,7 @@ lark_vc_meeting_leave(meeting_id="<meeting_id>")
 应用身份返回 `no permission`、`missing required scope(s)` 或 `missing_scopes` 时，按顺序检查（认证由 MCP server 自动处理，不需要也无法在会话内重新登录）：
 
 1. 按工具错误中的 `hint` 处理；返回 `console_url` 时将其原样提供给用户。
-2. 确认应用已开通对应权限，已发布并安装到当前租户。入会和应用身份会议查询需要 `vc:meeting.bot.join:write`；会中发消息需要 `vc:meeting.message:write`。
+2. 确认应用已开通对应权限，已发布并安装到当前租户。入会和应用身份会议查询需要 `vc:meeting.bot.join:write`；会中发消息需要 `vc:meeting.message:write`；会中倒计时需要 `vc:meeting.interaction:write`。
 3. 在开放平台确认“权限可访问的数据范围”已保存为“按条件筛选”，条件为“会议的归属者 包含 与应用的可用范围一致”。
 4. 上述配置均正确仍失败时，保留工具返回的错误码和 `log_id`，按服务端权限异常排查；不要反复重试或改用其他身份。
 

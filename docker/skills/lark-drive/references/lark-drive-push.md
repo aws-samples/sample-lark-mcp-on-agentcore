@@ -83,7 +83,7 @@ lark_drive_push(local_dir="./repo", folder_token="fldcnxxxxxxxxx", if_exists="ov
 
 大文件（>20MB）会自动切到三段式 `upload_prepare` / `upload_part` / `upload_finish`；该路径下 `version` 暂未在响应中返回，覆盖结果中 `items[].version` 会留空，但 `file_token` 与 `action: overwritten` 仍会正确产出。
 
-## --delete-remote 的安全行为
+## `delete_remote` 的安全行为
 
 `delete_remote` 是命令里**唯一的破坏性 flag**，会按"远端有但本地没有"逐个 `DELETE /open-apis/drive/v1/files/<token>?type=file` 清理云端副本。设计上把它跟 `_confirm=true` 强绑定：
 
@@ -164,7 +164,7 @@ lark_drive_push(local_dir="./repo", folder_token="fldcnxxxxxxxxx", if_exists="ov
 | 新建子目录（`create_folder`） | `space:folder:create` | 预声明 |
 | 删除文件（仅 `delete_remote=true, _confirm=true`） | `space:document:delete` | 不在命令默认 Scopes 里，但在 `delete_remote=true, _confirm=true` 时由 Validate 动态预检 |
 
-`drive:drive` 在部分企业被策略禁用，所以 +push 故意只声明上面这几条细粒度 scope。
+`drive:drive` 在部分企业被策略禁用，所以 `lark_drive_push` 故意只声明上面这几条细粒度 scope。
 
 ## 范围限制
 

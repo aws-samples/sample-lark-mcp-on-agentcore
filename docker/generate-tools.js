@@ -56,6 +56,13 @@ let scopeMapVersion = 'unknown';
 // shortcut-scopes.json — the authoritative upstream-extracted shortcut list. Used
 // to admit no-plus shortcuts while excluding no-plus raw-API resource groups.
 const noPlusShortcuts = {};
+// Shortcuts upstream declares bot-only (AuthTypes without "user"). They must never
+// become MCP tools: this server only ever holds a user token, so calling one fails
+// with "user access token not support", and the adapted skills state plainly that
+// no tool exists for them. lark-cli already hides bot-only commands from `--help`,
+// but only when a user-token env var is set during the build — an incidental
+// mechanism. Filtering on this set makes the exclusion explicit and testable.
+const botOnlyShortcuts = new Set();
 if (fs.existsSync(SCOPES_FILE)) {
   const raw = JSON.parse(fs.readFileSync(SCOPES_FILE, 'utf8'));
   const scopeData = raw.shortcuts || raw;
@@ -63,11 +70,12 @@ if (fs.existsSync(SCOPES_FILE)) {
   for (const entry of scopeData) {
     const key = `${entry.service}:${entry.command}`;
     scopeMap[key] = entry.scopes || [];
+    if (entry.userCallable === false) botOnlyShortcuts.add(key);
     if (!entry.command.startsWith('+')) {
       (noPlusShortcuts[entry.service] ||= new Set()).add(entry.command);
     }
   }
-  console.log(`Scope map loaded: ${Object.keys(scopeMap).length} entries (lark-cli ${scopeMapVersion})`);
+  console.log(`Scope map loaded: ${Object.keys(scopeMap).length} entries (lark-cli ${scopeMapVersion}), ${botOnlyShortcuts.size} bot-only excluded`);
 }
 
 console.log('Generating tool catalog from lark-cli...');
@@ -119,6 +127,8 @@ let schemaExtracted = 0;
 for (const service of services) {
   const { shortcuts } = discoverShortcuts(service, noPlusShortcuts[service] || new Set());
   for (const { command, description } of shortcuts) {
+    // Bot-only upstream: not user-callable, so never expose it as a tool.
+    if (botOnlyShortcuts.has(`${service}:${command}`)) continue;
     const cmdHelp = run('lark-cli', service, command, '--help');
     const { flags, supportsYes, supportsPrintSchema } = parseFlags(cmdHelp);
     // Translate CLI-speak out of every agent-facing description (@file/stdin

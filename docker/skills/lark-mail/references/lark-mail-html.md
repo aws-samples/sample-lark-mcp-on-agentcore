@@ -297,7 +297,7 @@
 4. **调写信工具生成草稿** — 把替换后的 HTML 通过 `body` 参数交给写信链路（推荐 `lark_mail_draft_create` 先存草稿、用户复核后再发送）：
 
    ```
-   lark_mail_draft_create(to="alice@example.com", subject="Q3 团队周报", body="<替换后的模板 HTML>")
+   lark_mail_draft_create(to=["alice@example.com"], subject="Q3 团队周报", body="<替换后的模板 HTML>")
    ```
 
    其中 `body` 的值即用 `lark_get_skill(domain="mail", section="assets/templates/weekly--team-report.html")` 取回模板后、AI 替换样例文本得到的最终 HTML 字符串。
@@ -317,7 +317,7 @@
 需要看 lint 详情时加 `show_lint_details=true`：
 
 ```
-lark_mail_draft_create(show_lint_details=true, to="alice@example.com", subject="Hi", body="<p>正文</p>")
+lark_mail_draft_create(show_lint_details=true, to=["alice@example.com"], subject="Hi", body="<p>正文</p>")
 ```
 
 加了 `show_lint_details=true` 后返回同时带 `lint_applied[]` / `original_blocked[]` 两个完整 Finding 数组（每条含 `rule_id` / `severity` / `tag_or_attr` / `excerpt` / `hint`），**不再返回任何 `*_count` 字段** —— 调用方需要 count 时直接 `len(lint_applied)` / `len(original_blocked)`。**默认场景不要加这个参数**，徒增 token 消耗。

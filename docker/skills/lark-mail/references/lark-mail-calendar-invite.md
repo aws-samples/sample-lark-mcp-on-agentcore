@@ -8,7 +8,7 @@
 
 ```
 # 发送带日程邀请的新邮件
-lark_mail_send(to="alice@example.com", cc="bob@example.com", subject="产品评审", body="<p>请参加本次产品评审会议。</p>", event_summary="产品评审", event_start="2026-05-10T14:00+08:00", event_end="2026-05-10T15:00+08:00", event_location="5F 大会议室", confirm_send=true)
+lark_mail_send(to=["alice@example.com"], cc=["bob@example.com"], subject="产品评审", body="<p>请参加本次产品评审会议。</p>", event_summary="产品评审", event_start="2026-05-10T14:00+08:00", event_end="2026-05-10T15:00+08:00", event_location="5F 大会议室", confirm_send=true)
 ```
 
 ## 参数

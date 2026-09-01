@@ -4,7 +4,7 @@ FROM node:20-bookworm-slim@sha256:2cf067cfed83d5ea958367df9f966191a942351a2df77d
 
 # Pin lark-cli to the version whose scope mapping is captured in shortcut-scopes.json.
 # Drift is detected by scripts/check-lark-cli-version.sh.
-ARG LARK_CLI_VERSION=1.0.89
+ARG LARK_CLI_VERSION=1.0.92
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get upgrade -y \
@@ -40,7 +40,8 @@ COPY skills /app/skills
 
 # Generate tool catalog at build time; lock scripts/ to prevent runtime overwrite
 RUN find /app/skills -type d -name scripts -exec chmod -R 555 {} + \
-    && LARKSUITE_CLI_APP_ID=build LARKSUITE_CLI_APP_SECRET=build LARKSUITE_CLI_BRAND=feishu \
+    && LARKSUITE_CLI_APP_ID=build LARKSUITE_CLI_APP_SECRET=build \
+       LARKSUITE_CLI_USER_ACCESS_TOKEN=build LARKSUITE_CLI_BRAND=feishu \
     node /app/generate-tools.js
 
 USER node

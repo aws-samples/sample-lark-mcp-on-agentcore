@@ -16,7 +16,7 @@
 
 **方式 A（推荐）** — 先创建草稿，再确认发送：
 ```
-lark_mail_send(to="<收件人>", subject="<主题>", body="<正文>")
+lark_mail_send(to=["<收件人>"], subject="<主题>", body="<正文>")
 ```
 → 返回 `draft_id`
 
@@ -29,7 +29,7 @@ lark_invoke(tool_name="lark_mail_user_mailbox_drafts_send", args={params: {"user
 
 **方式 B（允许）** — 用户已经明确确认收件人和内容时，可直接使用 `confirm_send=true` 立即发送：
 ```
-lark_mail_send(to="<收件人>", subject="<主题>", body="<正文>", confirm_send=true)
+lark_mail_send(to=["<收件人>"], subject="<主题>", body="<正文>", confirm_send=true)
 ```
 
 **禁止在用户未明确同意的情况下执行发送，无论是发送草稿还是直接使用 `confirm_send=true`。**
@@ -38,39 +38,39 @@ lark_mail_send(to="<收件人>", subject="<主题>", body="<正文>", confirm_se
 
 ```
 # 保存为草稿（默认行为，不发送）— HTML 格式推荐
-lark_mail_send(to="alice@example.com", subject="周报", body="<p>本周进展：</p><ul><li>完成 A 模块</li><li>修复 3 个 bug</li></ul>")
+lark_mail_send(to=["alice@example.com"], subject="周报", body="<p>本周进展：</p><ul><li>完成 A 模块</li><li>修复 3 个 bug</li></ul>")
 
 # 保存为草稿并抄送
-lark_mail_send(to="alice@example.com", cc="bob@example.com", subject="状态更新", body="<b>已完成</b>")
+lark_mail_send(to=["alice@example.com"], cc=["bob@example.com"], subject="状态更新", body="<b>已完成</b>")
 
 # 确认发送（仅在用户明确确认后使用）
-lark_mail_send(to="alice@example.com", subject="周报", body="<p>本周进展如下...</p>", confirm_send=true)
+lark_mail_send(to=["alice@example.com"], subject="周报", body="<p>本周进展如下...</p>", confirm_send=true)
 
 # 保存带附件的草稿
-lark_mail_send(to="alice@example.com", subject="请查收", body="<p>见附件</p>", attach="./report.pdf,./logs.zip")
+lark_mail_send(to=["alice@example.com"], subject="请查收", body="<p>见附件</p>", attach=["./report.pdf", "./logs.zip"])
 
 # 保存带内嵌图片的草稿（推荐：直接用相对路径，自动解析）
-lark_mail_send(to="alice@example.com", subject="预览图", body="<img src=\"./logo.png\" />")
+lark_mail_send(to=["alice@example.com"], subject="预览图", body="<img src=\"./logo.png\" />")
 
 # 纯文本邮件（仅在内容极简时使用）
-lark_mail_send(to="alice@example.com", subject="确认", body="收到，谢谢")
+lark_mail_send(to=["alice@example.com"], subject="确认", body="收到，谢谢")
 ```
 
 ## 参数
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `to` | 是 | 收件人邮箱，多个用逗号分隔 |
+| `to` | 是 | 收件人邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
 | `subject` | 是 | 邮件主题 |
 | `body` | 二选一 | 邮件正文。推荐使用 HTML 获得富文本排版；也支持纯文本（自动检测）。使用 `plain_text=true` 可强制纯文本模式。支持 `<img src="./local.png" />` 相对路径自动解析为内嵌图片（仅支持相对路径，不支持绝对路径）。与 `body_file` 互斥 |
 | `body_file` | 二选一 | 从文件读取邮件正文 HTML（相对路径，仅限 cwd 子树）。与 `body` 互斥。文件大小上限 32 MB |
 | `from` | 否 | 发件人邮箱地址（EML From 头）。使用别名（send_as）发信时，设为别名地址并配合 `mailbox` 指定所属邮箱。默认读取邮箱主地址 |
 | `mailbox` | 否 | 邮箱地址，指定草稿所属的邮箱（默认回退到 `from`，再回退到 `me`）。当发件人（`from`）与邮箱不同时使用。可通过 `accessible_mailboxes` 查询可用邮箱 |
-| `cc` | 否 | 抄送邮箱，多个用逗号分隔 |
-| `bcc` | 否 | 密送邮箱，多个用逗号分隔 |
+| `cc` | 否 | 抄送邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
+| `bcc` | 否 | 密送邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
 | `plain_text` | 否 | 强制纯文本模式，忽略 HTML 自动检测。不可与 `inline` 同时使用。纯文本模式下也会自动追加纯文本签名（HTML 签名经 `PlainTextFromHTML` 转换，内联图片丢弃） |
-| `attach` | 否 | 附件文件路径，多个用逗号分隔。相对路径。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
-| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）。仅在需要精确控制 CID 命名时使用此参数。格式：`'[{"cid":"mycid","file_path":"./logo.png"}]'`，在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
+| `attach` | 否 | 附件文件路径。**数组**，一个元素放一个相对路径（不要写成逗号分隔的字符串）；按数组顺序追加。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
+| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）；仅在需要精确控制 CID 命名时使用此参数。**数组**，一个元素放一个 JSON object（不要把整个 JSON 数组塞进单个字符串）：`inline=["{\"cid\":\"mycid\",\"file_path\":\"./logo.png\"}"]`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
 | `signature_id` | 否 | 签名 ID。附加邮箱签名到正文末尾。运行 `lark_mail_signature` 查看可用签名。与 `no_signature` 互斥 |
 | `no_signature` | 否 | 跳过默认签名自动追加。与 `signature_id` 互斥，同时使用时返回参数校验错误（退出码 2） |
 | `priority` | 否 | 邮件优先级：`high`、`normal`、`low`。省略或 `normal` 时不设置优先级 |

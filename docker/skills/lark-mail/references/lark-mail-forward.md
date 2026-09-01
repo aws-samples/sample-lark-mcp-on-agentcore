@@ -17,7 +17,7 @@
 
 **方式 A（推荐）** — 创建转发草稿（不带 `confirm_send`）：
 ```
-lark_mail_forward(message_id="<邮件ID>", to="<收件人>")
+lark_mail_forward(message_id="<邮件ID>", to=["<收件人>"])
 ```
 → 返回 `draft_id`
 
@@ -36,19 +36,19 @@ lark_invoke(tool_name="lark_mail_user_mailbox_drafts_send", args={params: {"user
 
 ```
 # 转发邮件（默认保存为草稿）— HTML 推荐
-lark_mail_forward(message_id="<邮件ID>", to="alice@example.com", body="<p>FYI，请看下面原邮件。</p>")
+lark_mail_forward(message_id="<邮件ID>", to=["alice@example.com"], body="<p>FYI，请看下面原邮件。</p>")
 
 # 转发并附加说明 + 抄送（草稿）
-lark_mail_forward(message_id="<邮件ID>", to="alice@example.com", cc="bob@example.com", body="<b>请参考</b>")
+lark_mail_forward(message_id="<邮件ID>", to=["alice@example.com"], cc=["bob@example.com"], body="<b>请参考</b>")
 
 # 转发时插入内嵌图片（推荐：直接用相对路径，自动解析）
-lark_mail_forward(message_id="<邮件ID>", to="alice@example.com", body="<p>详见图示：<img src=\"./logo.png\" /></p>")
+lark_mail_forward(message_id="<邮件ID>", to=["alice@example.com"], body="<p>详见图示：<img src=\"./logo.png\" /></p>")
 
 # 纯文本转发（仅在内容极简时使用）
-lark_mail_forward(message_id="<邮件ID>", to="alice@example.com")
+lark_mail_forward(message_id="<邮件ID>", to=["alice@example.com"])
 
 # 确认发送（用户明确确认后才可使用）
-lark_mail_forward(message_id="<邮件ID>", to="alice@example.com", confirm_send=true)
+lark_mail_forward(message_id="<邮件ID>", to=["alice@example.com"], confirm_send=true)
 ```
 
 ## 参数
@@ -56,16 +56,16 @@ lark_mail_forward(message_id="<邮件ID>", to="alice@example.com", confirm_send=
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `message_id` | 是 | 被转发的邮件 ID |
-| `to` | 是 | 收件人邮箱，多个用逗号分隔 |
+| `to` | 是 | 收件人邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
 | `body` | 否 | 转发时附加的说明文字。推荐使用 HTML 获得富文本排版；也支持纯文本。根据转发正文和原邮件正文自动检测 HTML。使用 `plain_text=true` 可强制纯文本模式。支持 `<img src="./local.png" />` 相对路径自动解析为内嵌图片（仅支持相对路径，不支持绝对路径）。与 `body_file` 互斥 |
 | `body_file` | 否 | 从文件读取转发说明 HTML（相对路径，仅限 cwd 子树）。与 `body` 互斥。文件大小上限 32 MB |
 | `from` | 否 | 发件人邮箱地址（EML From 头）。使用别名（send_as）发信时，设为别名地址并配合 `mailbox` 指定所属邮箱。默认读取邮箱主地址 |
 | `mailbox` | 否 | 邮箱地址，指定草稿所属的邮箱（默认回退到 `from`，再回退到 `me`）。当发件人（`from`）与邮箱不同时使用。可通过 `accessible_mailboxes` 查询可用邮箱 |
-| `cc` | 否 | 抄送邮箱，多个用逗号分隔 |
-| `bcc` | 否 | 密送邮箱，多个用逗号分隔。与 `event_*` 不兼容（见 `lark_mail_send` 日程邀请约束） |
+| `cc` | 否 | 抄送邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
+| `bcc` | 否 | 密送邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串）。与 `event_*` 不兼容（见 `lark_mail_send` 日程邀请约束） |
 | `plain_text` | 否 | 强制纯文本模式，忽略所有 HTML 自动检测。不可与 `inline` 同时使用。纯文本模式下也会自动追加纯文本签名（HTML 签名经 `PlainTextFromHTML` 转换，内联图片丢弃） |
-| `attach` | 否 | 附件文件路径，多个用逗号分隔，追加在原邮件附件之后。相对路径。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
-| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）。仅在需要精确控制 CID 命名时使用此参数。格式：`'[{"cid":"mycid","file_path":"./logo.png"}]'`，在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
+| `attach` | 否 | 附件文件路径。**数组**，一个元素放一个相对路径（不要写成逗号分隔的字符串）；按数组顺序追加在原邮件附件之后。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
+| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）；仅在需要精确控制 CID 命名时使用此参数。**数组**，一个元素放一个 JSON object（不要把整个 JSON 数组塞进单个字符串）：`inline=["{\"cid\":\"mycid\",\"file_path\":\"./logo.png\"}"]`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
 | `signature_id` | 否 | 签名 ID。附加邮箱签名到转发正文与引用块之间。运行 `lark_mail_signature` 查看可用签名。与 `no_signature` 互斥 |
 | `no_signature` | 否 | 跳过默认签名自动追加。与 `signature_id` 互斥，同时使用时返回参数校验错误（退出码 2） |
 | `priority` | 否 | 邮件优先级：`high`、`normal`、`low`。省略或 `normal` 时不设置优先级 |
@@ -119,14 +119,14 @@ lark_mail_forward(message_id="<邮件ID>", to="alice@example.com", confirm_send=
 
 ### 场景 1：用户说"把这封邮件转发给 Bob"（只创建草稿）
 ```
-lark_mail_forward(message_id="<邮件ID>", to="bob@example.com", body="<p>FYI</p>")
+lark_mail_forward(message_id="<邮件ID>", to=["bob@example.com"], body="<p>FYI</p>")
 ```
 → 返回 `draft_id`，告诉用户转发草稿已创建。
 
 ### 场景 2：用户说"转发给 Bob 并发送"（需要发送）
 ```
 # 方式 A: 创建转发草稿
-lark_mail_forward(message_id="<邮件ID>", to="bob@example.com", body="<p>FYI，请查收。</p>")
+lark_mail_forward(message_id="<邮件ID>", to=["bob@example.com"], body="<p>FYI，请查收。</p>")
 # → 返回 draft_id
 
 # 向用户确认 "收件人 bob@example.com。如果你想先看效果，也可以先去飞书邮件里查看草稿。确认发送吗？"
@@ -135,13 +135,13 @@ lark_mail_forward(message_id="<邮件ID>", to="bob@example.com", body="<p>FYI，
 lark_invoke(tool_name="lark_mail_user_mailbox_drafts_send", args={params: {"user_mailbox_id": "me", "draft_id": "<draft_id>"}})
 
 # 方式 B: 用户已明确确认时，直接发送
-lark_mail_forward(message_id="<邮件ID>", to="bob@example.com", body="<p>FYI，请查收。</p>", confirm_send=true)
+lark_mail_forward(message_id="<邮件ID>", to=["bob@example.com"], body="<p>FYI，请查收。</p>", confirm_send=true)
 ```
 
 ### 场景 3：用户说"下午 3 点转发给 Bob"（定时发送）
 ```
 # Step 1: 创建转发草稿
-lark_mail_forward(message_id="<邮件ID>", to="bob@example.com", body="<p>FYI，请查收。</p>")
+lark_mail_forward(message_id="<邮件ID>", to=["bob@example.com"], body="<p>FYI，请查收。</p>")
 # → 返回 draft_id
 
 # Step 2: 向用户确认 "转发草稿已创建：收件人 bob@example.com，定时 <目标时间> 发送。确认吗？"
@@ -169,7 +169,7 @@ lark_mail_thread(thread_id="<THREAD_ID>", html=false, format="json")
 #    messages 按时间升序排列，最后一条 = messages[-1].message_id
 
 # 3. 转发该消息
-lark_mail_forward(message_id="<最后一条的message_id>", to="recipient@example.com", body="请过目")
+lark_mail_forward(message_id="<最后一条的message_id>", to=["recipient@example.com"], body="请过目")
 ```
 
 ## 实现说明

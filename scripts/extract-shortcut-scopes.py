@@ -8,7 +8,10 @@ Produces docker/shortcut-scopes.json with UserScopes-first extraction strategy:
   - Prefer UserScopes when present
   - Fallback to Scopes when no UserScopes defined
   - Include ConditionalUserScopes / ConditionalScopes
-  - Exclude BotScopes
+  - Exclude BotScopes — including when the same scope also appears in the
+    generic Scopes fallback (upstream may declare it under both)
+  - Exclude every scope of a shortcut whose AuthTypes omits "user" (the
+    endpoint rejects user tokens, so nothing there is user-grantable)
 
 Handles:
   - Direct []string{...} literals
@@ -96,10 +99,42 @@ def main():
         m = pattern.search(body)
         return m.group(1) if m else ""
 
+    def merge_user_scopes(base_scopes, cond_scopes, bot_scopes, auth_types,
+                          from_user_field, has_auth):
+        """Combine a shortcut's scope fields into the user-grantable set.
+
+        Returns (scopes, user_callable). ``user_callable`` is False when upstream
+        declares AuthTypes without "user": such a shortcut cannot be invoked with a
+        user token at all, so it grants no user scopes AND must not be exposed as an
+        MCP tool. generate-tools.js consumes the flag so that exclusion is a checked
+        contract rather than a side effect of lark-cli hiding bot-only commands from
+        `--help` (which only happens when a user-token env var is set at build time).
+
+        Two bot-only leaks are filtered here, both of which the plain
+        "exclude BotScopes" rule misses:
+
+        1. When no UserScopes is declared we fall back to the generic ``Scopes``
+           field, which carries whatever identity upstream happens to support.
+           A scope listed there AND in ``BotScopes`` is bot-only, so drop it.
+           Scopes taken from ``UserScopes`` are left alone — upstream declared
+           them user-grantable, and the same string may legitimately appear
+           under both identities.
+        2. ``AuthTypes`` without "user" means the endpoint rejects user tokens
+           outright (e.g. im +messages-edit, added in 1.0.92), so the shortcut
+           grants no user scopes at all regardless of the fields above.
+        """
+        if not from_user_field:
+            botset = set(bot_scopes)
+            base_scopes = [s for s in base_scopes if s not in botset]
+            cond_scopes = [s for s in cond_scopes if s not in botset]
+        if has_auth and auth_types and "user" not in auth_types:
+            return [], False
+        return list(dict.fromkeys(base_scopes + cond_scopes)), True
+
     def extract_scope_field(body, field):
         """Extract scope list from a struct field, resolving variable references."""
         # Direct []string{...}
-        pattern = re.compile(rf'{field}\s*:\s*\[\]string\{{([^}}]*)\}}', re.DOTALL)
+        pattern = re.compile(rf'(?<![A-Za-z0-9_]){field}\s*:\s*\[\]string\{{([^}}]*)\}}', re.DOTALL)
         m = pattern.search(body)
         if m:
             inner = m.group(1).strip()
@@ -119,7 +154,7 @@ def main():
             return [], True
 
         # Variable reference: Field: someVar,
-        pattern = re.compile(rf'{field}\s*:\s*(\w+)\s*,')
+        pattern = re.compile(rf'(?<![A-Za-z0-9_]){field}\s*:\s*(\w+)\s*,')
         m = pattern.search(body)
         if m:
             return resolve_var(m.group(1)), True
@@ -137,6 +172,12 @@ def main():
         return [], False
 
     results = []
+    # Every scope upstream declares under BotScopes / ConditionalBotScopes, across
+    # all shortcuts. Recorded in _meta so scripts/extract-rawapi-scopes.sh can flag
+    # a raw-API scope that is bot-declared upstream: that script runs inside the
+    # container against lark-cli's flat `_meta.scopes` list, which carries no
+    # per-identity tag, so on its own it can only guess from the :send_as_bot suffix.
+    bot_declared = set()
 
     for gofile in sorted(src.rglob("*.go")):
         if "_test.go" in gofile.name:
@@ -162,17 +203,29 @@ def main():
             generic_scopes, has_generic = extract_scope_field(body, "Scopes")
             cond_user, _ = extract_scope_field(body, "ConditionalUserScopes")
             cond_generic, _ = extract_scope_field(body, "ConditionalScopes")
+            bot_scopes, _ = extract_scope_field(body, "BotScopes")
+            cond_bot, _ = extract_scope_field(body, "ConditionalBotScopes")
+            bot_declared.update(bot_scopes)
+            bot_declared.update(cond_bot)
+            auth_types, has_auth = extract_scope_field(body, "AuthTypes")
 
             base_scopes = user_scopes if has_user and user_scopes else generic_scopes
             cond_scopes = cond_user if cond_user else cond_generic
 
-            all_scopes = list(dict.fromkeys(base_scopes + cond_scopes))
+            all_scopes, user_callable = merge_user_scopes(
+                base_scopes, cond_scopes, bot_scopes, auth_types,
+                from_user_field=bool(has_user and user_scopes),
+                has_auth=has_auth,
+            )
 
-            results.append({
+            entry = {
                 "service": service,
                 "command": command,
                 "scopes": all_scopes,
-            })
+            }
+            if not user_callable:
+                entry["userCallable"] = False
+            results.append(entry)
 
     # Phase 3: Catch dynamically-registered shortcuts missed by regex.
     # Some shortcuts are generated by helper functions (objectCRUDSpec, newMergeShortcut, etc.)
@@ -264,22 +317,45 @@ def main():
             generic_scopes, _ = extract_scope_field(body, "Scopes")
             cond_user, _ = extract_scope_field(body, "ConditionalUserScopes")
             cond_generic, _ = extract_scope_field(body, "ConditionalScopes")
+            bot_scopes, _ = extract_scope_field(body, "BotScopes")
+            cond_bot, _ = extract_scope_field(body, "ConditionalBotScopes")
+            bot_declared.update(bot_scopes)
+            bot_declared.update(cond_bot)
+            auth_types, has_auth = extract_scope_field(body, "AuthTypes")
             base_scopes = user_scopes if has_user and user_scopes else generic_scopes
             cond_scopes = cond_user if cond_user else cond_generic
-            all_scopes = list(dict.fromkeys(base_scopes + cond_scopes))
+            all_scopes, user_callable = merge_user_scopes(
+                base_scopes, cond_scopes, bot_scopes, auth_types,
+                from_user_field=bool(has_user and user_scopes),
+                has_auth=has_auth,
+            )
             for cm in config_cmd_pattern.finditer(content):
                 cmd = cm.group(1)
                 if (service, cmd) not in extracted_keys:
-                    results.append({"service": service, "command": cmd, "scopes": all_scopes})
+                    entry = {"service": service, "command": cmd,
+                             "scopes": all_scopes}
+                    if not user_callable:
+                        entry["userCallable"] = False
+                    results.append(entry)
                     extracted_keys.add((service, cmd))
 
     results.sort(key=lambda x: (x["service"], x["command"]))
+
+    # A scope declared under BotScopes is not necessarily bot-ONLY: plenty are also
+    # granted to users (base:app:copy, wiki:node:retrieve, im:message:readonly …).
+    # Subtracting everything that survived as a user scope leaves the genuinely
+    # bot-exclusive strings — the set worth alerting on when it shows up on the
+    # raw-API side, where identity cannot be read from the schema.
+    user_side = {s for r in results for s in r["scopes"]}
+    bot_exclusive = sorted(bot_declared - user_side)
 
     output = {
         "_meta": {
             "lark_cli_version": version,
             "extracted_at": __import__("datetime").date.today().isoformat(),
             "source": "https://github.com/larksuite/cli",
+            "bot_declared_scopes": sorted(bot_declared),
+            "bot_exclusive_scopes": bot_exclusive,
         },
         "shortcuts": results,
     }

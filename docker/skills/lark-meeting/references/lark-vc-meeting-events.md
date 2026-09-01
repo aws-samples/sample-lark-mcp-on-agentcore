@@ -235,6 +235,7 @@ lark_drive_list_replies(url="<share_doc.url>", comment_id="<comment_focus.commen
 | `magic_share_started` | 开始共享内容 / 文档 |
 | `magic_share_ended` | 结束共享 |
 | `document_context_changed` | 评论聚焦、章节定位或元素预览上下文变化 |
+| `countdown_changed` | 会中倒计时被设置、延长、提前结束、关闭窗口，或自然结束、临近提醒 |
 
 ### 会中聊天与 reaction 转发到 IM
 

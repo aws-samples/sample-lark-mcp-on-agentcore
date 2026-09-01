@@ -28,6 +28,10 @@ Chat (oc_xxx)
 
 ## Important Notes
 
+### AppLink and Share Links
+
+Prefer the links the tools return: use `chat_app_link` to open joined conversations, `message_app_link` to open messages, and `share_link` to invite others to groups. If manually building a joined-conversation AppLink, use `https://<applink_host>/client/chat/open?openChatId=<oc_xxx>`, never `chatId=<oc_xxx>` or `lark://...chat_id=<oc_xxx>`.
+
 ### Identity and Token Mapping
 
 - User identity uses `user_access_token`. Calls run as the authorized end user, so permissions depend on both the app scopes and that user's own access to the target chat/message/resource.
@@ -53,7 +57,7 @@ The four message-pulling shortcuts (`lark_im_messages_mget`, `lark_im_chat_messa
 
 ### Card Messages (Interactive)
 
-**Before sending or replying with any `interactive` card (`lark_im_messages_send` / `lark_im_messages_reply`), you MUST call `lark_get_skill(domain="im", section="card/lark-im-card-create")` and follow its workflow.** The card JSON passed to `msg_type="interactive"` + `content` must be the output of that workflow — never hand-write or copy a card payload.
+**Before sending, replying with, or updating any `interactive` card (`lark_im_messages_send` / `lark_im_messages_reply` / `messages.patch`, the last one reached through `lark_invoke` with `tool_name="lark_im_messages_patch"`), you MUST call `lark_get_skill(domain="im", section="card/lark-im-card-create")` and follow its workflow.** The card JSON passed to `msg_type="interactive"` + `content` (send/reply) or to `messages.patch`'s `data` (update) must be the output of that workflow — never hand-write or copy a card payload.
 
 Card messages (`interactive` type) are not yet supported for compact conversion in event subscriptions. The raw event data will be returned instead, with a hint printed to stderr.
 
@@ -96,13 +100,14 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 
 | Shortcut | 说明 |
 |----------|------|
-| `lark_get_skill(domain="im", section="chat-create")` | Create a group chat or topic chat; user/bot; chat_mode group|topic; private/public; invites users/bots; optionally sets bot manager |
+| `lark_get_skill(domain="im", section="chat-create")` | Create a group chat or topic chat; user/bot; chat_mode group\|topic; private/public; invites users/bots; optionally sets bot manager |
 | `lark_get_skill(domain="im", section="chat-list")` | List chats the current user/bot is a member of; defaults to groups; pass types=p2p,group to include p2p single chats (user-only); user/bot; supports sorting, auto-pagination, exclude_muted (user-only) |
 | `lark_get_skill(domain="im", section="chat-members-list")` | List members of a chat; returns separate users[] / bots[] buckets; callable as user or bot; member_types filters which kinds to return; page_all pagination; surfaces truncations[] when the server caps a bucket |
 | `lark_get_skill(domain="im", section="chat-messages-list")` | List messages in a chat or P2P conversation; user/bot; accepts chat_id or user_id, resolves P2P chat_id, supports time range, order asc/desc sorting, auto-pagination |
 | `lark_get_skill(domain="im", section="chat-search")` | Search visible group chats by query keyword and/or member_ids; user/bot; e.g. look up chat_id by group name; supports type filters, sorting, auto-pagination, and exclude_muted (user identity only) |
 | `lark_get_skill(domain="im", section="chat-update")` | Update group chat name or description; user/bot; updates a chat's name or description |
 | `lark_get_skill(domain="im", section="message-read-status")` | `lark_im_message_read_users` — List users who read one message; user/bot; identity-specific scopes; supports bounded auto-pagination |
+| `lark_get_skill(domain="im", section="messages-edit")` | Editing a sent message's content (text/post, including the attachment zone). ⚠️ Bot identity only — the edit API rejects user tokens, so this shortcut is **absent from the MCP tool catalog** and there is no tool to call. Recall and re-send, or update an `interactive` card via `messages.patch`, instead |
 | `lark_get_skill(domain="im", section="messages-mget")` | Batch get messages by IDs; user/bot; fetches up to 50 om_ message IDs, formats sender names, expands thread replies |
 | `lark_get_skill(domain="im", section="message-read-status")` | `lark_im_messages_read_status` — Batch query whether the current user read 1–50 messages; user-only; returns readable items and invalid message IDs |
 | `lark_get_skill(domain="im", section="messages-reply")` | Reply to a message (supports thread replies); user/bot; supports text/markdown/post/media replies, reply-in-thread, idempotency key |
@@ -152,6 +157,11 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
   - `update` — 设置自己的群昵称。Set or update your own nickname in the chat (self-only). Identity: `user` only (`user_access_token`); `nickname` must be a non-empty string (max 300 bytes). Use DELETE to clear it.
   - `delete` — 清空自己的群昵称。Clear your own nickname in the chat (self-only). Identity: `user` only (`user_access_token`).
 
+### chat.join_requests
+
+  - `list` — 列出群的待审批入群申请（仅群主/管理员，user_access_token）。List pending join requests for a chat. Identity: `user` only (`user_access_token`); the caller must be the chat owner or an admin. Paginated (`page_size` 1-100); stop on `has_more == false` — `page_token` is returned even on the last page, so paging while it is present never terminates.
+  - `handle` — 批量审批入群申请（approve/reject，仅群主/管理员，user_access_token）。Approve or reject pending join requests in bulk (1-50 items, processed in order). Identity: `user` only (`user_access_token`); the caller must be the chat owner or an admin. `results[]` mirrors `items[]` in count and order — check each `result` (`success` / `failed` / `already_handled`); a successful call does not mean every item succeeded.
+
 ### chat.managers
 
   - `add_managers` — 指定群管理员。Identity: supports `user` and `bot`; only the group owner can add managers; max 10 managers per chat (20 for super-large chats), and at most 5 bots per request.
@@ -169,6 +179,7 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
   - `forward` — 转发消息。Identity: supports `user` and `bot`.
   - `merge_forward` — 合并转发消息。⚠️ This operation requires bot identity and is not available via the MCP server.
   - `read_users` — 查询消息已读信息。Identity: supports `user` and `bot`; the caller must still be in the chat. A user can query messages they sent within the last 7 days. ⚠️ The bot variant (only messages sent by that bot, within the last 7 days) requires bot identity and is not available via the MCP server. [Must-read] `lark_get_skill(domain="im", section="message-read-status")`
+  - `patch` — 更新已发送的消息卡片。Update an interactive message card sent by the app. Identity: supports `user` and `bot`; the message must have been sent within the last 14 days, and `content` must be a JSON-serialized string no larger than 30 KB. [Must-read] `lark_get_skill(domain="im", section="card/lark-im-card-create")`
   - `urgent_app` — 发送应用内加急。⚠️ This operation requires bot identity and is not available via the MCP server.
   - `urgent_phone` — 发送电话加急。⚠️ This operation requires bot identity and is not available via the MCP server.
   - `urgent_sms` — 发送短信加急。⚠️ This operation requires bot identity and is not available via the MCP server.
@@ -227,6 +238,8 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 | `chat.managers.delete_managers` | `im:chat.managers:write_only` |
 | `chat.moderation.get` | `im:chat.moderation:read` |
 | `chat.moderation.update` | `im:chat:moderation:write_only` |
+| `chat.join_requests.list` | `im:chat.membership_application:read` |
+| `chat.join_requests.handle` | `im:chat.membership_application:write` |
 | `lark_im_messages_read_status` | `im:message:readonly` (recommended) or `im:message` |
 | `lark_im_message_read_users` | `im:message:readonly` (recommended) or `im:message` |
 | `messages.read_status` | `im:message:readonly` (recommended) or `im:message` |
@@ -234,6 +247,7 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 | `messages.forward` | `im:message` |
 | `messages.merge_forward` | `im:message` |
 | `messages.read_users` | `im:message:readonly` (recommended) or `im:message` |
+| `messages.patch` | `im:message:update` |
 | `messages.urgent_app` | `im:message.urgent` |
 | `messages.urgent_phone` | `im:message.urgent:phone` |
 | `messages.urgent_sms` | `im:message.urgent:sms` |

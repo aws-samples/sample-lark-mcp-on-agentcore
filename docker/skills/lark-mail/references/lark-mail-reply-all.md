@@ -39,10 +39,10 @@ lark_invoke(tool_name="lark_mail_user_mailbox_drafts_send", args={params: {"user
 lark_mail_reply_all(message_id="<邮件ID>", body="<p><b>已完成</b>，详见下方说明。</p>")
 
 # 回复全部并追加收件人/抄送（草稿）
-lark_mail_reply_all(message_id="<邮件ID>", body="<p>同步更新</p>", to="lead@example.com", cc="pm@example.com")
+lark_mail_reply_all(message_id="<邮件ID>", body="<p>同步更新</p>", to=["lead@example.com"], cc=["pm@example.com"])
 
 # 从回复名单中排除某些地址（草稿）
-lark_mail_reply_all(message_id="<邮件ID>", body="<p>见上</p>", remove="bot@example.com,noreply@example.com")
+lark_mail_reply_all(message_id="<邮件ID>", body="<p>见上</p>", remove=["bot@example.com", "noreply@example.com"])
 
 # 回复全部时插入内嵌图片（推荐：直接用相对路径，自动解析）
 lark_mail_reply_all(message_id="<邮件ID>", body="<p>详见图示：<img src=\"./logo.png\" /></p>")
@@ -63,13 +63,13 @@ lark_mail_reply_all(message_id="<邮件ID>", body="<p>收到，已处理。</p>"
 | `body_file` | 二选一 | 从文件读取回复正文 HTML（相对路径，仅限 cwd 子树）。与 `body` 互斥。文件大小上限 32 MB |
 | `from` | 否 | 发件人邮箱地址（EML From 头）。使用别名（send_as）发信时，设为别名地址并配合 `mailbox` 指定所属邮箱。默认读取邮箱主地址 |
 | `mailbox` | 否 | 邮箱地址，指定草稿所属的邮箱（默认回退到 `from`，再回退到 `me`）。当发件人（`from`）与邮箱不同时使用。可通过 `accessible_mailboxes` 查询可用邮箱 |
-| `to` | 否 | 额外收件人，多个用逗号分隔（追加到自动聚合结果） |
-| `cc` | 否 | 额外抄送，多个用逗号分隔 |
-| `bcc` | 否 | 密送邮箱，多个用逗号分隔。与 `event_*` 不兼容（见 `lark_mail_send` 日程邀请约束） |
-| `remove` | 否 | 从自动聚合结果中排除的邮箱，多个用逗号分隔 |
+| `to` | 否 | 额外收件人。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串）；追加到自动聚合结果 |
+| `cc` | 否 | 额外抄送。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
+| `bcc` | 否 | 密送邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串）。与 `event_*` 不兼容（见 `lark_mail_send` 日程邀请约束） |
+| `remove` | 否 | 从自动聚合结果中排除的邮箱。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串）；按数组顺序处理 |
 | `plain_text` | 否 | 强制纯文本模式，忽略所有 HTML 自动检测。不可与 `inline` 同时使用。纯文本模式下也会自动追加纯文本签名（HTML 签名经 `PlainTextFromHTML` 转换，内联图片丢弃） |
-| `attach` | 否 | 附件文件路径，多个用逗号分隔。相对路径。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
-| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）。仅在需要精确控制 CID 命名时使用此参数。格式：`'[{"cid":"mycid","file_path":"./logo.png"}]'`，在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
+| `attach` | 否 | 附件文件路径。**数组**，一个元素放一个相对路径（不要写成逗号分隔的字符串）；按数组顺序追加。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
+| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）；仅在需要精确控制 CID 命名时使用此参数。**数组**，一个元素放一个 JSON object（不要把整个 JSON 数组塞进单个字符串）：`inline=["{\"cid\":\"mycid\",\"file_path\":\"./logo.png\"}"]`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
 | `signature_id` | 否 | 签名 ID。附加邮箱签名到回复正文与引用块之间。运行 `lark_mail_signature` 查看可用签名。与 `no_signature` 互斥 |
 | `no_signature` | 否 | 跳过默认签名自动追加。与 `signature_id` 互斥，同时使用时返回参数校验错误（退出码 2） |
 | `priority` | 否 | 邮件优先级：`high`、`normal`、`low`。省略或 `normal` 时不设置优先级 |

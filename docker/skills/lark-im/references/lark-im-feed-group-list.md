@@ -1,4 +1,4 @@
-# +feed-group-list
+# im +feed-group-list
 
 This tool maps to: `lark_im_feed_group_list`. List the caller's feed groups (tags) with auto-pagination that correctly merges both the live and soft-deleted lists.
 

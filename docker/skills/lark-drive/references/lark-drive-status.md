@@ -96,7 +96,7 @@ lark_drive_status(local_dir="./repo", folder_token="fldcnxxxxxxxxx", quick=true)
 把 lark_drive_status 当作"先看差异、再决定怎么同步"的只读探针。常见接驳场景：
 
 - 想知道云端有什么本地没有的内容 → 看 `new_remote`，按需选择性拉取（`lark_drive_download(file_token="<token>")`）。
-- 想把本地新增的内容推到云端 → 看 `new_local`，再 `lark_drive_upload(file="<path>", folder_token="<parent>")`（注意 +upload 不接受 0 字节文件）。
+- 想把本地新增的内容推到云端 → 看 `new_local`，再 `lark_drive_upload(file="<path>", folder_token="<parent>")`（注意 `lark_drive_upload` 不接受 0 字节文件）。
 - 想知道哪些文件在云端被同事改过 → 看 `modified`，逐个 `lark_drive_download` 查内容差异。
 
 ## 性能注意

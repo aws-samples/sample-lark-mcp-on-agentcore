@@ -1,214 +1,139 @@
-# Base Record 查询、匹配与分析 SOP
+# Base Record 数据语义与专业分析 SOP
 
-数据表记录查询和分析任务先读本 SOP，包括记录预览、筛选、排序、去重、统计、聚合、TopN、多值计算、Link 或多表关联、复杂行级计算、全局结论和查询后写入。先区分需要 LLM 理解原文的语义分析与可程序化计算的确定性分析，再按数据规模与计算复杂度选择路径；即使用户直接要求解释、编写或排错 `lark_base_data_query` 或其 DSL，也先由本 SOP 确认口径和路径，再读取底层 reference。
+本 SOP 不讲解通用 jq / Python 语法、统计公式或数据科学算法。Agent 应使用已有的数据分析能力；本文只负责把 Base 的查询范围、NDJSON 物理结构、Field / Record / View / Link 语义和完整性约束，正确映射到专业分析任务。
 
-## MCP 下的执行通道
+普通预览、已知记录读取、关键词搜索和小规模直接处理按主 skill 的 Record 核心路径执行（`lark_get_skill(domain="base")`）。以下情况读取本文：大表完整读取、`has_more=true`、View 范围读取、复杂多表 JOIN、集合或多值运算、分组与 Top-K、窗口或严格时序、时间周期对齐、层级递归、数据重塑、派生与指定规则清洗、临时语义转换，以及需要可靠样本范围的描述性或推断性分析。
 
-本 SOP 的确定性分析依赖 NDJSON 导出。通过 MCP server 调用时，导出通道与本地 CLI 不同，先记住三条事实：
+## 0. MCP 下的执行通道
 
-- `format="ndjson"` 时记录被写进一个 NDJSON artifact 文件，stdout 只返回 manifest。该文件位于本次会话的服务端容器内，agent 没有任何工具可以读回它；`output` 只能给这个不可达文件改名，`overwrite` 同理。**不要把 artifact 文件当作后续步骤的输入。**
-- `jq_records="<expr>"` 在服务端对整份导出记录数组跑一次 jq（等价于 `jq -s '<expr>'`），只把结果返回给 agent。**这是 MCP 下唯一可用的 NDJSON 计算通道**，也是把 2000 行收敛成小结果而不占用上下文的方式。它要求 `format="ndjson"`，且与 `minimal_stdout` 互斥。
-- MCP server 不能替 agent 运行本地 jq、Python 或 pandas；`lark_exec_script` 只执行随 skill 打包的脚本，不能处理这里的记录。要在自己的运行环境里做 DataFrame 级计算，只能基于工具返回到上下文中的数据（`jq_records` 结果或 `format="json"` 的记录），实现示例见 `lark_get_skill(domain="base", section="data-analysis-python-stdlib")` / `lark_get_skill(domain="base", section="data-analysis-pandas")`。
+Base 记录读取工具在本地 CLI 下会把记录写成 NDJSON 文件供本地引擎处理。通过 MCP server 调用时通道不同，先记住三条事实：
 
-因此确定性分析的标准两步是：先做一次不带 `jq_records` 的 ndjson 探测拿 manifest（规模、`has_more`、列统计），再对同一查询加 `jq_records` 取计算结果。两次调用都会重新向 Base 取数。
+- `format="ndjson"` 时记录被写进服务端容器内的 artifact 文件，返回值只有 manifest。agent 没有任何工具可以读回该文件；`output` 只能给这个不可达文件改名，`overwrite` 同理。**ndjson 只当作规模与 schema 探针，不要把 artifact 当作后续步骤的输入。**
+- `format="json"` 是唯一能把记录本体交到 agent 手上的通道，记录直接返回到上下文。此时 `limit` 上限是 200（缺省 100），比 ndjson 的 2000 小；成组读取靠 `offset` 翻页。
+- MCP server 不提供服务端 jq 或脚本计算：`lark_exec_script` 只执行随 skill 打包的脚本，不能处理这里的记录。所有确定性计算要么下推到 Base（`filter_json` 谓词、`sort_json` 排序、`field_id` 投影、`lark_base_data_query()` 聚合），要么由 agent 在自己的上下文/运行环境里对 `format="json"` 返回的记录完成。
 
-## 分流决策
+因此标准两步是：先用一次 `format="ndjson"` 拿 manifest 判断规模、`has_more` 和列统计，再决定是用 `format="json"` 把收敛后的记录读进上下文自行计算，还是改走 `lark_base_data_query()` 让云端算。**尽量把能下推的条件下推**——上下文是这里最紧的资源，不是磁盘。
 
-1. 明确所有需要参与分析的表及其 `records_count`。
-2. 如果结论必须依赖 LLM 理解原始内容，例如开放文本打标、情绪或意图识别、主题归纳、语义分类、相似性判断或实体消歧，进入下文"LLM 语义分析"路径。
-3. 对于其余确定性查询，任一分析表超过 2000 行时，先从任务意图中为所有大表提取可在单表内独立执行的谓词，例如日期范围、状态和关键词，再按下文将谓词逐表下推，并用 `field_id=["<一个简单标量字段>"], limit=2000, format="ndjson", minimal_stdout=true` 探测。目标是每张表都达到 `has_more=false`；任一表无法压缩到 2000 行以内时，转 `lark_get_skill(domain="base", section="record-query-and-analysis-cloud-sop")` 用云端的数据分析能力。
-4. 所有分析表都不超过 2000 行后：单表且筛选、计数、简单分组/聚合/排序、TopN 能用一段短 jq 清晰完成时，用 `jq_records` 一次算完。
-5. 其余确定性任务比如多表、日历计算和复杂数据分析：能拆成每表一次 `jq_records`、再把各表小结果在上下文中合并时，走这条路；结果规模或计算复杂度撑不住时，进入 `lark_get_skill(domain="base", section="record-query-and-analysis-cloud-sop")`。
+## 1. 先选数据路径
 
-进入 Cloud 后先由 Cloud SOP 在原始记录查询与聚合查询之间选路；只有选定 `lark_base_data_query()` 时才读取 data-query guide。
-
-## 执行与交付
-
-确定性分析的输入默认采用 `format="ndjson"`；NDJSON 未显式传 `limit` 时默认读取最多 2000 条，正式分析通常沿用该范围。窄投影探测、快速预览或用户明确要求前 N 条时再设置较小的 `limit`。默认的 `format="json"` 适用于把少量记录直接交给模型阅读或向用户即时展示。
-
-缩小大表记录范围时，展示文本关键词用 `lark_base_record_search()`，日期、状态、数字、空值、选项、人员和关联等结构化条件用 `lark_base_record_list(filter_json="...")`。
-
-### 单表谓词下推常用 example
-
-`lark_base_record_list()` / `lark_base_record_search()` 的 `filter_json` 支持使用 tuple condition 下推单表谓词。以下示例用注释说明各条件的含义；实际传参时删除注释并使用标准 JSON：
-
-```jsonc
-{
-  "logic": "and", // 所有 conditions 同时成立；任意一个成立时使用 "or"
-  "conditions": [
-    ["标题", "==", "Launch plan"], // 文本全等
-    ["标题", "!=", "Archived plan"], // 文本不全等
-    ["标题", "intersects", "urgent"], // 文本包含目标片段
-    ["标题", "disjoint", "internal"], // 文本不包含目标片段
-    ["金额", ">=", 100], // 数字比较；支持 ==、!=、>、>=、<、<=
-    ["状态", "intersects", ["进行中", "暂停"]], // Select 集合相交：包含"进行中"或"暂停"任意一个选项
-    ["状态", "disjoint", ["已终止"]], // Select 集合无交集
-    ["已完成", "==", true], // Checkbox
-    ["负责人", "intersects", [{"id": "ou_xxx"}]], // 负责人包含某个人；intersects 表示包含数组中任意一个人员
-    ["负责人", "disjoint", [{"id": "ou_yyy"}]], // 负责人不包含指定人员中的任何一个
-    ["关联项目", "intersects", [{"id": "rec_xxx"}]], // 关联项目包含某个 record_id；intersects 表示包含数组中任意一条关联
-    ["备注", "non_empty"], // 格子非空；判断格子为空改用 ["备注", "empty"]
-    ["业务日期", "==", "ExactDate(2026-08-07)"], // 具体一天：按 Base 时区匹配 2026-08-07 当天
-    ["发生时间", ">", "ExactDate(2024-01-31 23:59:59.999)"], // 日期不支持 >=；用 > 前一天最后一毫秒表达含当天的下界
-    ["发生时间", "<", "ExactDate(2024-03-01 00:00:00)"] // 2024 年 2 月范围上界：小于 3 月 1 日零点
-  ]
-}
-```
-
-全表分析的常规资源链路是 `lark_base_table_list()` 确认目标表与规模，对所有参与分析的表执行 `lark_base_field_list()` 读取所需 schema，再用 `lark_base_record_list()` 导出记录；已有可信的 `table_id` 时可直接读取各表 `lark_base_field_list()`。`lark_base_view_get()` 可按需读取，作为用户持久化访问习惯的可选参考；其中的 filter、sort 与字段范围可辅助理解用户常用的查询范围和排序偏好，并结合当前任务确定最终口径。
-
-1. 每次读取使用任务所需的最小投影，并包含 JOIN、解释、回查或写入需要的业务 key。
-2. 全局结论以 `has_more=false` 的完整导出或 Cloud 聚合结果为依据；`has_more=true` 时继续收敛单表谓词或选择 Cloud 路径。
-3. 确定性分析在 `jq_records` 里一次算完；模型上下文仅接收预览或最终小结果。
-4. Base 标量空值很常见；聚合前按用户口径确定空值是排除、按零计入还是进入分母。用户未指定且不同处理会实质改变结论时，说明空值数量、采用的口径及其影响；任务涉及业务键、展开、JOIN 或金额分摊时，同样明确目标粒度及与口径直接相关的重复或总量守恒。
-5. 最终结果保留真实表、查询范围和计算口径，展示用户可读字段；内部 ID 用于连接或定位。
-
-`lark_base_table_list()` / `lark_base_base_block_list()` 返回的 `records_count` 表示整表行数；manifest 的 `records_count` 表示本次查询实际导出的行数。
-
-## 重复取数
-
-NDJSON artifact 无法跨调用复用（文件对 agent 不可达），所以每个 `jq_records` 表达式都会重新取一次数。据此控制调用次数：
-
-1. 短时间内继续分析或表中数据低频变化时，直接沿用已在上下文里的 `jq_records` 结果，不要为同一口径重复取数。
-2. 一次 `jq_records` 里尽量把同一份记录需要的多个指标一起算出来（返回一个对象），而不是每个指标各取一次数。
-3. 需要判断上下文里的结论是否仍对应当前表版本时，比较 manifest 的 `rev` 与 `lark_base_table_list()` 返回的最新 `rev`；`rev` 变化说明表已被写入，结论需要重算。
-
-## LLM 语义分析
-
-先用任务中明确且不改变分析口径的确定性条件缩小数据范围；只有剩余判断必须依赖语义理解时，才将必要原文加载到模型上下文。
-
-开放文本打标、情绪或意图识别、主题归纳、语义分类、相似性判断和实体消歧等任务必须理解原文，最终判断由当前 LLM 在上下文中逐条完成。`jq_records` 只用于确定性范围筛选、投影和结果汇总；除非用户明确要求规则法，不用关键词命中、词频、正则或规则打分替代语义判断。
-
-1. 先把日期、状态、来源等不改变任务语义的确定性范围条件下推到 Base，只导出 `record_id`、判断所需原文和最终解释所需的最小字段集。
-2. 在读取正文前，先用一次 `format="ndjson"` 探测拿 manifest，看 `record_file_size_bytes`；结合 `records_count` 以及所选字符串列的 `null_count`、`max_length` 判断正文相对当前上下文的规模，拿不准时先用 `jq_records=".[0:3]"` 取前 3 行再决定读取范围。
-3. 规模可控时，用 `format="json"` 加最小投影把必要记录读入上下文并直接完成语义分析；规模较大但任务仍必须理解全部原文时，先向用户说明原因和预计耗时，在确认后按 `offset` + `limit` 分批读取。各批沿用同一判断口径，把 `record_id`、结构化判断和必要依据在上下文中持续累积，最后统一汇总。
-
-## Manifest
-
-`format="ndjson"` 时 stdout 返回 manifest，`minimal_stdout=true` 只保留文件位置、文件字节数、`records_count` 和 `has_more`。manifest 里的 `record_file` / `manifest_file` 路径指向服务端容器内的文件，agent 无法读取；把 manifest 当作规模与 schema 探针，用 `jq_records` 拿计算结果。
-
-```json
-{
-  "record_file": "/path/records.ndjson",
-  "record_file_size_bytes": 18432,
-  "manifest_file": "/path/records.manifest.json",
-  "records_count": 137,
-  "has_more": false,
-  "columns": {
-    "record_id": {"physical_type": "string", "stats": {"max_length": 15}},
-    "状态": {
-      "field_id": "fld_status",
-      "field_type": "select",
-      "physical_type": "array<string>",
-      "stats": {"empty_count": 3, "max_length": 2, "avg_length": 1.1},
-      "example": ["进行中"]
-    }
-  }
-}
-```
-
-- manifest `columns` 是 NDJSON 物理 schema 的权威来源，包含 `field_id`、`field_type`、`physical_type`、`stats` 以及可选的真实 example 或 hint；它不替代完整 Base field schema，选项配置、数字格式、Link 目标表或 formula/lookup 定义影响任务时读取 `lark_base_field_list()`。全空列按 hint 跳过，任务必须使用时显式 cast。
-- `stats` 只统计本次导出的 records；`null_count` 只计 JSON `null`，字符串长度按 Unicode 字符计数，数字 `avg` 排除 null，多值 `avg_length` 按全部 records（含 `[]`）计算。
-
-| 列类别 | `stats` |
-| --- | --- |
-| 普通字符串 | `null_count, max_length` |
-| 数字 | `null_count, min, max, avg` |
-| 日期 | `null_count, min, max` |
-| checkbox | `true_count` |
-| Location | `null_count` |
-| 多值列 | `empty_count, max_length, avg_length` |
-| 系统 `record_id` | `max_length` |
-
-- manifest 的 `records_count` 和 `has_more` 描述本次导出；确认后无需在 `jq_records` 表达式里重新统计行数。
-- `record_file_size_bytes` 是 NDJSON artifact 的实际字节数，用于判断这批记录相对上下文的体量，从而决定是全部读入、只取预览还是分批。
-- manifest 的 `rev` 是导出首个响应页返回的 table revision；与 `lark_base_table_list()` 返回的最新 `rev` 比较，可判断上下文里的结论是否仍对应当前表版本。
-- `query_context` 保存导出查询范围；沿用上下文里的既有结论时结合原查询上下文确认谓词下推口径保持一致。
-- `ignored_fields` 和 `record_not_found` 只在 manifest（不带 `jq_records` 的返回）中出现。
-- **投影自检：拿到 manifest 先看 `ignored_fields` 和 `columns`。** `ignored_fields` 非空说明有字段名没被识别（大小写、空格、字段被重命名、这段调用是从另一张表复制来的）；此时 `columns` 里缺的就是被丢掉的列，后续 `jq_records` 读它们只会得到 `null` 而不会报错。请求的字段**全部**没命中时工具会直接返回 `projection_dropped` 错误而不是给你一份只有 `record_id` 的导出；部分命中不会报错，必须自己核对 `columns` 是否覆盖了计算需要的每一列，必要时先 `lark_base_field_list()` 取真实字段名。
-
-## 数据库专家快速心智模型
-
-- Base table 是面向协作的反范式宽表；分析时将每个导出表作为关系输入，不假设数据库级约束。
-- 每行是一条 record；系统 `record_id` 是表内真正的主键，由 Base 系统生成并维护，契约保证 `NOT NULL` 和 `UNIQUE`，分析表达式无需再次检查空值或唯一性，也不可把它作为普通字段更新。Base 的"主字段"只是主要展示字段，不是主键。
-- NDJSON 业务列一律使用字段 `name` 作为 key，不使用 `field_id`；字段重命名会改变 key，对应的 `field_id` 仅记录在 manifest 列元数据中。
-- 除 `record_id` 外，不假设任何列满足 `NOT NULL`、`UNIQUE` 或业务键约束；仅当某列实际作为业务键参与关联或去重时处理空值和重复值。
-- checkbox 在 NDJSON 中始终为 `true` 或 `false`，上游空值会在导出时规范化为 `false`；其他标量列可空并使用 `null`。多值列始终非空，没有元素时用 `[]`；这些是序列化契约，不是业务约束。
-- NDJSON 的读取结构以 manifest `physical_type` 和下表为准，不等同于写记录时的 CellValue；`lark_get_skill(domain="base", section="cell-value")` 在读写形态不一致的类型下提供对照说明。formula 和 lookup 在当前 NDJSON 中统一为字符串，不保留计算结果的原始类型。
-- 将 `physical_type` 和上述 CellValue 结构视为输入契约；一次性分析表达式直接读取，不再逐格验证 `record_id`、数组或 struct 的运行时形状。
-- 未显式指定 sort 时不保证行顺序。
-
-### Physical type 快速参考
-
-| `field_type` | `physical_type` | 示例与语义 |
+| 任务条件 | 路径 | 完整性要求 |
 | --- | --- | --- |
-| 系统 `record_id` | `string` | `"rec_xxx"`；系统主键 |
-| `text`、`formula`、`lookup`、`auto_number`、`not_support` | `string\|null` | `"进行中"`；formula、lookup 不保留结果的原始类型 |
-| `datetime`、`created_at`、`updated_at` | `string\|null` | `"2026-08-05T10:30:00.000+08:00"`；RFC3339，固定三位毫秒 |
-| `number` | `number\|null` | `12.5`；JSON 整数和小数均为 number |
-| `checkbox` | `boolean` | `true`；上游空值已规范化为 `false` |
-| `select` | `array<string>` | `["进行中", "高优"]`；单选、多选读取均为名称数组 |
-| `location` | `struct<lng number, lat number, full_address string>\|null` | `{"lng":116.39,"lat":39.90,"full_address":"北京市"}`；非空 Location 的三个成员均非空 |
-| `user`、`group_chat`、`created_by`、`updated_by` | `array<struct<id string, name string>>` | `[{"id":"ou_xxx","name":"张三"}]` |
-| `link` | `array<struct<id string>>` | `[{"id":"rec_xxx"}]`；schema 的 `table_id` 指定目标表，`id` 是目标 `record_id` |
-| `attachment` | `array<struct<file_token string, size number, name string>>` | `[{"file_token":"box_xxx","size":1024,"name":"report.pdf"}]` |
+| 收敛后规模可读入上下文且 `has_more=false` | `format="json"` + 最小投影读入上下文自行计算 | 直接在返回记录上分析 |
+| 用户指定 View | 记录工具加 `view_id`，返回视图范围内的记录 | 结论只代表该 View；记录范围写在 `query_context` |
+| 超过 2000 行且必须取得逐条原始记录 | 调整 `offset` 后继续查询 | 直到 `has_more=false` 代表所有记录已读取 |
+| 超过 2000 行，只需单表基础统计、分组或 Top-K | `lark_base_data_query()` | 由 Base 云端在完整单表范围计算 |
+| 多表 JOIN、窗口、递归、严格漏斗、语义分析或任意需要逐条明细的高级计算 | 每张表分别下推收敛到可读入规模，再在上下文中处理 | 每张参与表都必须完整；不能用 `lark_base_data_query()` 代替原始明细 |
 
-### 日期字段读取
+局部预览、固定前 N 条或 `has_more=true` 的导出不能支持全局结论。采样只在用户明确要求抽样时使用，并必须说明抽样范围和方法。
 
-日期字段以带 offset 的 RFC3339 字符串序列化，并有两种分析语义：
+## 2. 范围、View、选择与投影
 
-- **instant semantics**：计算真实时长、先后顺序或跨时区比较时，解析完整 RFC3339 值，以其表示的绝对时刻计算。
-- **local-calendar semantics**：按来源 Base 的日、周、月等本地日历分组时，使用序列化值中的本地日期，不先转 UTC，也不按 manifest `timezone` 重复换算。
+先明确分析总体，再导出数据：
 
-例如，`2026-03-20T23:30:00.000-05:00` 与 `2026-03-21T12:30:00.000+08:00` 表示同一时刻；前者若是来源 Base 的值，本地日报归入 3 月 20 日，而时长或排序计算应把它解析为绝对时刻。只构造任务实际需要的日期表示。
+- **整表范围：** 省略 `view_id`；`query_context.record_scope` 应为 `all_records` 或 `filtered_records`。
+- **View 范围：** 传真实 `view_id`。View 的 filter 决定记录范围，sort 决定顺序，`query_context.record_scope` 应为 `view_filtered_records`；结论必须表述为"该 View 内"。
+- **临时条件：** `filter_json` 覆盖 View filter，`sort_json` 覆盖 View sort；排序示例：`sort_json='[{"field":"Updated","desc":true},{"field":"Title","desc":false}]'`，数组顺序是排序优先级，`desc=true` 为降序。两者只覆盖对应部分，不能把"指定 View"与"手工替换后的范围"混称为同一口径。tuple 条件的完整示例和协议见 `lark_get_skill(domain="base", section="filter-condition")`。
+- **关键词与结构化条件：** 展示文本关键词用 `lark_base_record_search()`；数值、日期、选项、人员、群组、Link、空值等用 `filter_json`。两者可以叠加。
+- **字段投影：** `field_id` 是数组参数，一个元素一个字段，只导出筛选、分组、排序、JOIN、解释、回查所需字段。系统 `record_id` 自动保留；跨表任务还必须投影 Link 或经过验证的业务 key。
 
-## 读取与关系建模
+manifest 的 `query_context` 是本次导出范围的记录，不是完整查询语言的替代品。沿用上下文里的既有结论前，同时核对 `base_token`、`table_id`、View / filter / sort、投影字段和 `rev`。
 
-将 Base 反范式宽表映射为关系模型时，可将标量列视为 record attributes，将多值列视为以 `record_id` 为关联键的 nested relation，将 Link 视为跨表 adjacency list。多值列通过 lateral `explode` / `UNNEST` 切换粒度；Link 规范化为 bridge relation 后再 join；同类来源表先投影到 conformed fact schema，再纵向合并。
+## 3. 大表完整读取
 
-上述建模在 MCP 下由 `jq_records` 表达式实现。若最终仍要在 agent 自己的运行环境里用 Python 完成，只能基于返回到上下文的数据；两份同场景实现示例（加载与日期解析、集合谓词、单数组展开、Link JOIN、多数组共现）见：
+NDJSON 单次最多返回 2000 条。必须取得超过 2000 条逐行原始记录时：
 
-- `lark_get_skill(domain="base", section="data-analysis-python-stdlib")`
-- `lark_get_skill(domain="base", section="data-analysis-pandas")`
+1. 固定 `base_token`、`table_id`、`view_id`、filter、sort 和字段投影；首块从 `offset=0` 开始，逐块推进 `offset`。ndjson 探测每块可达 2000，`format="json"` 每块上限 200。
+2. 每块读取 manifest 的 `records_count`、`has_more`、`next_offset`、`rev` 和 `query_context`；`has_more=true` 时只使用返回的 `next_offset` 继续。
+3. 所有块的 `rev` 与 `query_context` 必须一致。读取期间 `rev` 改变表示数据快照已变化，可能产生遗漏或重复；需要严格完整时从头重读，否则明确披露非快照一致。
+4. 以最后一块 `has_more=false` 作为终止条件。
+5. 多表任务分别完成每张表的完整性检查；任一输入不完整，JOIN、集合、窗口或统计结果都不完整。
 
-场景语义和粒度规则以本 SOP 为准，示例只提供对应实现的最短代码。
+MCP 下 ndjson artifact 不可读回，块之间也不能在服务端拼接，所以逐条明细必须用 `format="json"` 分块读入上下文，并按 `record_id` 合并去重。上下文是这里的硬约束：先用 `filter_json` 和最小 `field_id` 投影把每块压到必要列，逐块结果加起来仍撑不住时，说明规模限制，并优先改走下方 `lark_base_data_query()` 或继续收紧谓词。
 
-## 常见分析模式
+如果任务只需要单表基础统计，不应为了拿到所有原始行而分块下载，优先使用下方 `lark_base_data_query()`。
 
-### 单表简单筛选与统计：jq_records
+## 4. `data-query`：大规模单表基础统计逃生路径
 
-NDJSON 每行是一条 record，`jq_records` 表达式面对的是这些 record 组成的数组。下面筛选"状态"包含"进行中"的记录，并统计记录数和金额合计：
+`lark_base_data_query()` 的 datasource 是单个 Base Table，适合在超过 2000 行时由云端完成：
 
-```
-lark_base_record_list(base_token="<base_token>", table_id="<table_id>", field_id=["状态", "金额"], format="ndjson", jq_records='map(select((.["状态"] | index("进行中")) != null)) as $records | ($records | map(.["金额"] | select(. != null))) as $amounts | {records_count: ($records | length), amount_sum: (if ($amounts | length) > 0 then ($amounts | add) else null end)}')
-```
+- `filters`：聚合前筛选，类似 WHERE；它使用 LiteQuery 特有的 DSL，不是 Record/View 的 tuple filter，注意不要混淆。
+- `dimensions`：分组字段。
+- `measures`：`sum`、`avg`、`min`、`max`、`count`、`count_all`、`distinct_count`。
+- `sort`：排序字段
 
-`jq_records` 与 `format="ndjson"` 必须同时出现；一个表达式里把该份记录需要的多个指标一起算出来，避免为每个指标重复取数。
+SOP 选定这条路径后再读取 `lark_get_skill(domain="base", section="data-query")`。典型适用范围是**单表**总数、分组计数、数值汇总、去重计数、分组排序和 Top-K。
 
-### 多值列：nested relation 与目标粒度
+能力边界：
 
-Base 的反范式宽表会把零到多个 Select、人员、群组、Link 或附件元素嵌入一条 source record。多值单元格默认按无重复、无序集合建模：元素顺序不承担稳定业务语义，同一 source record 内可将元素视为唯一，因此其元素数等于去重元素数；跨 source record 出现的同一元素仍是不同事实或关系边。分析时将数组视为以 `record_id` 为 correlation key 的 nested relation，并先确定 target grain：
+- 只传 dimensions 时返回去重后的维度组合，不返回 `record_id`，不能视为逐条记录。
+- 不承担多表 JOIN、窗口函数、递归、原始明细导出或语义分析。
+- 没有独立 HAVING 语义；可先由 `lark_base_data_query()` 聚合，再对已收敛的聚合结果做条件过滤。
+- 条件聚合只有所有 measures 共用同一前置条件时才能直接下推到 `filters`；不同 measures 使用不同条件时，拆成可复核的查询或在完整明细上计算。
+- 聚合后需要展示原始记录时，用返回的真实业务 key / 维度值通过 `lark_base_record_list(filter_json=...)` 或 `lark_base_record_get()` 回查；不要从聚合行臆造 `record_id`。
 
-- **record grain**：包含、交集、子集和元素数量等问题直接使用集合谓词，不做 expansion。
-- **record-element grain**：通过 lateral `explode` / `UNNEST` 规范化为 `(source_record_id, element)` bridge relation。inner expansion 会丢弃空数组来源，outer expansion 会保留来源 record；回到 record 口径时按 `source_record_id` 聚合或去重。
-- **entity grain**：两侧分别规范化为 bridge relation，再按稳定 element key JOIN。人员和群组以 `id` 连接、以 `name` 展示；Select 以名称作为元素键，仅当字段共享同一业务值域时才可连接。
+## 5. Manifest 与 NDJSON 结构
 
-使用 manifest 列 `stats` 中的 `empty_count`、`avg_length` 和 `max_length` 做 expansion cardinality 与数据倾斜预估：单数组 inner expansion 的估算行数为 `records_count × avg_length`，outer expansion 还需加上 `empty_count`；结合 `max_length` 识别极端 fan-out 或 hot record。任务确实需要元素粒度且估算规模可控时，可以直接展开。
+`format="ndjson"` 时返回记录文件的 manifest。manifest 里的 `record_file` / `manifest_file` 路径指向服务端容器内的文件，agent 无法读取；把 manifest 当作规模与 schema 探针，再用 `format="json"` 取记录本体。高频 manifest 字段：
 
-#### 多数组、fan-out 与 row-local Cartesian product
+| 字段 | 分析用途 |
+| --- | --- |
+| `records_count` / `has_more` / `next_offset` | 判断当前块大小、是否完整以及下一块起点 |
+| `base_token` / `table_id` / `query_context` | 固定来源表和读取范围 |
+| `rev` | 检查多块或沿用既有结论时的数据版本一致性 |
+| `timezone` | 解释 Base 本地日历边界 |
+| `columns.*.field_id/field_type/physical_type` | 确认 NDJSON 实际列类型与稳定字段标识 |
+| `columns.*.stats/example/hint` | 估算空值、数组展开规模和文本体量；只描述本次导出 |
+| `record_file_size_bytes` | 判断这批记录相对上下文的体量，决定全部读入、只取预览、继续收紧投影还是改走云端聚合 |
 
-同一 source record 中的独立数组默认建立为彼此独立的 lateral pipeline，分别展开并聚合回 target grain 后再连接，避免 many-to-many fan-out 和重复计量。只有问题明确要求分析元素组合或共现时，才同时展开形成 row-local Cartesian product。
+NDJSON 每行是一条 Record，以字段 `name` 为 key，并额外包含系统 `record_id`；`field_id` 位于 manifest。字段改名会改变记录 key，跨批次或长期复用的分析应通过 manifest 复核 `field_id → name`。
 
-两个数组同时展开的准确 cardinality 为 `Σᵢ(|Aᵢ| × |Bᵢ|)`；可用 `records_count × avg_length_a × avg_length_b` 估算执行规模，并结合两列的 `max_length` 判断极端 fan-out。平均长度乘积不反映列间相关性，只用于成本估算。Base schema 不提供不同多值列之间的 positional contract；仅当额外业务契约明确声明位置对应语义时，才按 ordinality ZIP。
+**投影自检：拿到 manifest 先看 `ignored_fields` 和 `columns`。** `ignored_fields` 非空说明有字段名没被识别（大小写、空格、字段被重命名、这段调用是从另一张表复制来的）；此时 `columns` 里缺的就是被丢掉的列，后续读它们只会得到 `null` 而不会报错。请求的字段**全部**没命中时工具会直接返回 `projection_dropped` 错误而不是给你一份只有 `record_id` 的导出；部分命中不会报错，必须自己核对 `columns` 是否覆盖了计算需要的每一列，必要时先 `lark_base_field_list()` 取真实字段名。`ignored_fields` 和 `record_not_found` 在 manifest 中出现。
 
-### Link：跨表 adjacency list
+| `field_type` | NDJSON 结构 | Base 特有的分析语义 |
+| --- | --- | --- |
+| `record_id` | `string` | 表内唯一主键，用于定位和块间去重 |
+| `text`、`formula`、`lookup`、`auto_number`、`not_support` | `string\|null` | Formula / Lookup 不保留原始计算类型；需要数值运算时必须显式验证转换规则 |
+| `datetime`、`created_at`、`updated_at` | RFC3339 `string\|null` | 带 offset；区分绝对时刻与 Base 本地日历语义 |
+| `number` | `number\|null` | 空值不是零，是否纳入分母由任务口径决定 |
+| `checkbox` | `boolean` | 上游空值在 NDJSON 中规范化为 `false` |
+| `select` | `array<string>` | 单选、多选都读取为选项名称数组；空值为 `[]` |
+| `location` | `{lng,lat,full_address}\|null` | 地理计算用坐标，文本范围分析用地址 |
+| `user`、`group_chat`、`created_by`、`updated_by` | `array<{id,name}>` | 连接与去重使用 `id`，展示使用 `name` |
+| `link` | `array<{id}>` | `id` 是 Field schema 指定目标表中的 `record_id` |
+| `attachment` | `array<{file_token,size,name}>` | 文件 token 是稳定定位信息；数组展开会改变粒度 |
 
-- Link 字段的完整 schema 以 `lark_base_field_list()` 为准，其中 `table_id` 声明唯一目标 table；NDJSON 的 `[{"id":"rec_xxx"}]` 表示指向该表目标 `record_id` 的零到多条有向边。以 `table_id` 确定目标表，缺少可信 schema 时先补充 `lark_base_field_list()`。
-- 将 Link 规范化为 `(source_record_id, target_record_id)` edge/bridge relation，再按 `target_record_id = 目标表.record_id` 执行外键式 JOIN。需要反向遍历时复用同一 edge relation 反向分组或连接；NDJSON 不隐含自动反向关系。
-- 多跳 Link 通过逐跳组合 edge relation 完成 traversal，并始终在各自 record-id domain 内连接。最终展示目标表的用户可读 attributes；已有 Link 时使用 Link edge relation，其他关联使用经过验证的 business key。
-- 跨表 JOIN 需要两张表的记录同时在手。MCP 下每张表各做一次 `jq_records` 取回收敛后的边表和目标表投影，再在上下文中连接；两侧都无法收敛到可返回规模时，转 Cloud SOP 的逐跳回查。
+除 `record_id` 外，不假设任何列满足非空或唯一。标量空值通常是 `null`，多值列空值是 `[]`；未显式排序时不依赖 NDJSON 行顺序。
 
-### 跨表同类实体与指标
+## 6. 专业分析场景中的 Base 映射
 
-- 多表 users 等重复实体的事实分析，先把各表投影为 `(source_table, source_record_id, entity_id, metric...)` 的 conformed long fact schema，再合并并聚合到 entity grain。需要横向比较时，各表先聚合到相同 entity grain 再 JOIN，避免原始事实之间产生 many-to-many fan-out。
-- 没有 Link 时只能使用经过验证的 business key 关联。名称相似匹配属于 entity resolution，不属于普通 JOIN；应作为独立阶段输出匹配依据、置信度和未决项。
+下表不教授算法，只指出开始计算前必须解决的 Base 特有问题：
+
+| 场景 | Base 数据结构映射与正确性约束 |
+| --- | --- |
+| 复杂多表 JOIN | Link 先展开为 `(source_record_id, target_record_id)` 边，再按目标表 `record_id` 连接；目标 `table_id` 来自 Field schema。无 Link 时只能使用已验证唯一性和空值规则的业务 key，必须统计未匹配与重复 key。 |
+| 集合运算 | Select 是名称数组，人员/群组按 `id`，Link 按目标 `record_id`；先明确是 record 级包含/交并差，还是 element 级集合，不能把数组字符串化比较。 |
+| 多值展开与数据重塑 | Select、人员、群组、Link、附件都是 nested relation。一次展开把粒度从 record 变为 record-element；两个数组同时展开会产生行内笛卡尔积，除非任务明确分析共现，否则分别展开并聚合回目标粒度。 |
+| 分组、条件聚合与 HAVING | 先确定 record / element / entity grain 和空值口径。单表基础聚合可走 `lark_base_data_query()`；HAVING 在聚合结果上过滤。不同条件的 measures 不要错误共用一个全局 filter。 |
+| 排序与 Top-K | 原始记录 Top-K 用记录工具的 `sort_json`；大表单表聚合 Top-K 用 `lark_base_data_query()`。并列值是否全部保留、如何稳定打破 ties 必须按任务口径明确。 |
+| 窗口计算与严格时序漏斗 | NDJSON 不保证默认顺序；显式选择实体 key、事件时间、分区字段和同时间 tie-breaker。`lark_base_data_query()` 不提供窗口或逐事件漏斗语义。 |
+| 时间边界与周期对齐 | 真实时长和跨时区排序按完整 RFC3339 instant；按来源 Base 的日/周/月分组使用值中的本地日期和 manifest `timezone`，不要先转 UTC 后再切日历周期。 |
+| 层级与递归 | Link 是有向邻接边；逐跳保持各 Table 的 record-id domain，记录已访问节点以处理环，并明确深度或终止条件。 |
+| 派生变量与指定规则的数据质量处理 | 保留原字段和 `record_id`，派生列另命名；只执行用户给定或业务已确认的缺失、异常、去重、标准化规则，不把通用清洗习惯当成业务事实。 |
+| 临时语义转换 | LLM 产生的标签、主题或实体映射以 `record_id` 回连并保留判断依据；默认只作为临时派生结果，用户未要求时不写回 Base。 |
+| 描述性统计、差异分解、关联分析与统计推断 | 先确认总体是整表还是 View、输入是否完整、分析粒度是否因多值展开改变，以及 Formula / Lookup 是否需要类型恢复；把选择偏差、缺失和重复实体视为 Base 数据口径问题，而不是静默用算法默认值处理。 |
+
+跨多个同类事实表时，先投影为一致的长表结构，例如 `(source_table, source_record_id, entity_id, metric...)` 再纵向合并；横向比较时，各表先聚合到相同 entity grain 再 JOIN，避免原始事实间 many-to-many fan-out。
+
+需要 LLM 理解原文的判断（开放文本打标、情绪或意图识别、主题归纳、语义分类、相似性判断、实体消歧）先用不改变分析口径的确定性条件收敛范围，只导出 `record_id`、判断所需原文和解释所需的最小字段集，再用 `format="json"` 加最小投影把必要记录读入上下文逐条判断；规模较大时先说明原因和预计耗时，确认后按 `offset` + `limit` 分批，各批沿用同一口径并在上下文中累积。除非用户明确要求规则法，不用关键词命中、词频、正则或规则打分替代语义判断。
+
+## 7. 交付前检查
+
+最终结果至少说明：
+
+- 数据来自哪些 Base / Table / View，应用了哪些 filter、时间范围和字段投影。
+- 每张输入表是否读到 `has_more=false`，或是否由 `lark_base_data_query()` 在云端完成完整单表聚合。
+- 分析粒度、空值口径、多值展开方式、JOIN key、重复 key 和未匹配数量。
+- 时间采用 instant 还是 Base local-calendar 语义。
+- 临时派生、清洗、语义标签或推断使用了哪些用户指定规则；哪些结果没有写回 Base。
+
+只有范围完整且口径与问题一致时，才给出全局结论。

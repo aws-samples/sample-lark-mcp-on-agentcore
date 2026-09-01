@@ -10,10 +10,10 @@
 
 ```
 # 追加到末尾
-lark_slides_add_slide(presentation="<PID>", slide="<slide xmlns=\"https://www.larkoffice.com/sml/2.0\"><data></data></slide>")
+lark_slides_add_slide(presentation="<PRES_ID>", slide="<slide xmlns=\"https://www.larkoffice.com/sml/2.0\"><data></data></slide>")
 
 # 插到某页之前
-lark_slides_add_slide(presentation="<PID>", slide="<slide xmlns=...>...</slide>", before_slide_id="<SID>")
+lark_slides_add_slide(presentation="<PRES_ID>", slide="<slide xmlns=...>...</slide>", before_slide_id="<SID>")
 
 # wiki 链接（自动解析 wiki 节点，并校验 obj_type=slides）
 lark_slides_add_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX", slide="<slide xmlns=...>...</slide>")
@@ -33,7 +33,7 @@ lark_slides_add_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX", sli
 XML 里写 `<img src="@./chart.png" .../>` 时，会：先把每个不重复的本地文件上传到这份演示文稿（`parent_type=slide_file`），再把 `src` 替换成返回的 `file_token`，最后才提交页面。占位符路径按**当前工作目录**解析。
 
 ```
-lark_slides_add_slide(presentation="<PID>", slide="<slide xmlns=\"https://www.larkoffice.com/sml/2.0\"><data><img src=\"@./chart.png\" topLeftX=\"100\" topLeftY=\"100\" width=\"320\" height=\"180\"/></data></slide>")
+lark_slides_add_slide(presentation="<PRES_ID>", slide="<slide xmlns=\"https://www.larkoffice.com/sml/2.0\"><data><img src=\"@./chart.png\" topLeftX=\"100\" topLeftY=\"100\" width=\"320\" height=\"180\"/></data></slide>")
 ```
 
 - 文件不存在、不是普通文件、超过 20 MB，都在**调用任何接口之前**报错，不会留下半成品。

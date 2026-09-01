@@ -22,14 +22,14 @@ lark_invoke(tool_name="lark_mail_user_mailbox_settings_send_as", args={params: {
 
 ```
 # mailbox 指定公共邮箱，From 头自动使用该邮箱地址
-lark_mail_send(mailbox="shared@example.com", to="bob@example.com", subject="通知", body="<p>你好</p>")
+lark_mail_send(mailbox="shared@example.com", to=["bob@example.com"], subject="通知", body="<p>你好</p>")
 ```
 
 ## 别名发信
 
 ```
 # mailbox 指定所属邮箱，from 指定别名地址
-lark_mail_send(mailbox="me", from="alias@example.com", to="bob@example.com", subject="测试", body="<p>你好</p>")
+lark_mail_send(mailbox="me", from="alias@example.com", to=["bob@example.com"], subject="测试", body="<p>你好</p>")
 ```
 
 ## 相关命令

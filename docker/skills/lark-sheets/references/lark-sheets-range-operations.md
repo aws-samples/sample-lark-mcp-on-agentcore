@@ -54,7 +54,7 @@
 5. **新增合并时数据保护**：合并前确认目标区域只有左上角有数据，其余单元格为空，否则合并会导致非左上角的数据丢失。
 6. **批量取消合并一次调用即可**：当一个范围（整列 `A:A`、整行 `3:3`、矩形 `A1:D100`）内存在多个合并区域，直接调一次 `lark_sheets_cells_unmerge` 传入这个大范围，会一次性取消该范围内所有合并区域；**不要**为每个合并区域单独调用 unmerge，也不要用 `lark_sheets_batch_update` 拆成多次 unmerge。
 
-**⚠️ 多区域合并不要逐个调用**：对**多个**不同区域执行 `lark_sheets_cells_merge` 时，写成一份 `lark_sheets_styles_put` 的 `cell_merges` 一次交付（合并与样式 / 行高列宽 / 冻结同属一份声明式规格，见 `lark_get_skill(domain="sheets", section="styles-put")`）；只有当合并夹在**跨类型、有顺序依赖**的操作链里（如插列 → 合并 → 写表头）才用 `lark_sheets_batch_update`（fail-fast、不回滚，入参格式见 `lark_get_skill(domain="sheets", section="batch-update")`）。行高列宽同理**不需要** `lark_sheets_batch_update`：多行 / 多列不同尺寸直接用 `lark_sheets_rows_resize(heights=…)` / `lark_sheets_cols_resize(widths=…)` 的 map 形态，一次调用完成。
+**⚠️ 多区域合并不要逐个调用**：对**多个**不同区域执行 `lark_sheets_cells_merge` 时，写成一份 `lark_sheets_styles_put` 的 `cell_merges` 一次交付（合并与样式 / 行高列宽 / 冻结同属一份声明式规格，见 `lark_get_skill(domain="sheets", section="styles-put")`）；只有当合并夹在**跨类型、有顺序依赖**的操作链里（如插列 → 合并 → 写表头）才用 `lark_sheets_batch_update`（fail-fast，失败处置与入参格式见 `lark_get_skill(domain="sheets", section="batch-update")`）。行高列宽同理**不需要** `lark_sheets_batch_update`：多行 / 多列不同尺寸直接用 `lark_sheets_rows_resize(heights=…)` / `lark_sheets_cols_resize(widths=…)` 的 map 形态，一次调用完成。
 
 **唯一例外**：`lark_sheets_cells_unmerge` 原生支持传一个大 range 一次性取消其中所有合并区域，应直接单次调用，**不要**拆进 `lark_sheets_batch_update`。
 

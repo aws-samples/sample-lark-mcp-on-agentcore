@@ -15,7 +15,7 @@ lark_drive_member_remove(token="<bare_token_or_url>", type="docx", member_id="ou
 | `token` | 是 | 裸 token 或完整 URL。路径支持 `/drive/folder/`、`/docx/`、`/doc/`、`/sheets/`、`/base/`、`/bitable/`、`/wiki/`、`/file/`、`/mindnotes/`、`/slides/`、`/minutes/`、`/page/`；URL 可从路径推断类型，裸 token 必须同时传 `type`。 |
 | `type` | 条件必填 | 资源类型：`docx` / `doc` / `sheet` / `bitable` / `file` / `folder` / `wiki` / `mindnote` / `slides` / `minutes` / `apps`。完整 URL 可省略。 |
 | `member_id` | 是 | 要移除的单个协作者 ID。逗号分隔的多成员输入会被拒绝；批量场景应逐个调用。 |
-| `member_type` | 是 | ID 类型：`email` / `openid` / `openchat` / `opendepartmentid` / `userid` / `unionid` / `groupid` / `wikispaceid`。 |
+| `member_type` | 是 | ID 类型：`email` / `openid` / `openchat` / `opendepartmentid` / `userid` / `unionid` / `groupid` / `appid` / `wikispaceid`。 |
 | `member_kind` | 条件必填 | 仅 `member_type="wikispaceid"` 使用：未启用知识库成员分组时传 `wiki_space_member`，启用后根据权限传 `wiki_space_viewer` 或 `wiki_space_editor`。 |
 | `perm_type` | 否 | 仅 wiki 协作者使用：`container`（默认，当前页面及子页面）或 `single_page`（仅当前页面）。 |
 
@@ -45,6 +45,7 @@ Wiki 普通协作者还会返回 `perm_type`；`wikispaceid` 返回所传的 `me
 ## 行为说明
 
 - **身份支持**：本工具通过 MCP server 始终以 user identity 执行。
+- **应用协作者**：使用 `member_type="appid"`，`member_id` 传应用 ID（通常为 `cli_xxx`）。
 - **部门协作者**：`member_type="opendepartmentid"` 必须以 user identity 执行（MCP server 默认即为 user identity）。⚠️ bot 身份会在客户端提前拒绝，且 MCP server 不提供 bot identity。
 - **安全编码**：资源 token 和 member ID 都作为独立 path segment 编码。
 - **Wiki 范围**：普通 wiki 协作者默认删除 `container` 权限；只删除当前页面权限时显式传 `perm_type="single_page"`。

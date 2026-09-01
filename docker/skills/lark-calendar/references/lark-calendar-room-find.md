@@ -13,7 +13,7 @@
 lark_calendar_room_find(slot=["2026-03-27T14:00:00+08:00~2026-03-27T15:00:00+08:00"], attendee_ids="ou_xxx,ou_yyy", city="北京", building="学清嘉创大厦B座", floor="F2", event_rrule="FREQ=DAILY;INTERVAL=1")
 ```
 
-> 若存在多个候选时间块，可传入多个 `slot`（服务端支持重复 `--slot`）。
+> 若存在多个候选时间块，`slot` 是数组，一个候选时间块放一个元素。
 
 ### 批量会议室名称查询
 
