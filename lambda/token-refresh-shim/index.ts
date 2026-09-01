@@ -116,6 +116,26 @@ interface LambdaEvent {
 // sends to Feishu — that one is always CALLBACK_URL, i.e. the CloudFront domain.
 const ALLOWED_DOMAINS = (process.env.ALLOWED_DOMAINS || '').split(',').map(d => d.trim()).filter(Boolean);
 
+// VS Code's hosted redirect brokers. VS Code registers four redirect_uris in one
+// DCR request — two loopback forms plus these two — and rejecting any single entry
+// fails the whole registration, so omitting them locked VS Code out entirely.
+// The broker page hands the flow back to whichever VS Code instance started it
+// (Desktop, Remote-SSH, Dev Container, Codespaces, vscode.dev) via the vscode://
+// URI handler, which is why VS Code needs no port forwarding when the editor and
+// the browser sit on different machines.
+const VSCODE_REDIRECT_HOSTS = ['vscode.dev', 'insiders.vscode.dev'];
+
+// RFC 8252 §7.3 loopback set: "localhost", the whole 127.0.0.0/8 block, and [::1].
+// Accepting only localhost + 127.0.0.1 rejected IPv6-only clients and any client
+// that picked another 127.x address. Ports are deliberately NOT considered — §7.3
+// requires accepting any port, which is what lets clients use an ephemeral one.
+function isLoopbackHost(host: string): boolean {
+  if (host === 'localhost') return true;
+  if (host === '[::1]' || host === '::1') return true;
+  return /^127\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.test(host)
+    && host.split('.').slice(1).every(o => Number(o) <= 255);
+}
+
 // The redirect_uri handed to Feishu/Lark. deploy.sh pins CALLBACK_URL to
 // <CloudFront>/callback, so the Host-header fallback only ever fires on a bare
 // `cdk deploy` (which leaves the SET_AFTER_DEPLOY placeholder). ALLOWED_DOMAINS
@@ -623,10 +643,11 @@ async function handle(event: LambdaEvent) {
       if (u.protocol !== 'https:' && u.protocol !== 'http:') return jsonErr("invalid_redirect_uri");
       if (u.username || u.password || u.hash) return jsonErr("invalid_redirect_uri");
       const host = u.hostname;
-      const isLocal = host === 'localhost' || host === '127.0.0.1';
+      const isLocal = isLoopbackHost(host);
       const isQuickSight = host === 'quicksight.aws.amazon.com';
+      const isVsCode = VSCODE_REDIRECT_HOSTS.includes(host);
       const isAllowed = ALLOWED_DOMAINS.includes(host);
-      if (!isLocal && !isQuickSight && !isAllowed) return jsonErr("invalid_redirect_uri");
+      if (!isLocal && !isQuickSight && !isVsCode && !isAllowed) return jsonErr("invalid_redirect_uri");
       if (!isLocal && u.protocol !== 'https:') return jsonErr("invalid_redirect_uri");
     }
     const clientId = signClientId();
@@ -719,9 +740,10 @@ async function handle(event: LambdaEvent) {
         return { statusCode: 400, headers: { "Content-Type": "application/json" }, body: '{"error":"invalid_request","error_description":"redirect_uri not a valid URL"}' };
       }
       const isQuickSight = host === 'quicksight.aws.amazon.com' || host.endsWith('.quicksight.aws.amazon.com');
-      const isLocal = host === 'localhost' || host === '127.0.0.1';
+      const isLocal = isLoopbackHost(host);
+      const isVsCode = VSCODE_REDIRECT_HOSTS.includes(host);
       const customAllowed = ALLOWED_DOMAINS.some(d => host === d || host.endsWith(`.${d}`));
-      if (!isQuickSight && !isLocal && !customAllowed) {
+      if (!isQuickSight && !isLocal && !isVsCode && !customAllowed) {
         return { statusCode: 400, headers: { "Content-Type": "application/json" }, body: '{"error":"invalid_request","error_description":"redirect_uri not allowed"}' };
       }
       // localhost / 127.0.0.1 must be plain HTTP only when explicitly local;
@@ -754,6 +776,34 @@ async function handle(event: LambdaEvent) {
     return { statusCode: 302, headers: { Location: `https://${ACCOUNTS_HOST}/open-apis/authen/v1/authorize?client_id=${appId}&response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&state=${state}${scopeParamIncr}` } };
   }
 
+  // /activate — headless-friendly self-service authorization.
+  //
+  // The standard OAuth flow needs the browser and the MCP client on the SAME
+  // machine: the client listens on a loopback port and the authorization code is
+  // redirected there. When the agent runs on a remote host and the browser is on
+  // the user's laptop, that redirect lands on the wrong machine — the loopback
+  // address resolves to the browser's host, not the agent's.
+  //
+  // This route removes the client from the flow entirely. There is no
+  // redirect_uri and no PKCE, because nothing is redirected back to a client:
+  // Feishu returns to CALLBACK_URL (this service, over HTTPS), and /callback
+  // renders the resulting 30-day MCP token in the page for the user to copy into
+  // their client's request headers. Every MCP client supports static headers, so
+  // this works without any client-side capability, port forwarding or SSH tunnel.
+  //
+  // This grants no new authority: /token already issues 30-day tokens over the
+  // standard flow, and revocation is unchanged — mcp-middleware re-reads the
+  // user's Feishu token from Secrets Manager on every request, so revoking the
+  // user kills every token they hold.
+  if (path.includes("/activate")) {
+    if (!appId) return { statusCode: 500, headers: { "Content-Type": "application/json" }, body: '{"error":"server_misconfigured"}' };
+    if (!CALLBACK_URL) return { statusCode: 500, headers: { "Content-Type": "application/json" }, body: '{"error":"server_misconfigured","error_description":"callback URL not configured"}' };
+    log('INFO', 'activate_start', {});
+    const state = signState(JSON.stringify({ a: 1 }));
+    const scopeParam = FEISHU_SCOPES ? `&scope=${encodeURIComponent(FEISHU_SCOPES)}` : '';
+    return { statusCode: 302, headers: { Location: `https://${ACCOUNTS_HOST}/open-apis/authen/v1/authorize?client_id=${appId}&response_type=code&redirect_uri=${encodeURIComponent(CALLBACK_URL)}&state=${state}${scopeParam}` } };
+  }
+
   // /callback — Feishu redirects here after user consent
   if (path.includes("/callback")) {
     const { code, state } = params;
@@ -761,7 +811,7 @@ async function handle(event: LambdaEvent) {
     const { valid, payload } = verifyState(state);
     if (!valid) return { statusCode: 403, headers: { "Content-Type": "application/json" }, body: '{"error":"invalid_state"}' };
 
-    let stateData: { r?: string; s?: string; c?: string; u?: string };
+    let stateData: { r?: string; s?: string; c?: string; u?: string; a?: number };
     try { stateData = JSON.parse(payload); } catch { return { statusCode: 400, body: "invalid state payload" }; }
 
     const appToken = await getAppAccessToken();
@@ -822,6 +872,28 @@ async function handle(event: LambdaEvent) {
     const displayName = userName || `${stableUserId.slice(0, 8)}…`;
     const acceptLang = event.headers?.['accept-language'] || event.headers?.['Accept-Language'] || '';
     const langKey = detectLang(acceptLang);
+
+    // Activation flow: render the MCP token for the user to copy. The token is
+    // only ever in the response body — never in a URL, a redirect or a log — so
+    // it cannot leak through browser history, a Referer header or CloudFront
+    // access logs. It is shown once: the authorization code behind it is
+    // single-use, so reloading this page cannot reproduce it.
+    if (stateData.a) {
+      const at = (i18n.activate as Record<string, typeof i18n.activate.en>)[langKey] || i18n.activate.en;
+      const mcpToken = generateMcpToken(stableUserId);
+      log('INFO', 'activate_success', { userIdHash: hashUserId(stableUserId) });
+      const activateHtml = `<!DOCTYPE html><html lang="${langKey}"><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"><title>${at.title}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;max-width:600px;margin:64px auto;padding:24px;color:#222}h2{color:#0a7d2c;margin-bottom:8px}p{color:#666;font-size:14px;line-height:1.5}.label{font-size:12px;color:#999;margin:24px 0 6px}code{display:block;background:#f6f6f6;border:1px solid #e0e0e0;border-radius:6px;padding:12px;font-size:12px;word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}.warn{margin-top:24px;padding:12px 16px;background:#fff8e6;border-left:3px solid #e8a33d;border-radius:4px}.warn b{display:block;font-size:13px;color:#8a5a00;margin-bottom:6px}.warn p{color:#7a6535;font-size:13px;margin:4px 0}</style></head><body><h2>${at.heading}</h2><p>${at.message.replace('%s', escapeHtml(displayName))}</p><div class="label">${at.token_label}</div><code>${escapeHtml(mcpToken)}</code><div class="label">${at.copy_hint}</div><code>"headers": { "Authorization": "Bearer &lt;token&gt;" }</code><div class="warn"><b>${at.warn_title}</b><p>${at.warn_once}</p><p>${at.warn_secret}</p><p>${at.warn_revoke}</p></div></body></html>`;
+      return {
+        statusCode: 200,
+        headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Cache-Control": "no-store",
+          "Referrer-Policy": "no-referrer",
+        },
+        body: activateHtml,
+      };
+    }
+
     const ct = (i18n.callback as Record<string, typeof i18n.callback.en>)[langKey] || i18n.callback.en;
     const hintText = ct.hint_close;
     const successHtml = `<!DOCTYPE html><html lang="${langKey}"><head><meta charset="utf-8"><title>${ct.title}</title><style>body{font-family:-apple-system,BlinkMacSystemFont,Segoe UI,sans-serif;max-width:480px;margin:80px auto;padding:24px;text-align:center;color:#222}h2{color:#0a7d2c;margin-bottom:8px}p{color:#666;font-size:14px;line-height:1.5}.hint{color:#999;font-size:12px;margin-top:24px}</style></head><body><h2>${ct.heading}</h2><p>${ct.message.replace('%s', escapeHtml(displayName))}</p><p class="hint">${hintText}</p></body></html>`;
