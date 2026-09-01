@@ -128,13 +128,13 @@ if os.path.exists(SCOPES):
             f"{sorted(list(extra))[:5]}…")
     # The reverse direction is NOT an invariant: shortcut-scopes.json is extracted
     # from lark-cli's Go source and is deliberately a SUPERSET of the catalog. It
-    # keeps deprecated/renamed aliases, and bot-only shortcuts (AuthTypes without
-    # "user") that never render into `--help` and so never become tools. Reporting
+    # keeps deprecated/renamed aliases, and non-user-callable shortcuts that never
+    # become tools. Reporting
     # that as a failure made this tier permanently red and hid real regressions.
     if missing:
         print(f"  \033[33m·\033[0m {len(missing)} scope-map entry(ies) are not catalog "
               f"tools — expected: the scope map is a Go-source superset (deprecated "
-              f"aliases + bot-only shortcuts). Sample: {sorted(list(missing))[:5]}")
+              f"aliases + non-user-callable shortcuts). Sample: {sorted(list(missing))[:5]}")
 
 # ── B. Schema health ──────────────────────────────────────────────────────
 print("\n── B. Schema health ──")
@@ -347,8 +347,8 @@ else:
 # time. Two failure classes, both silent, both seen in real bumps:
 #
 #   1. Dead tool name. shortcut-scopes.json is a Go-source SUPERSET (hidden
-#      aliases, plus bot-only shortcuts whose AuthTypes omit "user" and which
-#      therefore never reach `--help` and never become tools). Validating docs
+#      aliases, plus shortcuts marked non-user-callable by AuthTypes or an
+#      evidence-backed ordinary-app override). Validating docs
 #      against it passes names the server does not expose; the agent then gets
 #      "tool does not exist". The catalog below is the only authority.
 #   2. Flag type mismatch. A stringArray flag written as a comma-joined string
@@ -439,23 +439,23 @@ else:
             print(f"      {m}")
 
 # End-to-end counterpart of the scope-coverage unit assertions: prove the shortcuts
-# upstream declares bot-only really are absent from the catalog the server serves.
+# marks non-user-callable really are absent from the catalog the server serves.
 if os.path.exists(SCOPES):
     with open(SCOPES) as f:
         _sc = json.load(f).get('shortcuts', [])
-    bot_only = [s for s in _sc if s.get('userCallable') is False]
+    user_unavailable = [s for s in _sc if s.get('userCallable') is False]
     leaked = [f"{s['service']} {s['command']}"
-              for s in bot_only
+              for s in user_unavailable
               if (s['service'], s['command']) in
               {(t['service'], t['command']) for t in tools}]
-    if not bot_only:
-        bad("no shortcut is marked userCallable:false — the AuthTypes gate in "
+    if not user_unavailable:
+        bad("no shortcut is marked userCallable:false — the extraction gate in "
             "scripts/extract-shortcut-scopes.py has stopped working")
     elif leaked:
-        bad(f"{len(leaked)} bot-only shortcut(s) reached the catalog — the adapted "
+        bad(f"{len(leaked)} non-user-callable shortcut(s) reached the catalog — the adapted "
             f"skills claim no tool exists for them: {leaked}")
     else:
-        ok(f"all {len(bot_only)} bot-only shortcut(s) absent from the catalog")
+        ok(f"all {len(user_unavailable)} non-user-callable shortcut(s) absent from the catalog")
 
 # ── Summary ────────────────────────────────────────────────────────────────
 print(f"\n──────────────────────────────────")

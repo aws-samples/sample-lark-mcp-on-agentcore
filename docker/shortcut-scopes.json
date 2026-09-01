@@ -4007,9 +4007,8 @@
     {
       "service": "vc",
       "command": "+meeting-screenshot",
-      "scopes": [
-        "vc:meeting.realtime:read"
-      ]
+      "scopes": [],
+      "userCallable": false
     },
     {
       "service": "vc",

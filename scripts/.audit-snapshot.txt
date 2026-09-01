@@ -489,7 +489,6 @@ vc|+meeting-join|write|0|vc:meeting.bot.join:write
 vc|+meeting-leave|write|0|vc:meeting.bot.join:write
 vc|+meeting-list-active|read|0|vc:meeting.meetingevent:read
 vc|+meeting-message-send|write|0|vc:meeting.message:write
-vc|+meeting-screenshot|read|0|vc:meeting.realtime:read
 vc|+recording|read|0|vc:record:readonly
 vc|+search|read|0|vc:meeting.search:read
 whiteboard|+export|read|0|board:whiteboard:node:read

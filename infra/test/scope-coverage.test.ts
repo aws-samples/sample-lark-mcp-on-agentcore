@@ -190,28 +190,42 @@ describe("scope coverage", () => {
     ).toEqual([]);
   });
 
-  // A shortcut whose upstream AuthTypes omits "user" cannot be invoked with a user
-  // token at all. The extractor marks those `userCallable: false`, generate-tools.js
-  // skips them, and the adapted skills tell the agent no tool exists. These three
-  // assertions keep that chain honest — before them the exclusion rested entirely on
-  // lark-cli hiding bot-only commands from `--help`, which it only does when a
-  // user-token env var happens to be set during the image build.
-  const botOnly = shortcutScopes.shortcuts.filter((s) => s.userCallable === false);
+  // A shortcut can be unavailable to this user-only deployment because upstream
+  // AuthTypes omits "user", or because an evidence-backed override records that an
+  // ordinary app cannot obtain the declared permission. The extractor marks those
+  // `userCallable: false`, generate-tools.js skips them, and adapted skills explain
+  // the limitation instead of presenting an unusable tool.
+  const userUnavailable = shortcutScopes.shortcuts.filter(
+    (s) => s.userCallable === false,
+  );
 
-  it("bot-only shortcuts are marked and carry no user scopes", () => {
-    // Non-vacuous: 1.0.92 ships four (im +messages-edit, vc +meeting-end,
-    // vc +meeting-invite, event +subscribe). Zero means the AuthTypes gate broke.
-    expect(botOnly.length).toBeGreaterThan(0);
+  it("non-user-callable shortcuts are marked and carry no user scopes", () => {
     expect(
-      botOnly.filter((s) => (s.scopes || []).length > 0).map((s) => `${s.service} ${s.command}`),
-      "a bot-only shortcut must grant no user scopes",
+      userUnavailable.map((s) => `${s.service} ${s.command}`).sort(),
+    ).toEqual([
+      "event +subscribe",
+      "im +messages-edit",
+      "vc +meeting-end",
+      "vc +meeting-invite",
+      "vc +meeting-screenshot",
+    ]);
+    expect(
+      userUnavailable
+        .filter((s) => (s.scopes || []).length > 0)
+        .map((s) => `${s.service} ${s.command}`),
+      "a non-user-callable shortcut must grant no user scopes",
     ).toEqual([]);
+
+    const screenshot = userUnavailable.find(
+      (s) => s.service === "vc" && s.command === "+meeting-screenshot",
+    );
+    expect(screenshot?.scopes).toEqual([]);
   });
 
-  it("generate-tools.js filters bot-only shortcuts out of the catalog", () => {
+  it("generate-tools.js filters non-user-callable shortcuts out of the catalog", () => {
     const gen = readFileSync(resolve(ROOT, "docker/generate-tools.js"), "utf-8");
     expect(gen).toContain("userCallable === false");
-    expect(gen).toMatch(/botOnlyShortcuts\.has\(/);
+    expect(gen).toMatch(/userUnavailableShortcuts\.has\(/);
   });
 
   // The generator's own env is what makes lark-cli hide bot-only commands. Setting it
