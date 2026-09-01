@@ -23,6 +23,7 @@
   "docs:document:export",
   "docs:document:import",
   "docs:document.media:upload",
+  "docs:permission.member:auth",
   "drive:drive.metadata:readonly",
   "drive:file:upload",
   "drive:file:download",

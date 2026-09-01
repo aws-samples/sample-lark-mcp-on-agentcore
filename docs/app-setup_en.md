@@ -48,7 +48,7 @@ avoids that loop. It does **not** widen what users see at first authorization (s
 minimal set); the only cost is a larger declared permission ceiling and more items for
 your admin to approve.
 
-Scope list (233 entries, copy-paste ready):
+Scope list (237 entries, copy-paste ready):
 
 ```json
 {
@@ -120,8 +120,10 @@ Scope list (233 entries, copy-paste ready):
       "calendar:calendar",
       "calendar:calendar.event:create",
       "calendar:calendar.event:delete",
+      "calendar:calendar.event:join",
       "calendar:calendar.event:read",
       "calendar:calendar.event:reply",
+      "calendar:calendar.event:transfer",
       "calendar:calendar.event:update",
       "calendar:calendar.free_busy:read",
       "calendar:calendar:create",
@@ -269,8 +271,10 @@ Scope list (233 entries, copy-paste ready):
       "task:tasklist:read",
       "task:tasklist:write",
       "vc:meeting.bot.join:write",
+      "vc:meeting.interaction:write",
       "vc:meeting.meetingevent:read",
       "vc:meeting.message:write",
+      "vc:meeting.realtime:read",
       "vc:meeting.search:read",
       "vc:meeting:readonly",
       "vc:note:read",

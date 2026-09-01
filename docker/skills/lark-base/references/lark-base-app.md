@@ -88,6 +88,19 @@ lark_base_app_create(name="销售应用", workspace_token="<workspace_token>")
 - `theme_style` 可选，支持 `default|cloudBlue|fresh|softLight|future|technology`。
 - 记录输出中的 `app_token` 和 `workspace_token`。
 
+### 新建应用的默认 Page 复用
+
+`lark_base_app_create()` 会同时生成一个系统默认 Page，但创建响应不返回它的 `page_id`。用户未明确要求其他页面结构时，创建 App 后先读取应用取得该 Page，将其重命名并直接用作用户所需的第一个页面；不要用 `lark_base_app_page_create()` 另建第一个页面：
+
+```
+lark_base_app_get(app_token="<app_token>")
+lark_base_app_page_update(app_token="<app_token>", page_id="<default_page_id>", name="<page_name>")
+```
+
+在上述默认流程中，随后在这个 Page 上**逐个串行**执行 `lark_base_app_block_create()`，同一 Page 的多个组件不得并发创建。只有用户确实需要额外页面时，才在复用默认 Page 之后调用 `lark_base_app_page_create()`。用户明确要求保留默认 Page、另建独立页面或采用其他页面结构时，按用户要求处理。
+
+若 `lark_base_app_get()` 暂时没有返回默认 Page，重新执行 `lark_base_app_get()` 或 `lark_base_app_page_list()` 获取它，不要创建替代 Page。若创建组件返回布局重叠，先停止同页的其他并发写入，用 `lark_base_app_block_list()` 确认已成功组件，再留在原 Page 上串行重试失败步骤；不要通过新建 Page、删除默认 Page 或整页重建来规避冲突。
+
 ### 创建应用的自然语言编排
 
 先根据用户是否指定 Workspace 和现有 Base 选择流程，再调用原子工具：
@@ -157,6 +170,7 @@ lark_base_app_page_update(app_token="<app_token>", page_id="<page_id>", name="�
 lark_base_app_page_delete(app_token="<app_token>", page_id="<page_id>", _confirm=true)
 ```
 
+- 对新建 App，用户未明确要求其他页面结构时，必须按[新建应用的默认 Page 复用](#新建应用的默认-page-复用)将系统默认 Page 用作用户所需的第一个页面；`lark_base_app_page_create()` 只用于用户要求的额外页面。
 - 同一 App 内 Page 名称必须唯一。创建或更新名称前，服务端会读取页面列表；更新时排除当前 Page。
 - 同一 Page 内组件名称必须唯一。`lark_base_app_block_create()` 会分页读取该 Page 的全部组件并在创建前检查重名。
 - 本期没有 Page arrange，也没有 Block delete；Block 的 `type/sub_type` 创建后不可修改。详见[本期不支持的能力](#本期不支持的能力)。

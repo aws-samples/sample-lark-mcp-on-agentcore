@@ -21,7 +21,7 @@ lark_base_form_detail(share_token="<share_token>")
 | `base_token` | 表单所属 Base；提交附件时必须传给 `lark_base_form_submit(base_token="...")` |
 | `questions[].id` | 题目标识，通常对应字段 ID |
 | `questions[].title` | 提交时使用的字段名/题目名，以真实返回为准 |
-| `questions[].type` | 决定值格式；与字段类型和 `lark_get_skill(domain="base", section="cell-value")` 对齐 |
+| `questions[].type` | 决定值格式；提交结构见 `lark_get_skill(domain="base", section="form-submit")` |
 | `questions[].required` | 判断必填项 |
 | `questions[].filter` | 判断题目是否对当前提交可见；被隐藏的问题不要填写 |
 

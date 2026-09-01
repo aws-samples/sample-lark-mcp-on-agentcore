@@ -445,22 +445,20 @@ find docker/skills -name "*.md" -exec grep -ln "Read 工具\|Read tool" {} \;  #
 find docker/skills -name "*.md" -exec grep -ln "^python3\|python3 " {} \; # no raw python3 invocations in .md (lark_exec_script only)
 
 # Tool-name existence: every lark_*() call in skills must reference a real tool.
-# Extracts call-form tool names and diffs against shortcut-scopes.json.
-python3 -c "
-import json, re, glob, sys
-sc = json.load(open('docker/shortcut-scopes.json'))['shortcuts']
-real = {f'lark_{e[\"service\"]}_{e[\"command\"].lstrip(\"+\").replace(\"-\",\"_\")}' for e in sc}
-real |= {'lark_discover','lark_invoke','lark_get_skill','lark_drive_import','lark_exec_script'}
-bad = set()
-for f in glob.glob('docker/skills/**/*.md', recursive=True):
-    for m in re.finditer(r'(lark_[a-z0-9_]+)\(', open(f).read()):
-        t = m.group(1)
-        if t not in real and not t.endswith('_'): bad.add((t,f))
-if bad:
-    for t,f in sorted(bad): print(f'  ✗ {t}  <- {f}')
-    print(f'\n{len(bad)} tool-name references to non-existent tools'); sys.exit(1)
-print('Tool-name check: all references valid ✓')
-"
+# GROUND TRUTH IS THE GENERATED CATALOG, NOT shortcut-scopes.json. The scope map is
+# extracted from lark-cli's Go source and is a SUPERSET: it carries hidden/deprecated
+# aliases, and bot-only shortcuts whose AuthTypes omit "user" — those never render into
+# `--help`, so generate-tools.js never sees them and they are NOT MCP tools. Validating
+# against the scope map therefore passes names the server cannot serve, and the agent
+# gets "tool does not exist" at call time. (1.0.92 shipped three such shortcuts:
+# im +messages-edit, vc +meeting-invite, vc +meeting-end.)
+#
+# The catalog only exists inside the built image, so export it first:
+#   docker build -f docker/Dockerfile -t lark-mcp-audit:tmp docker/
+#   docker run --rm --entrypoint cat lark-mcp-audit:tmp /app/generated-tools.json > /tmp/catalog.json
+#
+# Then let the audit script do both this check and the flag-type check (section N):
+scripts/audit-tools.sh --catalog /tmp/catalog.json
 
 # Every SKILL.md must keep a non-empty, single-quoted description frontmatter that itself
 # contains no CLI leaks. The authoritative gate is the vitest skill-quality test (it parses
@@ -512,7 +510,7 @@ the per-skill upstream diff.
 | # | Perspective | What this agent hunts for (and ignores everything else) |
 |---|-------------|----------------------------------------------------------|
 | 1 | **Semantic fidelity** | Content silently dropped, meaning changed, or workflows/sections invented vs the NEW upstream source. Every new `+shortcut`/flag/reference-file is reflected; nothing hallucinated. |
-| 2 | **Tool & parameter correctness** | Every `lark_<svc>_<cmd>(...)` is a real tool in `shortcut-scopes.json` (watch the `docs` vs `doc` plural trap); every named arg matches that tool's actual snake_case `--flags` — no invented params. |
+| 2 | **Tool & parameter correctness** | Every `lark_<svc>_<cmd>(...)` is a real tool in the **generated catalog** (`generated-tools.json` from the built image — NOT `shortcut-scopes.json`, which is a Go-source superset including bot-only shortcuts that never become tools); watch the `docs` vs `doc` plural trap. Every named arg matches that tool's actual snake_case `--flags` — no invented params — and its **type** matches: a `stringArray` flag must be written as an array, a scalar `string` flag must not. |
 | 3 | **Reference & section resolution** | Every `lark_get_skill(domain, section="X")` resolves under the 3-path rule; no `](references/` links, no dead `../lark-*` cross-links, no `domain="shared"`. |
 | 4 | **Leak & format compliance** | Zero `lark-cli` / bare `+cmd` / `--kebab` / `--as` / `Read 工具` / `\| jq` in actionable text; description frontmatter is a single quoted YAML line. (Runs the Phase 2 grep gate + `skill-quality` test.) |
 | 5 | **Identity & scope safety** | Bot-only ops carry the ⚠️ Rule 6b warning rather than being silently presented as user-callable; no bot-only scopes implied. |
@@ -549,7 +547,7 @@ generalist — that defeats the purpose.
 - [ ] Bot-only operations flagged with warning
 - [ ] Every resource file (references/, routes/, scenes/) is mentioned by at least one .md in the same skill
 - [ ] Subdir sections use full path: `section="style/lark-doc-style"` not `section="style"`
-- [ ] **Tool-name existence**: every `lark_*()` call references a tool that exists in `shortcut-scopes.json` (or `lark_discover`/`lark_invoke`/`lark_get_skill`/`lark_drive_import`). Common pitfall: the CLI service is `docs` (plural), so the tool is `lark_docs_create` — not `lark_doc_create`. The skill directory name (`lark-doc`) does NOT dictate the tool name.
+- [ ] **Tool-name existence**: every `lark_*()` call references a tool that exists in the **generated catalog** (`generated-tools.json`, exported from the built image — a name present only in `shortcut-scopes.json` is NOT a tool; see the Phase 2 note), or is a server-provided meta tool (`lark_discover`/`lark_invoke`/`lark_get_skill`/`lark_list_skills`/`lark_exec_script`). Enforced by `scripts/audit-tools.sh` section N. Common pitfall: the CLI service is `docs` (plural), so the tool is `lark_docs_create` — not `lark_doc_create`. The skill directory name (`lark-doc`) does NOT dictate the tool name.
 - [ ] **Parameter-name accuracy**: every named argument inside a tool call (`flag="value"`) must match that tool's actual `--flags` (in snake_case). Verify against `lark-cli <service> +<command> --help` or the generated catalog. Don't invent parameter names from the semantic intent (e.g. `dimension/start/end` when the real flags are `position/count`).
 - [ ] **`scripts/` contain only `.py` files** copied verbatim from upstream — no `.md` transformation applied to them
 - [ ] **No raw `python3 ...` invocations** in `.md` files — must be replaced with `lark_exec_script(script="...", args=[...])` calls

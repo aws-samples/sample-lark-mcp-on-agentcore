@@ -57,6 +57,12 @@ API 会立即返回 `minute_url`，但妙记可能仍在异步生成中。`lark_
 | `minute_url` | 生成的妙记访问链接 |
 | `minute_token` | 从 `minute_url` 提取出的妙记 Token，可直接传给 `lark_minutes_detail(minute_tokens=...)` |
 
+## 常见错误与排查
+
+| 错误现象 | 错误码 | 根本原因 | 解决方案 |
+|---------|--------|---------|---------|
+| `error.subtype` = `quota_exceeded` | 2091008 | ASR/AI 额度已用尽，不足以转写这个音视频，妙记未创建 | 让用户去妙记详情页查看额度详细信息；无法通过工具补充或提升额度，重试同一个 `file_token` 不会成功 |
+
 ## 相关场景
 
 - 生成和修改妙记：`lark_get_skill(domain="meeting", section="scenes/create-and-edit-minutes")`

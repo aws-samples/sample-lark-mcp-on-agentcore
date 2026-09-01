@@ -19,10 +19,10 @@
 lark_mail_template_create(name="周报模板", subject="本周进展", template_content="<p>大家好，请见本周进展：</p><ul><li>……</li></ul>")
 
 # 带 HTML 内嵌图片 + 非 inline 附件
-lark_mail_template_create(name="客户通知模板", subject="产品更新", template_content="<p>新版本上线：</p><img src=\"./banner.png\"><p>附上发版说明。</p>", attach="./release-notes.pdf")
+lark_mail_template_create(name="客户通知模板", subject="产品更新", template_content="<p>新版本上线：</p><img src=\"./banner.png\"><p>附上发版说明。</p>", attach=["./release-notes.pdf"])
 
 # 从文件加载正文
-lark_mail_template_create(name="请假申请", template_content_file="./leave.html", to="manager@example.com,hr@example.com")
+lark_mail_template_create(name="请假申请", template_content_file="./leave.html", to=["manager@example.com", "hr@example.com"])
 ```
 
 ## 参数
@@ -33,11 +33,12 @@ lark_mail_template_create(name="请假申请", template_content_file="./leave.ht
 | `subject` | 否 | 默认主题 |
 | `template_content` | 否* | 模板正文。HTML 首选；支持 `<img src="./local.png" />` 相对路径自动上传到 Drive 并改写为 `cid:` |
 | `template_content_file` | 否* | 从文件加载正文内容；与 `template_content` 互斥 |
-| `plain_text` | 否 | 标记为纯文本模式（`is_plain_text_mode=true`）。仍可带内嵌图片，但 `lark_mail_send(template_id=...)` 套用时会走 plain-text 正文拼接 |
-| `to` | 否 | 默认收件人列表，逗号分隔，支持 `Name <email>` 格式 |
-| `cc` | 否 | 默认抄送 |
-| `bcc` | 否 | 默认密送 |
-| `attach` | 否 | 非 inline 附件路径，逗号分隔。每个文件按 `attach` 书写顺序上传到 Drive |
+| `plain_text` | 否 | 标记为纯文本模式（`is_plain_text_mode=true`）。不可与 `inline` 同时使用；`lark_mail_send(template_id=...)` 套用时会走 plain-text 正文拼接 |
+| `to` | 否 | 默认收件人列表。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串）。支持 `Name <email>` 格式 |
+| `cc` | 否 | 默认抄送。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
+| `bcc` | 否 | 默认密送。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
+| `attach` | 否 | 非 inline 附件路径。**数组**，一个元素放一个相对路径（不要写成逗号分隔的字符串）；每个文件按数组展开顺序上传到 Drive，重复路径不会去重 |
+| `inline` | 否 | 手动指定 inline 图片 CID 映射。**数组**，一个元素放一个 JSON object（不要把整个 JSON 数组塞进单个字符串）：`inline=["{\"cid\":\"mycid\",\"file_path\":\"./logo.png\"}"]`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在模板正文中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
 | `mailbox` | 否 | 所属邮箱，默认 `me`（当前用户主邮箱） |
 
 \* `template_content` / `template_content_file` 二选一；两者都留空则模板正文为空（用户之后可通过 `lark_mail_template_update` 补充）。

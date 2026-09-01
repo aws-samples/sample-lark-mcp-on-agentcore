@@ -39,7 +39,7 @@
 | `type` | string | 是 | 步骤类型，见下方枚举 |
 | `title` | string | 否 | 步骤标题 |
 | `children` | StepChildren | 否 | 子关系边，承担所有分支/循环 |
-| `next` | string | null | 否 | 线性后继节点 ID；`null` 表示流程结束 |
+| `next` | string \| null | 否 | 线性后继节点 ID；`null` 表示流程结束 |
 | `data` | object | 是 | 步骤详细配置，按 `type` 区分，见后续各节 |
 
 > **总原则**：连线写 `children`，扩展标识写 `meta`，输入参数写 `data`。

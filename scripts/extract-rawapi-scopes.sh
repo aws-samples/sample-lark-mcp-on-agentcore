@@ -30,6 +30,24 @@ function run(...args) {
 // bot-identity naming convention (the :send_as_bot suffix). Mirrors the
 // shortcut extractor policy that excludes BotScopes (this is a user-only project).
 const isBotOnlyScope = (s) => /:send_as_bot$/.test(s);
+// The suffix test above is a heuristic: a bot-only scope named anything else sails
+// through. The shortcut extractor DOES read per-identity source fields, so it
+// publishes the scopes upstream declares only for bots (BotScopes /
+// ConditionalBotScopes minus everything that survived as a user scope) in
+// shortcut-scopes.json _meta. Cross-check against that list and REVIEW rather than
+// filter: some scopes upstream lists under BotScopes are legitimately user-grantable
+// too, so a hard filter would over-block a raw API that genuinely needs one.
+const REVIEWED_USER_SCOPES = new Set([
+  // Upstream lists this under BotScopes at contact_get_user.go, but it is a real
+  // user scope and drive file.view_records list needs it. Confirmed user-grantable.
+  \"contact:user.base:readonly\",
+]);
+let botExclusive = new Set();
+try {
+  const meta = JSON.parse(require(\"fs\").readFileSync(\"/app/shortcut-scopes.json\",\"utf8\"))._meta || {};
+  botExclusive = new Set(meta.bot_exclusive_scopes || []);
+} catch {}
+const flagged = new Set();
 const t = JSON.parse(require(\"fs\").readFileSync(\"/app/generated-tools.json\",\"utf8\"));
 const out = [];
 let botFiltered = 0;
@@ -39,8 +57,19 @@ for (const e of t.rawApis || []) {
   let scopes = [];
   try { scopes = JSON.parse(raw)._meta?.scopes || []; } catch {}
   const kept = scopes.filter(s => !isBotOnlyScope(s));
+  for (const s of kept) {
+    if (botExclusive.has(s) && !REVIEWED_USER_SCOPES.has(s)) flagged.add(s + \"  (\" + schemaPath + \")\");
+  }
   botFiltered += scopes.length - kept.length;
   out.push({ service: e.service, resource: e.resource, method: e.method, scopes: kept });
+}
+if (flagged.size > 0) {
+  console.error(\"\");
+  console.error(\"REVIEW REQUIRED: \" + flagged.size + \" raw-API scope(s) that upstream declares only for bots\");
+  console.error(\"passed the :send_as_bot suffix filter. Confirm each is user-grantable; if it is, add it to\");
+  console.error(\"REVIEWED_USER_SCOPES in scripts/extract-rawapi-scopes.sh with the reason. If it is not,\");
+  console.error(\"it must not reach the user allowlist.\");
+  for (const f of [...flagged].sort()) console.error(\"  - \" + f);
 }
 if (botFiltered > 0) console.error(\"Filtered \" + botFiltered + \" bot-only scope occurrence(s)\");
 const version = run(\"--version\").match(/[\d.]+/)?.[0] || \"unknown\";

@@ -3,7 +3,7 @@ name: lark-approval
 description: "飞书审批：查询和处理审批待办/已办/实例，搜索可发起审批定义、查看定义详情并发起原生审批实例。当用户要处理审批任务、查看审批实例、搜索或发起审批时使用。审批待办不是飞书任务；非审批类待办走 lark-task。不负责创建审批定义；三方审批定义不走原生提单。"
 ---
 
-所有操作默认以当前用户身份执行（审批是人的动作）。调用前先按需调用 `lark_get_skill(domain="approval", section="<对应小节>")` 读取参考，查参数结构，不要猜字段；**references 是第一信息源**，只有在 reference 未覆盖的原生 / 高级场景下，才额外用 `lark_discover(query="approval.<resource>.<method>")` 补充确认字段。
+所有操作默认以当前用户身份执行（审批是人的动作）。调用前先按需调用 `lark_get_skill(domain="approval", section="<section>")` 读取参考，查参数结构，不要猜字段；**references 是第一信息源**，只有在 reference 未覆盖的原生 / 高级场景下，才额外用 `lark_discover(query="approval.<resource>.<method>")` 补充确认字段。
 
 ## 路由优先级（先判断是不是审批，再选命令）
 
@@ -26,7 +26,7 @@ description: "飞书审批：查询和处理审批待办/已办/实例，搜索�
 | 搜可发起定义 | `lark_invoke(tool_name="lark_approval_approvals_search", args={...})` | `lark_get_skill(domain="approval", section="approvals-search")` |
 | 看审批定义详情/提单前确认表单与流程 | `lark_invoke(tool_name="lark_approval_approvals_get", args={...})` | `lark_get_skill(domain="approval", section="approvals-get")` |
 | 发起原生审批实例/提交请假审批/提交报销审批/创建审批实例 | `lark_invoke(tool_name="lark_approval_instances_create", args={...})` | `lark_get_skill(domain="approval", section="initiate")` |
-| 查待办/已办 | `lark_invoke(tool_name="lark_approval_tasks_query", args={params: {"topic":"1"}})`（`topic`：1待办 2已办 17未读 18已读）| `lark_get_skill(domain="approval", section="tasks-query")` |
+| 查/搜待办、已办 | `lark_invoke(tool_name="lark_approval_tasks_query", args={params: {"topic":"1"}})`（`topic`：1待办 2已办 17未读 18已读）| `lark_get_skill(domain="approval", section="tasks-query")` |
 | 看表单/进度/当前节点 | `lark_invoke(tool_name="lark_approval_instances_get", args={...})` | `lark_get_skill(domain="approval", section="instances-get")` |
 | 同意审批 | `lark_invoke(tool_name="lark_approval_tasks_approve", args={...})` | `lark_get_skill(domain="approval", section="tasks-approve")` |
 | 拒绝审批 | `lark_invoke(tool_name="lark_approval_tasks_reject", args={...})` | `lark_get_skill(domain="approval", section="tasks-reject")` |
@@ -36,7 +36,7 @@ description: "飞书审批：查询和处理审批待办/已办/实例，搜索�
 | 催办审批 | `lark_invoke(tool_name="lark_approval_tasks_remind", args={...})` | `lark_get_skill(domain="approval", section="tasks-remind")` |
 | 撤回已发起审批 | `lark_invoke(tool_name="lark_approval_instances_cancel", args={...})` | `lark_get_skill(domain="approval", section="instances-cancel")` |
 | 给审批实例追加抄送 | `lark_invoke(tool_name="lark_approval_instances_cc", args={...})` | `lark_get_skill(domain="approval", section="instances-cc")` |
-| 按定义查已发起审批 | `lark_invoke(tool_name="lark_approval_instances_initiated", args={...})` | `lark_get_skill(domain="approval", section="instances-initiated")` |
+| 按定义/关键词查已发起审批 | `lark_invoke(tool_name="lark_approval_instances_initiated", args={...})` | `lark_get_skill(domain="approval", section="instances-initiated")` |
 
 处理链：
 

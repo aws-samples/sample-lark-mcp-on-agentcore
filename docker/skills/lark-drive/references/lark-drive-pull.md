@@ -68,7 +68,7 @@ lark_drive_pull(local_dir="./repo", folder_token="fldcnxxxxxxxxx", delete_local=
 - 已存在的本地文件按 `if_exists` 决定 `overwrite` / `smart` / `skip`。其中 **`smart` 是推荐的重复同步模式**：只要本地 mtime 在远端时间精度下已经等于或晚于远端 `modified_time`，就跳过下载；时间戳缺失/非法时会退回安全路径继续下载，不会盲跳。想做 `keep-both` 这类的仍需自己改名再 pull。
 - 云端同名冲突默认失败；只有"冲突全是 `type=file`"且传了 `on_duplicate_remote="rename|newest|oldest"` 时才会继续。
 
-## --delete-local 的安全行为
+## `delete_local` 的安全行为
 
 `delete_local` 是命令里**唯一的破坏性 flag**，会按"本地有但云端没有"清理本地常规文件。设计上把它跟 `_confirm=true` 强绑定，且与下载阶段的失败联动：
 
@@ -113,7 +113,7 @@ lark_drive_pull(local_dir="./repo", folder_token="fldcnxxxxxxxxx", delete_local=
 | 列出文件夹 / 子目录 | `drive:drive.metadata:readonly` |
 | 下载文件 | `drive:file:download` |
 
-如果当前 token 缺这些 scope，命令会直接报 `missing_scope` 并提示重新登录。`drive:drive` 在部分企业被策略禁用，所以 +pull 故意只声明上面这两个细粒度 scope。
+如果当前 token 缺这些 scope，命令会直接报 `missing_scope` 并提示重新登录。`drive:drive` 在部分企业被策略禁用，所以 `lark_drive_pull` 故意只声明上面这两个细粒度 scope。
 
 ## 范围限制
 

@@ -55,7 +55,7 @@ lark_base_form_submit(share_token="<share_token>", base_token="<base_token>", js
 
 #### fields（普通字段）
 
-`fields` 中的单元格值写法与 `lark_get_skill(domain="base", section="cell-value")` 完全对齐，填写前应先阅读该文档了解各类型的构造规则：
+`fields` 中的常见单元格值按下方示例构造（与主 skill 一致）：
 
 ```json
 {
@@ -95,7 +95,7 @@ lark_base_form_submit(share_token="<share_token>", base_token="<base_token>", js
 2. 并行上传到 Base Drive Media（并发上限 5，跨字段重复路径自动去重）
 3. 获取 `file_token` 后合并到最终表单提交内容中
 
-> 与 `lark_get_skill(domain="base", section="cell-value")` 中 Record 场景的附件写法不同：Record 写入时附件走独立的 `lark_base_record_upload_attachment` 命令；而 `lark_base_form_submit` 只需在 `attachments` 中传本地路径，上传由工具内部自动完成。
+> Record 写入时附件走独立的 `lark_base_record_upload_attachment()` 工具；`lark_base_form_submit()` 则在 `attachments` 中传本地路径，由工具内部自动上传。
 
 ### 从分享链接提取 share-token
 

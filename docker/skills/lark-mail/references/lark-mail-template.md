@@ -20,7 +20,7 @@
 ### 创建模板后立即发信 checklist
 
 1. `lark_mail_template_create(name="<name>", subject="<subject>", template_content="<html>")`，捕获真实 `template_id`。
-2. 用户要求发送时不要停在模板或草稿：`lark_mail_send(to="<email>", template_id="<template_id>", confirm_send=true)`；只有需要覆盖模板主题时再传 `subject`。
+2. 用户要求发送时不要停在模板或草稿：`lark_mail_send(to=["<email>"], template_id="<template_id>", confirm_send=true)`；只有需要覆盖模板主题时再传 `subject`。
 3. 返回 `message_id` 后调用 `lark_invoke(tool_name="lark_mail_user_mailbox_messages_send_status", ...)` 汇报投递状态。
 
 ## 合并规则

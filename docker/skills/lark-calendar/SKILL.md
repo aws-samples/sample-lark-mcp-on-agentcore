@@ -26,7 +26,9 @@ description: "飞书日历：管理日历日程和会议室。查看/搜索日�
 | `lark_calendar_freebusy` | 查询用户主日历的忙闲信息和 RSVP 状态（纯查询场景；预约场景走 `lark_calendar_suggestion`） |
 | `lark_calendar_room_find` | 针对一个或多个**明确的**时间块查找可用会议室（无明确时间时禁止直接调用，需先走 lark_calendar_suggestion） |
 | `lark_calendar_rsvp` | 回复日程（接受/拒绝/待定）（详见 lark_get_skill(domain="calendar", section="rsvp")） |
+| `lark_calendar_join_event` | 凭分享 token 加入日程（分享链接/二维码/分享卡片/RSVP 卡片）（详见 lark_get_skill(domain="calendar", section="join-event")） |
 | `lark_calendar_suggestion` | 根据非明确时间或一段时间范围，推荐多个可用时间块方案 |
+| `lark_calendar_transfer` | 把日程组织者转让给另一个用户或机器人；不可逆，真实执行需 `_confirm=true`（详见 lark_get_skill(domain="calendar", section="transfer")） |
 
 ### `lark_calendar_get` — 单日程详情
 
@@ -89,7 +91,7 @@ lark_calendar_freebusy(start="2026-03-11", end="2026-03-12", user_id="ou_xxx")
 |------|----------|
 | 预约日程/会议、调整时间、查会议室 | 先调用 lark_get_skill(domain="calendar", section="schedule-meeting") |
 | 仅编辑字段（标题/描述）或增删参会人 | 先定位 `event_id`，再调用 lark_get_skill(domain="calendar", section="update") |
-| 调用任何 Shortcut | 先调用 lark_get_skill(domain="calendar", section="...") 读取其对应说明文档 |
+| 调用任何 Shortcut | 先调用 lark_get_skill(domain="calendar", section="<section>") 读取其对应说明文档 |
 
 ## 写操作反馈
 
@@ -117,10 +119,12 @@ lark_calendar_freebusy(start="2026-03-11", end="2026-03-12", user_id="ou_xxx")
 | 查询日历/日程或未来时间的会议 | 本 skill |
 | 按关键词搜索日程 | 本 skill（`lark_calendar_search_event`） |
 | 从日程获取关联的视频会议 ID 或用户绑定的会议纪要文档 | 本 skill（`lark_calendar_meeting`） |
+| 把日程分享给某人 / 群 | 本 skill：先用 `lark_invoke` 调用 `lark_calendar_events_share_info` 取**日程分享链接**，再走 lark_get_skill(domain="im") 发送该链接；分享链接不是 applink，不要自己拼接或用 applink 代替 |
 | 从日程进一步拿 AI 智能纪要 / 逐字稿 / 妙记产物 | 先用 `lark_calendar_meeting` 取 `meeting_id`，再进入 lark_get_skill(domain="meeting")：`lark_vc_detail`（lark_get_skill(domain="meeting", section="lark-vc-detail")）→ `lark_note_detail`（lark_get_skill(domain="meeting", section="lark-note-detail")） / `lark_minutes_detail`（lark_get_skill(domain="meeting", section="lark-minutes-detail")） |
 | 预约/改约日程、调整时间、添加/更换会议室、查会议室 | 先判断新建 vs 编辑，再进入 lark_get_skill(domain="calendar", section="schedule-meeting") 工作流 |
 | 仅编辑日程字段（标题/描述）或增删参会人（不涉及时间和会议室） | 先定位 `event_id`，再调用 lark_get_skill(domain="calendar", section="update") 执行变更 |
 | 编辑/删除重复性日程（「改这个重复日程」「删掉后面的」「全部取消」等） | 先调用 lark_get_skill(domain="calendar", section="recurring")，确认操作范围后执行 |
+| 转让日程组织者（「把这个日程交给 XX」「组织者改成 XX」「这个会转给我」「bot 建完还给我」） | 先调用 lark_get_skill(domain="calendar", section="transfer")；转出方必须是日程**当前组织者**身份，`to_user_id` 传接收人（用户或机器人）。⚠️ MCP server 始终以用户身份执行，只能转让当前登录用户作为组织者的日程；bot 组织的日程转出需要 bot 身份，MCP server 不可用 |
 
 ## 任务类型分流
 
@@ -152,6 +156,10 @@ lark_invoke(tool_name="lark_calendar_calendars_primary")
 
 # 获取日程详情及 app_link
 lark_invoke(tool_name="lark_calendar_events_get", args={params: {"calendar_id": "<calendar_id>", "event_id": "<event_id>"}})
+
+# 获取日程分享链接（分享给他人/群前必须先拿到）
+# 返回形如 {{domain}}/calendar/share?token=<token> 的分享链接，不是 applink；直接把该链接发给对方（对方可凭链接中的 token 走 lark_calendar_join_event 加入）
+lark_invoke(tool_name="lark_calendar_events_share_info", args={params: {"calendar_id": "<calendar_id>", "event_id": "<event_id>"}})
 
 # 删除日程
 lark_invoke(tool_name="lark_calendar_events_delete", args={params: {"calendar_id": "<calendar_id>", "event_id": "<event_id>"}})

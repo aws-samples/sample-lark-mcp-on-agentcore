@@ -83,6 +83,7 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 | 读取或分析已有 PPT | 解析 slides/wiki token，用 shortcut 回读全文 XML 或读取单页 XML，保存 `xml_presentation_id`、`slide_id`、`revision_id` | `lark_slides_xml_get`、`lark_invoke(tool_name="lark_slides_xml_presentation_slide_get")`、`cli/lark-slides-xml-presentations-get.md` |
 | 查看或回滚历史版本 | 先用 `lark_slides_history_list` 找 `history_version_id`，再 `lark_slides_history_revert`，必要时 `lark_slides_history_revert_status` 轮询 | `lark_slides_history_list`、`cli/lark-slides-history.md` |
 | 获取幻灯片页面截图 | 按页码用 `slide_number`，按 ID 用 `slide_id`；单张用 `output`，批量或全量用 `output_dir`，每批最多 10 页串行执行；截图目录复用同一任务的 deck/task 标识，后续读取返回的实际路径 | `lark_slides_screenshot`、`cli/lark-slides-screenshot.md` |
+| 下载图片 | `output` 选填；传入时指定单个文件路径，未传时自动保存到默认目录 `.lark-slides/media`，并按响应文件名/类型生成路径；调用后读取返回的 `path`，不要猜测文件名；直连被拒时自动回退到源文件预览 | `lark_slides_media_download(file_token="<file_token>")` |
 | 上传或使用图片 | 先上传为 `file_token`，禁止直接写 http(s) 外链 | `lark_slides_media_upload`、`cli/lark-slides-media-upload.md`，或 `lark_slides_create` 的 `slides` / `lark_slides_add_slide` 的 `slide` XML 里写 `<img src="@./path">` 占位符 |
 | 绘制图表 | 原生图表（柱状、条形、折线、面积、饼（环）、雷达、组合图）用 `<chart>`，其他（漏斗图、金字塔图、象限图、矩阵图等）用 `<shape>` + `<line>` 模拟 | `lark_get_skill(domain="slides", section="xml/xml-schema-quick-ref")` 的图表章节 |
 | 绘制表格 | 优先用 `rect` 和 `text` 模拟，其他用 `<table>` | `xml/xml-schema-quick-ref.md` |
@@ -267,6 +268,7 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentations-get")`） | 读取全文 XML，用 `presentation` 指定演示文稿的 `xml_presentation_id`，用 `output` 把 XML 存到本地文件（必须是当前目录内的相对路径，如 `.lark-slides/plan/<deck>/readback.xml`） |
 | `lark_slides_screenshot`（`lark_get_skill(domain="slides", section="cli/lark-slides-screenshot")`） | 把幻灯片页面截图保存为本地图片，用 `slide_number` 指定页号（从 1 开始，多页用逗号分隔，一次最多 10 页），用 `output_dir` 指定保存目录（必须是当前目录内的相对路径，默认 `.lark-slides/screenshots`），失败时降级到 XML 回读等非截图检查 |
 | `lark_slides_media_upload`（`lark_get_skill(domain="slides", section="cli/lark-slides-media-upload")`） | 上传本地图片到指定演示文稿，返回 `file_token`（用作 `<img src="...">`），最大 20 MB |
+| `lark_slides_media_download` | 根据 Slides 图片 `file_token` 下载本地图片；`output` 选填，未传时使用 `output_dir` 默认值 `.lark-slides/media` 并自动生成文件名；调用后使用返回的 `path`，不要猜测实际路径；直连下载无权限时自动回退到源文件预览 |
 | `lark_slides_replace_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")`） | 对已有幻灯片页面进行块级替换/插入（`block_replace` / `block_insert`），自动注入 id 和 `<content/>`，不改变页序 |
 | `lark_slides_update_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-update-slide")`） | 把一整页 XML 交给已有页面，页面变成 `content` 描述的样子；能一次改样式/插入/删除/备注/背景，`slide_id` 和页序不变。**没写进 `content` 的元素会被删除** |
 

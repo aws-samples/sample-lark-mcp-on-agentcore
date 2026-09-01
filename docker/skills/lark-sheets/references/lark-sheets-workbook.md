@@ -242,7 +242,7 @@ lark_sheets_workbook_create(title="交易", sheets={
 
 `sheets` 协议与 `lark_sheets_table_put` 完全同构（字段含义见 `lark_get_skill(domain="sheets", section="write-cells")` 的 `lark_sheets_table_put`）。关键差异：**新建工作簿的默认子表会被复用为第一个子表**（重命名后承载数据），不会残留空 `Sheet1`；其余子表按需新建。它把 `lark_sheets_table_put` 单独做不到的"建表 + typed 写入"合到一次调用，是「pandas 算完直接落地一张带真日期的新表」的首选。回读校验用 `lark_sheets_table_get`（与 `sheets` 同构、可 round-trip）。
 
-> 💡 pandas DataFrame 走 `sheets` 时直接 `from sheets_df import df_to_sheet`（脚本 `lark-sheets/scripts/sheets_df.py`，与 `lark_sheets_table_put` 共用同一份 helper），多子表场景 helper 优势更明显：
+> 💡 pandas DataFrame 走 `sheets` 时用 `from sheets_df import df_to_sheet`（脚本 `lark-sheets/scripts/sheets_df.py`，与 `lark_sheets_table_put` 共用同一份 helper；import 前先把该 `scripts/` 目录加入 `sys.path`），多子表场景 helper 优势更明显：
 > ```python
 > payload = {"sheets": [df_to_sheet(income, "Income Statement"),
 >                       df_to_sheet(balance, "Balance Sheet"),
@@ -332,6 +332,8 @@ lark_sheets_workbook_import(file="./report.csv", folder_token="<FOLDER_TOKEN>", 
 ```
 
 - **不接受任何 spreadsheet / sheet 定位参数**（它是新建，不操作已有表）：只有 `file`（必填）/ `folder_token` / `name`。
+- **`file` 只接受相对路径**：传 `./file.xlsx` / `data/file.xlsx`；传 `/home/.../file.xlsx`、`C:\...\file.xlsx` 这类绝对路径会被判定 `unsafe file path` 拒绝。
+- 导入成功后把新表链接交付给用户。
 - 本地表格文件 → 飞书电子表格一律用本工具，**不要**用 `lark_drive_import` 导电子表格——它是 sheets 之外的通用导入、还需额外指定 `type`，绕路且更易错。只有要把本地表格导入成**多维表格**（bitable）时，才改用 `lark_drive_import` 并传 `type="bitable"`。
 - 返回 `token` / `url`（导入完成的新表格）/ `ticket` / `ready` / `job_status`；未在内置轮询窗口内完成时返回 `timed_out=true` 与续查命令 `next_command`。
 

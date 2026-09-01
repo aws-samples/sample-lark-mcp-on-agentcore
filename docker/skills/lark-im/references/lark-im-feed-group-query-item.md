@@ -1,4 +1,4 @@
-# +feed-group-query-item
+# im +feed-group-query-item
 
 This tool maps to: `lark_im_feed_group_query_item`. Look up specific feed cards inside one feed group (tag) by ID, enriched with a readable `chat_name`.
 

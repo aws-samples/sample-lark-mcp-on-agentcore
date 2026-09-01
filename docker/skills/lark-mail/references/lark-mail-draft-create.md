@@ -22,33 +22,33 @@
 
 ```
 # 创建 HTML 草稿（推荐）
-lark_mail_draft_create(to="alice@example.com", subject="周报", body="<p>本周进展：</p><ul><li>完成 A 模块</li></ul>")
+lark_mail_draft_create(to=["alice@example.com"], subject="周报", body="<p>本周进展：</p><ul><li>完成 A 模块</li></ul>")
 
 # 不带收件人的 HTML 草稿（用户之后可自行添加）
 lark_mail_draft_create(subject="周报", body="<p>草稿内容</p>")
 
 # 带附件和内嵌图片的 HTML 草稿（推荐：直接用相对路径，自动解析）
-lark_mail_draft_create(to="alice@example.com", subject="预览图", body="<p>见附件和图：<img src=\"./logo.png\" /></p>", attach="./report.pdf")
+lark_mail_draft_create(to=["alice@example.com"], subject="预览图", body="<p>见附件和图：<img src=\"./logo.png\" /></p>", attach=["./report.pdf"])
 
 # 纯文本草稿（仅在内容极简时使用）
-lark_mail_draft_create(to="alice@example.com", subject="简短通知", body="收到，谢谢")
+lark_mail_draft_create(to=["alice@example.com"], subject="简短通知", body="收到，谢谢")
 ```
 
 ## 参数
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
-| `to` | 否 | 完整收件人列表，多个用逗号分隔。支持 `Alice <alice@example.com>` 格式。省略时草稿不带收件人（之后可通过 `lark_mail_draft_edit` 添加） |
+| `to` | 否 | 完整收件人列表。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串）。支持 `Alice <alice@example.com>` 格式。省略时草稿不带收件人（之后可通过 `lark_mail_draft_edit` 添加） |
 | `subject` | 是 | 草稿主题 |
 | `body` | 二选一 | 邮件正文。推荐使用 HTML 获得富文本排版；也支持纯文本（自动检测）。使用 `plain_text=true` 可强制纯文本模式。支持 `<img src="./local.png" />` 相对路径自动解析为内嵌图片（仅支持相对路径，不支持绝对路径）。与 `body_file` 互斥 |
 | `body_file` | 二选一 | 从文件读取邮件正文 HTML（相对路径，仅限 cwd 子树）。与 `body` 互斥。文件大小上限 32 MB |
 | `from` | 否 | 发件人邮箱地址（EML From 头）。使用别名（send_as）发信时，设为别名地址并配合 `mailbox` 指定所属邮箱。省略时使用邮箱主地址 |
 | `mailbox` | 否 | 邮箱地址，指定草稿所属的邮箱（默认回退到 `from`，再回退到 `me`）。当发件人（`from`）与邮箱不同时使用，如通过别名或 send_as 地址发信。可通过 `accessible_mailboxes` 查询可用邮箱 |
-| `cc` | 否 | 完整抄送列表，多个用逗号分隔 |
-| `bcc` | 否 | 完整密送列表，多个用逗号分隔。与 `event_*` 不兼容（见 `lark_mail_send` 日程邀请约束） |
+| `cc` | 否 | 完整抄送列表。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串） |
+| `bcc` | 否 | 完整密送列表。**数组**，一个元素放一个地址（不要写成逗号分隔的字符串）。与 `event_*` 不兼容（见 `lark_mail_send` 日程邀请约束） |
 | `plain_text` | 否 | 强制纯文本模式，忽略 HTML 自动检测。不可与 `inline` 同时使用。纯文本模式下也会自动追加纯文本签名（HTML 签名经 `PlainTextFromHTML` 转换，内联图片丢弃） |
-| `attach` | 否 | 附件文件路径，多个用逗号分隔。相对路径。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
-| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）。仅在需要精确控制 CID 命名时使用此参数。格式：`'[{"cid":"mycid","file_path":"./logo.png"}]'`，在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
+| `attach` | 否 | 附件文件路径。**数组**，一个元素放一个相对路径（不要写成逗号分隔的字符串）；按数组顺序追加。当附件导致 EML 总大小超过 25 MB 时，超出部分自动上传为超大附件（HTML 邮件插入下载卡片，纯文本邮件追加下载链接），单个文件上限 3 GB |
+| `inline` | 否 | 高级用法：手动指定内嵌图片 CID 映射。推荐直接在 `body` 中使用 `<img src="./path" />`（自动解析）；仅在需要精确控制 CID 命名时使用此参数。**数组**，一个元素放一个 JSON object（不要把整个 JSON 数组塞进单个字符串）：`inline=["{\"cid\":\"mycid\",\"file_path\":\"./logo.png\"}"]`。`file_path` 必须是相对路径；CID 应唯一，例如随机十六进制字符串；在 body 中用 `<img src="cid:mycid">` 引用。不可与 `plain_text` 同时使用 |
 | `signature_id` | 否 | 签名 ID。附加邮箱签名到正文末尾。运行 `lark_mail_signature` 查看可用签名。与 `no_signature` 互斥 |
 | `no_signature` | 否 | 跳过默认签名自动追加。与 `signature_id` 互斥，同时使用时返回参数校验错误（退出码 2） |
 | `priority` | 否 | 邮件优先级：`high`、`normal`、`low`。省略或 `normal` 时不设置优先级 |
@@ -87,7 +87,7 @@ lark_mail_draft_create(to="alice@example.com", subject="简短通知", body="收
 
 ```
 # 1. 创建草稿
-lark_mail_draft_create(to="alice@example.com", subject="Q1 报告", body="请查收附件中的报告。", attach="./q1-report.pdf", format="json")
+lark_mail_draft_create(to=["alice@example.com"], subject="Q1 报告", body="请查收附件中的报告。", attach=["./q1-report.pdf"], format="json")
 
 # 2. 发送草稿
 lark_invoke(tool_name="lark_mail_user_mailbox_drafts_send", args={params: {"user_mailbox_id": "me", "draft_id": "<draft_id>"}})
@@ -99,10 +99,10 @@ lark_invoke(tool_name="lark_mail_user_mailbox_drafts_send", args={params: {"user
 
 ```
 # 推荐：直接使用相对路径，自动解析为内嵌图片
-lark_mail_draft_create(to="alice@example.com", subject="通讯稿", body="<h1>你好</h1><img src=\"./banner.png\" />")
+lark_mail_draft_create(to=["alice@example.com"], subject="通讯稿", body="<h1>你好</h1><img src=\"./banner.png\" />")
 
 # 高级用法：手动指定 CID（CID 为唯一标识符，可用随机十六进制字符串）
-lark_mail_draft_create(to="alice@example.com", subject="通讯稿", body="<h1>你好</h1><img src=\"cid:c7d8e9f0a1b2c3d4e5f6\">", inline="[{\"cid\":\"c7d8e9f0a1b2c3d4e5f6\",\"file_path\":\"./banner.png\"}]")
+lark_mail_draft_create(to=["alice@example.com"], subject="通讯稿", body="<h1>你好</h1><img src=\"cid:c7d8e9f0a1b2c3d4e5f6\">", inline=["{\"cid\":\"c7d8e9f0a1b2c3d4e5f6\",\"file_path\":\"./banner.png\"}"])
 ```
 
 ## 相关工具

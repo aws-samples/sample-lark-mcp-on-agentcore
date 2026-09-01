@@ -30,6 +30,7 @@ const {
   translateCliError,
   stripCliNotice,
   resolveSkillDomain,
+  runBaseCreateTransaction,
 } = require('./server-lib');
 
 process.on('uncaughtException', (err) => {
@@ -449,7 +450,21 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     // holding a concurrency slot. abortSignal is also wired into execFile so a
     // client disconnect kills the child and frees the slot immediately, rather
     // than leaking it until the timeout.
-    const { stdout } = await withSemaphore(() => runLarkCli(cliArgs, env, LARK_CLI_TIMEOUT_MS, abortSignal), abortSignal);
+    //
+    // `base +base-create --fields/--table-name` is routed through
+    // runBaseCreateTransaction: upstream performs it as create-Base-then-
+    // customize-table and leaves the new Base behind when a later step fails
+    // (e.g. the app lacks base:table:create), so this server drives the steps
+    // itself and deletes the Base it just created on failure. Every other
+    // command passes straight through. The semaphore is held for the whole
+    // transaction so a rollback can never be starved by a full queue.
+    const { stdout } = await withSemaphore(
+      () => runBaseCreateTransaction(
+        (args) => runLarkCli(args, env, LARK_CLI_TIMEOUT_MS, abortSignal),
+        cliArgs,
+      ),
+      abortSignal,
+    );
     // Strip lark-cli's `_notice.update` ("run: lark-cli update") — operator
     // guidance the agent can't act on, repeated in EVERY response until the
     // pin is bumped. Version drift stays visible in ops.sh / container logs.

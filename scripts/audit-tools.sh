@@ -118,14 +118,23 @@ if os.path.exists(SCOPES):
     catalog_keys = {f"{t['service']}:{t['command'].lstrip('+')}" for t in tools}
     missing = sc_keys - catalog_keys
     extra = catalog_keys - sc_keys
-    if not missing:
-        ok(f"every shortcut-scopes.json entry ({len(sc_keys)}) is in the catalog")
+    # The load-bearing direction is catalog -> scope map: a tool the server serves
+    # with no scope entry breaks incremental authorization. Assert that.
+    if not extra:
+        ok(f"every catalog tool ({len(catalog_keys)}) has a shortcut-scopes.json entry")
     else:
-        bad(f"{len(missing)} shortcut(s) missing from catalog: {sorted(list(missing))[:5]}…")
-    if extra:
-        # extra tools are OK if lark-cli added new shortcuts — just note
-        print(f"  \033[33m·\033[0m {len(extra)} extra catalog tool(s) not in scope map "
-              f"(may need shortcut-scopes.json refresh)")
+        bad(f"{len(extra)} catalog tool(s) have NO scope-map entry — incremental auth "
+            f"will fail for them; refresh docker/shortcut-scopes.json: "
+            f"{sorted(list(extra))[:5]}…")
+    # The reverse direction is NOT an invariant: shortcut-scopes.json is extracted
+    # from lark-cli's Go source and is deliberately a SUPERSET of the catalog. It
+    # keeps deprecated/renamed aliases, and bot-only shortcuts (AuthTypes without
+    # "user") that never render into `--help` and so never become tools. Reporting
+    # that as a failure made this tier permanently red and hid real regressions.
+    if missing:
+        print(f"  \033[33m·\033[0m {len(missing)} scope-map entry(ies) are not catalog "
+              f"tools — expected: the scope map is a Go-source superset (deprecated "
+              f"aliases + bot-only shortcuts). Sample: {sorted(list(missing))[:5]}")
 
 # ── B. Schema health ──────────────────────────────────────────────────────
 print("\n── B. Schema health ──")
@@ -137,7 +146,11 @@ for t in tools:
     for f in t['flags']:
         if not f.get('name') or not isinstance(f['name'], str):
             broken_schema.append((t['service'], t['command'], 'flag missing name'))
-        if f.get('type') not in ('string', 'number', 'boolean'):
+        # 'stringArray' is emitted by flagTypeFromRest for repeatable flags
+        # (pflag stringArray/stringSlice) and mapped to {type:"array"} by
+        # buildInputSchema. It predates this allowlist, which had gone stale and
+        # failed all 62 such flags.
+        if f.get('type') not in ('string', 'number', 'boolean', 'stringArray'):
             broken_schema.append((t['service'], t['command'], f"bad flag type {f.get('type')}"))
 if not broken_schema:
     ok(f"all {len(tools)} tools have well-formed flags")
@@ -327,6 +340,122 @@ elif os.path.exists(SNAPSHOT_PATH):
 else:
     print(f"  \033[33m·\033[0m no baseline at {SNAPSHOT_PATH}; "
           f"run with AUDIT_UPDATE_SNAPSHOT=1 to create one")
+
+# ── N. Skill-doc tool references ───────────────────────────────────────────
+# The adapted skills under docker/skills/ are prose handed to downstream agents,
+# so a tool name or flag type that is wrong there fails at CALL time, not build
+# time. Two failure classes, both silent, both seen in real bumps:
+#
+#   1. Dead tool name. shortcut-scopes.json is a Go-source SUPERSET (hidden
+#      aliases, plus bot-only shortcuts whose AuthTypes omit "user" and which
+#      therefore never reach `--help` and never become tools). Validating docs
+#      against it passes names the server does not expose; the agent then gets
+#      "tool does not exist". The catalog below is the only authority.
+#   2. Flag type mismatch. A stringArray flag written as a comma-joined string
+#      is NOT split — it becomes one bogus value. A string flag written as an
+#      array is JSON-stringified into one bogus value. Neither errors.
+print("\n── N. Skill-doc tool references ──")
+REPO_ROOT = os.path.dirname(os.environ['AUDIT_SCRIPT_DIR'].rstrip('/'))
+SKILLS_DIR = os.path.join(REPO_ROOT, 'docker', 'skills')
+
+def tool_name(t):
+    return f"lark_{t['service']}_{t['command'].lstrip('+').replace('-', '_')}"
+
+# Tools the server implements itself; they are not lark-cli shortcuts.
+META_TOOLS = {'lark_invoke', 'lark_discover', 'lark_get_skill',
+              'lark_list_skills', 'lark_exec_script'}
+catalog_names = {tool_name(t) for t in tools}
+# A `string`-typed flag is either a plain scalar (pflag `strings`, comma-joined —
+# an array literal there is a real defect) or a COMPOSITE JSON flag, where the
+# value is a JSON document and server.js JSON-stringifies an array into exactly
+# what the CLI wants — an array literal there is correct. Tell them apart by the
+# flag's own contract: a payload schema, or a description that says JSON / opens
+# with a JSON literal.
+flag_types, json_flags = {}, {}
+for t in tools:
+    name = tool_name(t)
+    schemas = t.get('payloadSchemas') or {}
+    flag_types[name] = {}
+    json_flags[name] = set()
+    for f in (t.get('flags') or []):
+        key = f['name'].replace('-', '_')
+        flag_types[name][key] = f.get('type')
+        desc = (f.get('description') or '').lstrip()
+        if (f['name'] in schemas or key in schemas
+                or 'JSON' in desc or desc[:1] in ('[', '{')):
+            json_flags[name].add(key)
+
+if not os.path.isdir(SKILLS_DIR):
+    print(f"  \033[33m·\033[0m {SKILLS_DIR} not present; skipping "
+          f"(running against an image catalog outside a checkout?)")
+else:
+    call_re = re.compile(r'\b(lark_[a-z0-9_]+)\s*\(')
+    unknown, mistyped = {}, []
+    md_files = 0
+    for root, _dirs, files in os.walk(SKILLS_DIR):
+        for fn in sorted(files):
+            if not fn.endswith('.md'):
+                continue
+            md_files += 1
+            path = os.path.join(root, fn)
+            rel = os.path.relpath(path, REPO_ROOT)
+            with open(path, encoding='utf-8') as fh:
+                for lineno, line in enumerate(fh, 1):
+                    for name in call_re.findall(line):
+                        if name in META_TOOLS:
+                            continue
+                        if name not in catalog_names:
+                            unknown.setdefault(name, []).append(f"{rel}:{lineno}")
+                            continue
+                        for flag, ftype in flag_types[name].items():
+                            # `flag=[` is an array literal, `flag="` a string.
+                            as_array = re.search(
+                                rf'\b{flag}\s*=\s*\[', line)
+                            as_string = re.search(
+                                rf'\b{flag}\s*=\s*["\']', line)
+                            if ftype == 'stringArray' and as_string:
+                                mistyped.append(
+                                    f"{rel}:{lineno} {name}.{flag} is stringArray "
+                                    f"but written as a string (comma form is NOT split)")
+                            elif (ftype == 'string' and as_array
+                                    and flag not in json_flags[name]):
+                                mistyped.append(
+                                    f"{rel}:{lineno} {name}.{flag} is a scalar string "
+                                    f"but written as an array (JSON-stringified to one value)")
+
+    if not unknown:
+        ok(f"every tool named in {md_files} skill docs exists in the catalog")
+    else:
+        bad(f"{len(unknown)} tool name(s) in skill docs are NOT catalog tools "
+            f"(validate against the catalog, never shortcut-scopes.json):")
+        for name in sorted(unknown)[:6]:
+            print(f"      {name} — {', '.join(unknown[name][:3])}")
+
+    if not mistyped:
+        ok("no stringArray/string flag-type mismatches in skill docs")
+    else:
+        bad(f"{len(mistyped)} flag-type mismatch(es) — these fail SILENTLY at call time:")
+        for m in mistyped[:6]:
+            print(f"      {m}")
+
+# End-to-end counterpart of the scope-coverage unit assertions: prove the shortcuts
+# upstream declares bot-only really are absent from the catalog the server serves.
+if os.path.exists(SCOPES):
+    with open(SCOPES) as f:
+        _sc = json.load(f).get('shortcuts', [])
+    bot_only = [s for s in _sc if s.get('userCallable') is False]
+    leaked = [f"{s['service']} {s['command']}"
+              for s in bot_only
+              if (s['service'], s['command']) in
+              {(t['service'], t['command']) for t in tools}]
+    if not bot_only:
+        bad("no shortcut is marked userCallable:false — the AuthTypes gate in "
+            "scripts/extract-shortcut-scopes.py has stopped working")
+    elif leaked:
+        bad(f"{len(leaked)} bot-only shortcut(s) reached the catalog — the adapted "
+            f"skills claim no tool exists for them: {leaked}")
+    else:
+        ok(f"all {len(bot_only)} bot-only shortcut(s) absent from the catalog")
 
 # ── Summary ────────────────────────────────────────────────────────────────
 print(f"\n──────────────────────────────────")

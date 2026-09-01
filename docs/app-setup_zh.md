@@ -38,7 +38,7 @@ Manager。请妥善保管，不要提交到代码库。
 反复。它**不影响**用户首次授权看到的范围（那始终是最小集），代价只是应用声明的权限上限更大、
 管理员审核项更多。
 
-scope 清单（233 条，可直接复制导入）：
+scope 清单（237 条，可直接复制导入）：
 
 ```json
 {
@@ -110,8 +110,10 @@ scope 清单（233 条，可直接复制导入）：
       "calendar:calendar",
       "calendar:calendar.event:create",
       "calendar:calendar.event:delete",
+      "calendar:calendar.event:join",
       "calendar:calendar.event:read",
       "calendar:calendar.event:reply",
+      "calendar:calendar.event:transfer",
       "calendar:calendar.event:update",
       "calendar:calendar.free_busy:read",
       "calendar:calendar:create",
@@ -259,8 +261,10 @@ scope 清单（233 条，可直接复制导入）：
       "task:tasklist:read",
       "task:tasklist:write",
       "vc:meeting.bot.join:write",
+      "vc:meeting.interaction:write",
       "vc:meeting.meetingevent:read",
       "vc:meeting.message:write",
+      "vc:meeting.realtime:read",
       "vc:meeting.search:read",
       "vc:meeting:readonly",
       "vc:note:read",

@@ -1,4 +1,4 @@
-# +feed-group-list-item
+# im +feed-group-list-item
 
 This tool maps to: `lark_im_feed_group_list_item`. List the feed cards inside one feed group (tag), enriched with a readable `chat_name`.
 

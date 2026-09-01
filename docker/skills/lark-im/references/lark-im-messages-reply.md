@@ -162,7 +162,7 @@ lark_im_messages_reply(message_id="om_xxx", msg_type="interactive", content="<ca
 
 - Media parameters accept an existing key (`img_xxx` / `file_xxx`), an `http://` or `https://` URL, or a local file path.
 - Local paths must be relative to the current working directory and stay within it after resolving `..` and symlinks.
-- Absolute paths such as `/tmp/photo.png` are rejected. Run the command from the file's directory and pass `./photo.png`, or copy the file into the current directory first.
+- Absolute paths such as `/tmp/photo.png` are rejected; pass a cwd-relative path such as `./photo.png`.
 - `audio` sends a voice message and accepts only Opus audio (`.opus` or Ogg Opus `.ogg`) for local paths and URLs. For `mp3`, `wav`, or other non-Opus audio, convert to `.opus` before using `audio`, or use `file` to send the original audio as an attachment.
 
 ## Parameters
@@ -179,6 +179,7 @@ lark_im_messages_reply(message_id="om_xxx", msg_type="interactive", content="<ca
 | `video` | One content option | Cwd-relative local video path, URL, or `file_key` (`file_xxx`); **must be used together with `video_cover`** |
 | `video_cover` | **Required with `video`** | Cwd-relative local cover image path, URL, or `image_key` (`img_xxx`) |
 | `audio` | One content option | Voice-message audio key, URL, or cwd-relative local path. Local paths and URLs must be Opus (`.opus` or Ogg Opus `.ogg`) |
+| `attachment` | One content option | Array of bare file/folder keys (`file_xxx`), one element per value; merges into the post message's attachment zone. Requires a post message (`markdown` or `msg_type="post"`). Name/size/mime/is_folder are filled by the server from file service metadata, not taken from the client. Use this instead of `file` when the file should render inside a rich-text message's attachment area |
 | `reply_in_thread` | No | Reply inside the thread. The reply appears in the target message's thread instead of the main chat stream |
 | `idempotency_key` | No | Idempotency key, max 50 characters; the same key sends only one reply within 1 hour |
 
@@ -196,6 +197,7 @@ lark_im_messages_reply(message_id="om_xxx", msg_type="interactive", content="<ca
 - Using `content` without making the JSON match the effective `msg_type`.
 - Explicitly setting `msg_type` to something that conflicts with `text`, `markdown`, or media parameters.
 - Mixing `text`, `markdown`, or `content` with media parameters in one command.
+- Using `attachment` with `text` or a media parameter. The attachment zone only exists on `post` messages — pair `attachment` with `markdown` or `msg_type="post"`.
 
 ## Return Value
 
