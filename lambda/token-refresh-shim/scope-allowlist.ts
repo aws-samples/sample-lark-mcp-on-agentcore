@@ -238,7 +238,6 @@ export const SCOPE_ALLOWLIST: ReadonlySet<string> = new Set([
   "vc:meeting.interaction:write",
   "vc:meeting.meetingevent:read",
   "vc:meeting.message:write",
-  "vc:meeting.realtime:read",
   "vc:meeting.search:read",
   "vc:meeting:readonly",
   "vc:note:read",

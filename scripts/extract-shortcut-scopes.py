@@ -12,6 +12,8 @@ Produces docker/shortcut-scopes.json with UserScopes-first extraction strategy:
     generic Scopes fallback (upstream may declare it under both)
   - Exclude every scope of a shortcut whose AuthTypes omits "user" (the
     endpoint rejects user tokens, so nothing there is user-grantable)
+  - Apply evidence-backed user-unavailable overrides when upstream AuthTypes is
+    wrong or the declared user scope is not grantable by ordinary apps
 
 Handles:
   - Direct []string{...} literals
@@ -24,6 +26,18 @@ import json
 import re
 import sys
 from pathlib import Path
+
+
+# Shortcut-scoped overrides are intentionally narrow and require concrete
+# evidence that an ordinary user-OAuth deployment cannot call the endpoint.
+USER_UNAVAILABLE_SHORTCUTS = {
+    ("vc", "+meeting-screenshot"): (
+        "calls /open-apis/vc/v1/bots/screenshot and requires "
+        "vc:meeting.realtime:read, which the Feishu developer console rejects "
+        "for ordinary apps"
+    ),
+}
+
 
 def main():
     if len(sys.argv) < 2:
@@ -131,6 +145,12 @@ def main():
             return [], False
         return list(dict.fromkeys(base_scopes + cond_scopes)), True
 
+    def apply_user_unavailable_override(service, command, scopes, user_callable):
+        """Force evidence-backed ordinary-app exclusions into generated metadata."""
+        if (service, command) in USER_UNAVAILABLE_SHORTCUTS:
+            return [], False
+        return scopes, user_callable
+
     def extract_scope_field(body, field):
         """Extract scope list from a struct field, resolving variable references."""
         # Direct []string{...}
@@ -216,6 +236,9 @@ def main():
                 base_scopes, cond_scopes, bot_scopes, auth_types,
                 from_user_field=bool(has_user and user_scopes),
                 has_auth=has_auth,
+            )
+            all_scopes, user_callable = apply_user_unavailable_override(
+                service, command, all_scopes, user_callable
             )
 
             entry = {
@@ -332,9 +355,12 @@ def main():
             for cm in config_cmd_pattern.finditer(content):
                 cmd = cm.group(1)
                 if (service, cmd) not in extracted_keys:
+                    entry_scopes, entry_user_callable = apply_user_unavailable_override(
+                        service, cmd, all_scopes, user_callable
+                    )
                     entry = {"service": service, "command": cmd,
-                             "scopes": all_scopes}
-                    if not user_callable:
+                             "scopes": entry_scopes}
+                    if not entry_user_callable:
                         entry["userCallable"] = False
                     results.append(entry)
                     extracted_keys.add((service, cmd))

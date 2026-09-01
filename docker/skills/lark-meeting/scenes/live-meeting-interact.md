@@ -51,22 +51,11 @@ lark_vc_meeting_events(meeting_id="<meeting_id>", page_all=true, format="pretty"
 
 精确事件 schema 和后续调用见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-events")` 的文档上下文部分。
 
-## 读取当前会议画面
+## 会议截图不可用
 
-仅当用户的问题必须读取当前会议合成画面中的视觉信息，且结构化内容不足以回答时读取画面。适用任务包括识别投屏中实际显示的网页地址、界面状态或报错，理解图表、幻灯片等依赖版式或图像的信息，以及查看摄像头画面。
+当前 user-only Remote MCP 不提供会议截图：上游 shortcut 调用 `/open-apis/vc/v1/bots/screenshot`，并依赖普通应用无法在飞书开放平台导入的 `vc:meeting.realtime:read`。不要尝试调用、生成增量授权链接或用其他身份重试。
 
-事件、字幕、聊天或可直接读取的共享文档已经足够回答时，不要截图；会议内容查询、总结或共享文档定位也不以截图兜底，不要仅因为会议正在进行就读取画面。
-
-需要读取时执行：
-
-```
-lark_vc_meeting_screenshot(meeting_id="<meeting_id>")
-```
-
-- 沿用 `meeting_id` 的来源身份。通过 MCP server 时恒为用户身份，要求当前登录用户正在该会议中。
-- 工具只返回文件路径和元数据（字节数、content type、SHA-256、`log_id`），不会把图片内容本身返回给调用方。
-
-身份、会议 ID、输出文件和失败处理见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-screenshot")`。
+优先使用会中事件、字幕、聊天和可读取的共享文档回答问题；必须依赖当前画面时，明确说明该部署无法读取会议截图。完整限制见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-screenshot")`。
 
 ## 发送会中文本或表情
 
