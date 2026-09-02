@@ -121,10 +121,16 @@ See also [faq_en.md](faq_en.md).
 <details>
 <summary>ALLOWED_DOMAINS (no action needed for current clients)</summary>
 
-Registration requires the redirect URI host to be in the allowlist. Loopback
-(`localhost`/`127.0.0.1`) and `quicksight.aws.amazon.com` are always allowed —
-Kiro / Claude Code / Codex use loopback and Amazon Quick uses the QuickSight
-host, so no current client needs anything here.
+Registration requires the redirect URI to use HTTPS on an allowed host, or
+HTTP on an RFC 8252 loopback host. The built-in allowlist covers:
+
+- loopback: `localhost`, the full `127.0.0.0/8` range, and `[::1]` (with or without a port)
+- VS Code's hosted brokers: `https://vscode.dev/redirect` and `https://insiders.vscode.dev/redirect`
+- Amazon Quick: `quicksight.aws.amazon.com`
+
+Kiro / Claude Code / Codex use loopback, VS Code uses a hosted broker, and
+Amazon Quick uses the QuickSight host, so no current client needs extra
+configuration.
 
 To add another host in the future:
 `EXTRA_ALLOWED_DOMAINS=<host> ./scripts/deploy.sh --yes`

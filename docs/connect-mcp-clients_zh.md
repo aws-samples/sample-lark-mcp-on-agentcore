@@ -112,9 +112,15 @@
 <details>
 <summary>ALLOWED_DOMAINS（当前客户端无需操作）</summary>
 
-注册要求重定向 URI 的 host 在白名单中。loopback（`localhost`/`127.0.0.1`）和
-`quicksight.aws.amazon.com` 始终放行——Kiro / Claude Code / Codex 走 loopback，
-Amazon Quick 走 QuickSight host，所以当前客户端都不需要配置。
+注册要求重定向 URI 使用白名单 host 上的 HTTPS，或 RFC 8252 loopback host 上的
+HTTP。内置白名单包括：
+
+- loopback：`localhost`、完整 `127.0.0.0/8` 地址段和 `[::1]`（端口可有可无）
+- VS Code 托管跳板：`https://vscode.dev/redirect` 和 `https://insiders.vscode.dev/redirect`
+- Amazon Quick：`quicksight.aws.amazon.com`
+
+Kiro / Claude Code / Codex 走 loopback，VS Code 走托管跳板，Amazon Quick 走
+QuickSight host，因此当前客户端都不需要额外配置。
 
 未来如需放行其他 host：
 `EXTRA_ALLOWED_DOMAINS=<host> ./scripts/deploy.sh --yes`

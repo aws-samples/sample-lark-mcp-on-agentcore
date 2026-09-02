@@ -42,8 +42,9 @@ deploy.sh 是一个交互式部署脚本，完成从环境检查到端到端验�
 9. 飞书告警 Webhook URL + 签名 Secret + 关键词
 10. 部署区域选择
 
-**连接 MCP 客户端（两条路径）：**
-- **Kiro / Claude Code / Codex** — 自助注册（DCR），无需 secret，loopback 回调。见 [connect-mcp-clients_zh.md](connect-mcp-clients_zh.md)。
+**连接 MCP 客户端（三条路径）：**
+- **标准 OAuth（Kiro / Claude Code / Codex / VS Code）** — DCR 自注册，无需 secret。浏览器与客户端同机时可走 loopback；VS Code 使用托管重定向跳板。见 [connect-mcp-clients_zh.md](connect-mcp-clients_zh.md)。
+- **远程/无头 Agent** — 在任意浏览器打开 `https://<your-domain>/activate`，再把页面显示的 30 天 Bearer token 配成静态 `Authorization` 请求头；不需要 loopback 回调、SSH 隧道或客户端支持 device flow。见 [connect-mcp-clients_zh.md](connect-mcp-clients_zh.md#远程与无头环境)。
 - **Amazon Quick** — 用部署输出的 Client ID + Secret 配置。见 [quick-desktop-setup_zh.md](quick-desktop-setup_zh.md)。
 
 **第 1/5 步：CDK 部署**

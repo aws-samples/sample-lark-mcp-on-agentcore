@@ -4,7 +4,7 @@
 
 ## 概述
 
-本系统采用纵深防御策略，在网络边缘、传输层、应用层和存储层都实施安全控制。所有 Token 永远不会离开 AWS 内网，OAuth 流程使用 PKCE（Amazon Quick 另加共享 client_secret），并通过 HMAC 签名防止 CSRF 和 Token 伪造。
+本系统采用纵深防御策略，在网络边缘、传输层、应用层和存储层都实施安全控制。飞书 access/refresh token 永不离开 AWS。标准 MCP OAuth 使用 PKCE（Amazon Quick 另加共享 client_secret）；无头环境的 `/activate` 流程则直接向完成授权的浏览器返回一个签名的 30 天 MCP Bearer token。两条流程都通过 HMAC 签名防止 CSRF 和 Token 伪造。
 
 ## 用户隔离（飞书 Token · MCP Token · MCP 端点）
 
@@ -57,9 +57,11 @@
 
 **slug 不可变，只有别名可变。** 人类可读的**别名**在账户/区域内硬唯一，在任何资源创建*之前*通过原子注册表写入声明，因此两个应用绝不会撞同一显示名。重命名只改别名（`ops.sh rename`）；命名真实资源的 slug 永不改变——改它会使 RETAIN 的 `openid-map` 表成为孤儿并迫使所有用户重新授权。
 
-## OAuth 2.0 PKCE 流程
+## 授权流程
 
-系统实现了完整的 OAuth 2.0 Authorization Code + PKCE (RFC 7636) 流程：
+### 标准 MCP OAuth：授权码 + PKCE
+
+标准的客户端驱动流程实现 OAuth 2.0 Authorization Code + PKCE (RFC 7636)：
 
 1. **客户端生成 code_verifier**（随机字符串）和 **code_challenge**（SHA-256 哈希）
 2. 客户端发起 `/authorize` 请求时必须携带 `code_challenge`（缺失则返回 400）；`code_challenge_method` 可省略，但若提供则必须为 `S256`，其他值（如 `plain`）会被拒绝
@@ -70,11 +72,11 @@
 
 PKCE 防止授权码被中间人截获后直接兑换 Token — 即使攻击者拿到了授权码，没有原始 code_verifier 也无法获取 access_token。系统只接受 S256 方法，拒绝 plain 方法。
 
-### 两类客户端
+#### 两类客户端
 
 同一端点同时服务两类 MCP 客户端，`/token` 通过 `client_id` 区分：
 
-- **自助注册客户端（Kiro、Claude Code、Codex）** 通过发现机制（RFC 9728 Protected Resource Metadata，在 401 的 `WWW-Authenticate` 中通告）找到服务，并经 **`POST /register`**（RFC 7591 动态客户端注册）自助注册。它们拿到一个不透明、HMAC 签名的 `client_id`，**没有 secret**（`token_endpoint_auth_method: "none"`）。对这类 public client，**PKCE 是唯一的客户端认证**——`/token` 会拒绝携带 `client_secret` 的请求；注册时只接受 host 精确命中白名单（`ALLOWED_DOMAINS`、`localhost`/`127.0.0.1` 或 QuickSight host）的 `redirect_uris`。
+- **自助注册客户端（Kiro、Claude Code、Codex、VS Code）** 通过发现机制（RFC 9728 Protected Resource Metadata，在 401 的 `WWW-Authenticate` 中通告）找到服务，并经 **`POST /register`**（RFC 7591 动态客户端注册）自助注册。它们拿到一个不透明、HMAC 签名的 `client_id`，**没有 secret**（`token_endpoint_auth_method: "none"`）。对这类 public client，**PKCE 是唯一的客户端认证**——`/token` 会拒绝携带 `client_secret` 的请求。注册时，HTTPS 只接受内置或配置的 host 白名单，HTTP 只接受 RFC 8252 loopback host（`localhost`、`127.0.0.0/8`、`[::1]`）；内置 HTTPS 白名单包括 VS Code 跳板和 QuickSight host。
 - **Amazon Quick（Quick Desktop）** 使用部署时打印的共享 `OAUTH_CLIENT_ID` + `OAUTH_CLIENT_SECRET` 配置。它的 `/token` 请求在 PKCE 之外**额外**提供该 secret（用时间安全比较校验）。
 
 无论哪类，**绑定身份的关键都是 PKCE 的 `code_verifier`**。对自助注册的 public client，它是唯一的客户端凭据；对 Amazon Quick，共享 `client_secret` 只是一层不绑定身份的额外纵深防御。
@@ -90,6 +92,16 @@ PKCE 防止授权码被中间人截获后直接兑换 Token — 即使攻击者�
 <p align="center">
   <img src="images/oauth-pkce-sequence.svg" alt="OAuth 2.0 授权码 + PKCE 时序：/token 端点的校验，code_verifier 绑定身份（client_secret 仅 Amazon Quick）" width="900">
 </p>
+
+### 远程/无头自助授权
+
+`GET /activate` 是浏览器与 Agent 无法共享 loopback 接口时使用的独立入口：
+
+1. 服务端用 OAuth state 密钥签名最小化 activation state（`{a:1}`），沿用 5 分钟有效期，再通过服务端固定 HTTPS callback 将浏览器重定向到飞书。
+2. callback 用飞书 code 换取 token，将用户飞书 token 写入 Secrets Manager，并签发现有格式的 30 天 MCP Bearer token。流程不携带客户端 `redirect_uri`、PKCE 值、动态端口，也不需要 SSH 隧道。
+3. 成功页只显示一次 MCP token。token 不进入 URL、重定向、响应头或日志；响应设置 `Cache-Control: no-store` 和 `Referrer-Policy: no-referrer`。
+
+页面显示的 MCP token 是用户凭据：持有者可在有效期内以该用户身份调用 MCP，直到 token 过期或用户授权被撤销。Token 为无状态签名，无法单独吊销某一枚；`./scripts/ops.sh revoke <userId>` 删除服务端的用户飞书 token 后，该用户的所有 MCP token 会立即失效。
 
 ## 凭据泄露影响对比
 
@@ -119,7 +131,7 @@ STATE_SECRET (root, 256-bit)
 **为什么域分离？** 如果各类 Token 共用同一密钥，则对某种 Token 的签名可能被用于伪造另一种（oracle 攻击）。域分离确保即使攻击者观察到某一签名的输出，也无法推导出另一签名密钥——例如一个 MCP Token 永远无法被当作已注册的 `client_id` 重放。DCR `client_id` 的 HMAC 输入还额外加 `dcr:` 前缀作为第二重隔离。
 
 **OAuth State 签名格式：** `base64url(payload).timestamp.hmac_hex`
-- payload 编码了 redirect_uri、client state、code_challenge 等
+- payload 按流程编码 activation marker，或标准流程的 redirect_uri、client state、code_challenge 等
 - timestamp 用于 5 分钟过期检查
 - 验证时使用 `timingSafeEqual` 防止时序攻击
 
@@ -233,9 +245,9 @@ EventBridge 每 30 分钟触发一次 Token 刷新 Lambda。选择 30 分钟的�
 | 层面 | 措施 |
 |------|------|
 | Token 存储 | Secrets Manager，使用**每应用独立的客户自管 KMS 密钥（CMK）**加密；key policy 仅把解密权授给该应用的两个 Lambda 角色——仅持 `GetSecretValue`（无 IAM/KMS 管理、无 AssumeRole）的主体只能拿到密文。存量 secret 经刷新循环用 `UpdateSecret` 透明换 key 迁移（零感知）。所有读写经 CloudTrail 审计。 |
-| Token 传输 | AWS 内网 TLS + SigV4，不经过公网 |
+| Token 传输 | 飞书 access/refresh token 只走 AWS 内部 TLS + SigV4 链路；MCP Bearer token 仅在客户端或授权浏览器与 CloudFront 之间通过公网 HTTPS 传输 |
 | OAuth 防 CSRF | HMAC-SHA256 签名 state（timing-safe，5 分钟过期） |
-| MCP 认证 | OAuth 2.0（PKCE；自助注册客户端走 RFC 7591 DCR，Amazon Quick 用共享 client_secret），HMAC 签名 token（30 天有效） |
+| MCP 认证 | 标准 OAuth 2.0（PKCE；自助注册客户端走 RFC 7591 DCR，Amazon Quick 用共享 client_secret）或从 `/activate` 获取静态 token；两者使用相同的 HMAC 签名 30 天 MCP token 格式 |
 | 容器 | 无状态 per-request，非 root 运行；SIGTERM 优雅关闭并跟踪子进程 |
 | 脚本执行 (`lark_exec_script`) | 启动时冻结白名单（仅构建时存在的 `.py` 可执行）；scripts/ 目录 chmod 555 防覆盖；路径正则白名单；`execFile`（非 shell）+ `cwd=/tmp` + 30s 超时 + 10MB 输出上限；最小化 env（仅 PATH/HOME/LANG，无 AWS 凭证）；纳入并发信号量和优雅关闭追踪 |
 | App Secret | 容器启动后异步从 Secrets Manager 拉取；加载完成前 `/ping` 健康检查返回 503、tools/call 返回 `server_initializing`，避免上线前接受流量；密钥不进 AgentCore 控制面，不出现在日志/argv |

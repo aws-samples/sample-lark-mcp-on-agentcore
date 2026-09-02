@@ -42,8 +42,9 @@ deploy.sh is an interactive deployment script handling the full flow from enviro
 9. Feishu alarm webhook URL + signature secret + keyword
 10. Deploy region selection
 
-**Connecting MCP clients (two paths):**
-- **Kiro / Claude Code / Codex** — self-register (DCR), no secret, loopback callbacks. See [connect-mcp-clients_en.md](connect-mcp-clients_en.md).
+**Connecting MCP clients (three paths):**
+- **Standard OAuth (Kiro / Claude Code / Codex / VS Code)** — self-register (DCR), no secret. Loopback clients work when the browser and client share a machine; VS Code uses its hosted redirect broker. See [connect-mcp-clients_en.md](connect-mcp-clients_en.md).
+- **Remote/headless agents** — open `https://<your-domain>/activate` in any browser, then configure the displayed 30-day Bearer token as a static `Authorization` header. No loopback callback, SSH tunnel, or client-side device-flow support is required. See [connect-mcp-clients_en.md](connect-mcp-clients_en.md#remote-and-headless-environments).
 - **Amazon Quick** — shared Client ID + Secret from deploy output. See [quick-desktop-setup_en.md](quick-desktop-setup_en.md).
 
 **Step 1/5: CDK Deploy**

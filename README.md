@@ -69,7 +69,7 @@ After deploy, add this to any remote-MCP client:
 }
 ```
 
-Save and authorize in the browser when prompted. See [Connect clients](docs/connect-mcp-clients_en.md).
+Save and authorize in the browser when prompted. If the browser and agent run on different machines (SSH, containers, Codespaces, or other headless environments), open `https://<your-domain>/activate` on any machine and put the one-time displayed Bearer token in the client's `Authorization` header. See [Connect clients](docs/connect-mcp-clients_en.md).
 
 ## Architecture
 
@@ -303,7 +303,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/aws-samples/sample-lark-mcp-
 }
 ```
 
-保存后按提示在浏览器完成飞书授权即可。详见 [连接客户端](docs/connect-mcp-clients_zh.md)。
+保存后按提示在浏览器完成飞书授权即可。如果浏览器与 Agent 不在同一台机器（SSH、容器、Codespaces 或其他无头环境），可在任意机器打开 `https://<your-domain>/activate`，再把页面一次性显示的 Bearer token 配到客户端的 `Authorization` 请求头。详见 [连接客户端](docs/connect-mcp-clients_zh.md)。
 
 ## 架构
 
