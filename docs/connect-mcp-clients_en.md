@@ -27,6 +27,49 @@ Save → the client prompts to authorize → browser opens Feishu → approve �
 On success the client loads 450+ Feishu tools. Tokens are cached locally and
 refreshed automatically.
 
+## Remote and headless environments
+
+The setup above assumes the browser and the MCP client run on the **same
+machine**: the client listens on a loopback port and the authorization code is
+redirected there. If your agent runs on a remote host (SSH, container, cloud
+devbox) while you browse on a laptop, that redirect lands on the wrong machine —
+`127.0.0.1` resolves to the browser's host, not the agent's — and the client
+keeps reporting that authorization is required.
+
+Use `/activate` instead. It takes the client out of the flow entirely, so it
+needs no port forwarding, no SSH tunnel and no client-side support:
+
+1. Open `https://<your-domain>/activate` in **any** browser, on any machine.
+2. Approve in Feishu. The page then shows a 30-day access token.
+3. Put that token in your client's request headers:
+
+```json
+{
+  "mcpServers": {
+    "feishu": {
+      "type": "http",
+      "url": "https://<your-domain>/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+The token is shown **once** — the page cannot be reloaded to see it again.
+Treat it as a credential equivalent to your Feishu authorization: store it in a
+password manager or your client config, and never paste it into chat, a ticket or
+a repository. Revoking the user (`./scripts/ops.sh revoke <user_id>`)
+invalidates every token that user holds, because the server re-reads their Feishu
+token on every request.
+
+Client-specific alternatives, if you prefer to keep the interactive flow:
+
+| Client | Headless option |
+|--------|-----------------|
+| **Claude Code** | `claude mcp login <name> --no-browser` prints the URL, then you paste the full redirect URL from the browser's address bar back into the terminal. Connect with `ssh -t` so the paste step works. |
+| **Codex** | `mcp_oauth_callback_url` accepts an external URL (e.g. a devbox ingress) instead of loopback. |
+| **VS Code** | Works unchanged over Remote-SSH, Dev Containers and Codespaces — it uses a hosted redirect broker rather than a loopback port. |
+
 ## Per-client notes
 
 | Client | Notes | Docs |
@@ -78,10 +121,16 @@ See also [faq_en.md](faq_en.md).
 <details>
 <summary>ALLOWED_DOMAINS (no action needed for current clients)</summary>
 
-Registration requires the redirect URI host to be in the allowlist. Loopback
-(`localhost`/`127.0.0.1`) and `quicksight.aws.amazon.com` are always allowed —
-Kiro / Claude Code / Codex use loopback and Amazon Quick uses the QuickSight
-host, so no current client needs anything here.
+Registration requires the redirect URI to use HTTPS on an allowed host, or
+HTTP on an RFC 8252 loopback host. The built-in allowlist covers:
+
+- loopback: `localhost`, the full `127.0.0.0/8` range, and `[::1]` (with or without a port)
+- VS Code's hosted brokers: `https://vscode.dev/redirect` and `https://insiders.vscode.dev/redirect`
+- Amazon Quick: `quicksight.aws.amazon.com`
+
+Kiro / Claude Code / Codex use loopback, VS Code uses a hosted broker, and
+Amazon Quick uses the QuickSight host, so no current client needs extra
+configuration.
 
 To add another host in the future:
 `EXTRA_ALLOWED_DOMAINS=<host> ./scripts/deploy.sh --yes`

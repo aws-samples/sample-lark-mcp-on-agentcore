@@ -4,7 +4,7 @@
 
 ## Overview
 
-The system employs defense-in-depth, implementing security controls at the network edge, transport layer, application layer, and storage layer. Tokens never leave the AWS internal network, OAuth uses PKCE (plus a shared client_secret for Amazon Quick), and HMAC signing prevents CSRF and token forgery.
+The system employs defense-in-depth, implementing security controls at the network edge, transport layer, application layer, and storage layer. Feishu access and refresh tokens never leave AWS. Standard MCP OAuth uses PKCE (plus a shared client_secret for Amazon Quick); the headless `/activate` flow instead returns a signed, 30-day MCP Bearer token directly to the authorizing browser. HMAC signing prevents CSRF and token forgery in both flows.
 
 ## User Isolation (Feishu Token · MCP Token · MCP Endpoint)
 
@@ -57,9 +57,11 @@ The security goal: **app A can never read, delete, or forge app B's user tokens.
 
 **Slug is immutable; only the alias is mutable.** The human-readable **alias** is hard-unique within the account/region, claimed via an atomic registry write *before* any resource is created, so two apps can never collide on a display name. Renaming changes only the alias (`ops.sh rename`); the slug — which names real resources — never changes, because renaming it would orphan the RETAIN'd `openid-map` table and force every user to re-authorize.
 
-## OAuth 2.0 PKCE Flow
+## Authorization Flows
 
-The system implements the full OAuth 2.0 Authorization Code + PKCE (RFC 7636) flow:
+### Standard MCP OAuth: Authorization Code + PKCE
+
+The standard client-driven flow implements OAuth 2.0 Authorization Code + PKCE (RFC 7636):
 
 1. **Client generates a code_verifier** (random string) and **code_challenge** (SHA-256 hash)
 2. The `/authorize` request must include `code_challenge` (returns 400 if missing); `code_challenge_method` is optional, but if provided it must be `S256` — any other value (e.g., `plain`) is rejected
@@ -70,11 +72,11 @@ The system implements the full OAuth 2.0 Authorization Code + PKCE (RFC 7636) fl
 
 PKCE prevents authorization code interception attacks — even if an attacker captures the auth code, they cannot exchange it for tokens without the original code_verifier. Only S256 is accepted; plain method is rejected.
 
-### Two client styles
+#### Two client styles
 
 The endpoint serves both kinds of MCP client at once; `/token` tells them apart by the `client_id`:
 
-- **Self-registering clients (Kiro, Claude Code, Codex)** discover the server (RFC 9728 Protected Resource Metadata, advertised in the `WWW-Authenticate` challenge on a 401) and register themselves via **`POST /register`** (RFC 7591 Dynamic Client Registration). They receive an opaque, HMAC-signed `client_id` and **no secret** (`token_endpoint_auth_method: "none"`). For these public clients, **PKCE is the sole client authentication** — `/token` rejects a request that carries a `client_secret`, and registration only accepts `redirect_uris` whose host is an exact allowlist match (`ALLOWED_DOMAINS`, `localhost`/`127.0.0.1`, or the QuickSight host).
+- **Self-registering clients (Kiro, Claude Code, Codex, VS Code)** discover the server (RFC 9728 Protected Resource Metadata, advertised in the `WWW-Authenticate` challenge on a 401) and register themselves via **`POST /register`** (RFC 7591 Dynamic Client Registration). They receive an opaque, HMAC-signed `client_id` and **no secret** (`token_endpoint_auth_method: "none"`). For these public clients, **PKCE is the sole client authentication** — `/token` rejects a request that carries a `client_secret`. Registration accepts HTTPS only for the built-in or configured host allowlist, and HTTP only for RFC 8252 loopback hosts (`localhost`, `127.0.0.0/8`, `[::1]`). The built-in HTTPS list includes the VS Code brokers and the QuickSight host.
 - **Amazon Quick (Quick Desktop)** is configured with the shared `OAUTH_CLIENT_ID` + `OAUTH_CLIENT_SECRET` printed at deploy time. Its `/token` request presents that secret (verified by a timing-safe compare) **in addition to** PKCE.
 
 In both styles **the PKCE `code_verifier` is the identity-binding check**. For self-registering public clients it is the only client credential; for Amazon Quick the shared `client_secret` is one extra defense-in-depth layer that does not itself bind identity.
@@ -90,6 +92,16 @@ The sequence below then shows a full authorization-and-exchange flow and the che
 <p align="center">
   <img src="images/oauth-pkce-sequence-en.svg" alt="OAuth 2.0 Authorization Code + PKCE sequence: the checks at /token, code_verifier binds identity (client_secret only for Amazon Quick)" width="900">
 </p>
+
+### Remote/headless activation
+
+`GET /activate` is a separate user-driven entry point for environments where the browser and agent do not share a loopback interface:
+
+1. The service signs a minimal activation state (`{a:1}`) with the OAuth state key and the existing 5-minute expiry, then redirects the browser to Feishu using the service's fixed HTTPS callback.
+2. The callback exchanges the Feishu code, stores the user's Feishu token in Secrets Manager, and mints the same signed 30-day MCP Bearer token used by the standard flow. No client `redirect_uri`, PKCE value, dynamic port, or SSH tunnel is involved.
+3. The success page displays the MCP token once. It is not placed in a URL, redirect, response header, or log; the response sets `Cache-Control: no-store` and `Referrer-Policy: no-referrer`.
+
+The displayed MCP token is a user credential: anyone holding it can call MCP as that user until it expires or the user's authorization is revoked. Tokens are stateless and cannot be revoked individually; `./scripts/ops.sh revoke <userId>` removes the user's server-side Feishu token and immediately invalidates every MCP token for that user.
 
 ## Credential Leak Impact
 
@@ -119,7 +131,7 @@ STATE_SECRET (root, 256-bit)
 **Why domain separation?** If all token types shared the same key, a signature for one type could potentially be used to forge another type (oracle attack). Domain separation ensures that observing one signature reveals nothing about another signing key — e.g. an MCP token can never be replayed as a registered `client_id`. The DCR `client_id` HMAC additionally prefixes its input with `dcr:` as a second separator.
 
 **OAuth State format:** `base64url(payload).timestamp.hmac_hex`
-- payload encodes redirect_uri, client state, code_challenge, etc.
+- payload encodes either the activation marker, or the standard-flow redirect_uri, client state, code_challenge, etc.
 - timestamp enables 5-minute expiry check
 - Verification uses `timingSafeEqual` to prevent timing attacks
 
@@ -233,9 +245,9 @@ The key uses `RemovalPolicy.RETAIN` (a deleted key would make every secret encry
 | Layer | Measure |
 |-------|---------|
 | Token storage | Secrets Manager, encrypted with a **per-app customer-managed KMS key (CMK)** whose key policy grants decrypt only to that app's two Lambda roles — a least-privilege `GetSecretValue` reader (no IAM/KMS-admin/AssumeRole) gets ciphertext, not plaintext. Existing secrets migrate onto the CMK transparently via the refresh loop (`UpdateSecret`, zero downtime). All reads/writes audited via CloudTrail. |
-| Token transport | AWS internal TLS + SigV4, never traverses public internet |
+| Token transport | Feishu access/refresh tokens stay on AWS-internal TLS + SigV4 paths. MCP Bearer tokens cross the public edge only over HTTPS between the client or authorizing browser and CloudFront. |
 | OAuth CSRF | HMAC-SHA256 signed state (timing-safe, 5-min expiry) |
-| MCP auth | OAuth 2.0 (PKCE; RFC 7591 DCR for self-registering clients, shared client_secret for Amazon Quick), HMAC signed token (30-day validity) |
+| MCP auth | Standard OAuth 2.0 (PKCE; RFC 7591 DCR for self-registering clients, shared client_secret for Amazon Quick) or a static token obtained from `/activate`; both use the same HMAC-signed 30-day MCP token format |
 | Container | Stateless per-request, non-root; SIGTERM graceful shutdown with child-process tracking |
 | Script execution (`lark_exec_script`) | Boot-time frozen allowlist (only `.py` files present at build time can run); scripts/ dirs chmod 555 to prevent overwrite; path regex whitelist; `execFile` (no shell) + `cwd=/tmp` + 30s timeout + 10MB output cap; curated env (PATH/HOME/LANG only, no AWS credentials); shares concurrency semaphore and graceful-shutdown tracking |
 | App Secret | Container kicks off the Secrets Manager fetch at startup asynchronously; until it loads, `/ping` returns 503 and `tools/call` returns `server_initializing`, so traffic is gated; the secret never enters the AgentCore control plane, logs, or argv |

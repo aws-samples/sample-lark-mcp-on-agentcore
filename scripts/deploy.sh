@@ -1771,6 +1771,10 @@ cat > "$DEPLOY_INFO" << INFOEOF
 
 Save → authorize in browser → done. Details: docs/connect-mcp-clients_en.md
 
+## Remote/headless agents
+
+Open ${OAUTH_ENDPOINT}/activate in any browser, authorize in Feishu, then configure the displayed 30-day token as an \`Authorization: Bearer <token>\` request header.
+
 ## Amazon Quick Desktop (requires Client Secret)
 
 Settings → Capabilities → Browse Connections → Connectors →
@@ -1830,6 +1834,7 @@ echo "  OAuth Client ID:       ${OAUTH_CLIENT_ID}"
 echo "  OAuth Client Secret:   ${OAUTH_CLIENT_SECRET_VAL}"
 echo "  Token URL:             ${OAUTH_ENDPOINT}/token"
 echo "  Authorization URL:     ${OAUTH_ENDPOINT}/authorize"
+echo "  Activation URL:        ${OAUTH_ENDPOINT}/activate"
 echo "  Redirect URL:          ${REDIRECT_URL}"
 if [ -n "$DASHBOARD_URL" ]; then
 echo "  Dashboard:             ${DASHBOARD_URL}"

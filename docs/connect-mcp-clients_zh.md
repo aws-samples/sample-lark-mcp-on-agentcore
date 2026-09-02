@@ -24,6 +24,45 @@
 
 连接成功后客户端加载 450+ 飞书工具。Token 本地缓存，过期自动刷新。
 
+## 远程与无头环境
+
+上面的配置假设浏览器和 MCP 客户端在**同一台机器**上：客户端监听一个 loopback
+端口，授权码被重定向到那里。如果 Agent 跑在远程主机（SSH、容器、云端 devbox），
+而你在笔记本上用浏览器，这个重定向就会落到错误的机器上 —— `127.0.0.1` 指向的是
+浏览器所在的机器，不是 Agent 所在的机器 —— 客户端会一直提示需要授权。
+
+这种情况改用 `/activate`。它把客户端从授权流程里完全移出，因此不需要端口转发、
+不需要 SSH 隧道，也不要求客户端支持任何特殊能力：
+
+1. 在**任意**机器的浏览器中打开 `https://<your-domain>/activate`。
+2. 在飞书中同意授权，页面随即显示一个有效期 30 天的访问令牌。
+3. 把该令牌填入客户端配置的请求头：
+
+```json
+{
+  "mcpServers": {
+    "feishu": {
+      "type": "http",
+      "url": "https://<your-domain>/mcp",
+      "headers": { "Authorization": "Bearer <token>" }
+    }
+  }
+}
+```
+
+该令牌**只显示一次**，刷新页面无法再次获取。它等同于你的飞书授权，请存入密码
+管理器或客户端配置，不要粘贴到聊天、工单或代码仓库。撤销用户授权
+（`./scripts/ops.sh revoke <user_id>`）会立即使该用户持有的所有令牌失效，因为
+服务端每次请求都会重新读取该用户的飞书 token。
+
+如果你更希望保留交互式授权，各客户端也有各自的无头方案：
+
+| 客户端 | 无头方案 |
+|--------|---------|
+| **Claude Code** | `claude mcp login <name> --no-browser` 会打印授权 URL，你在浏览器完成授权后，把地址栏里那条完整的重定向 URL 粘回终端。需用 `ssh -t` 连接以保证可以粘贴。 |
+| **Codex** | `mcp_oauth_callback_url` 支持填任意外部 URL（例如 devbox 的 ingress 地址）替代 loopback。 |
+| **VS Code** | 在 Remote-SSH、Dev Containers 和 Codespaces 下无需额外配置 —— 它用的是托管重定向跳板，不是 loopback 端口。 |
+
 ## 各客户端说明
 
 | 客户端 | 备注 | 官方文档 |
@@ -73,9 +112,15 @@
 <details>
 <summary>ALLOWED_DOMAINS（当前客户端无需操作）</summary>
 
-注册要求重定向 URI 的 host 在白名单中。loopback（`localhost`/`127.0.0.1`）和
-`quicksight.aws.amazon.com` 始终放行——Kiro / Claude Code / Codex 走 loopback，
-Amazon Quick 走 QuickSight host，所以当前客户端都不需要配置。
+注册要求重定向 URI 使用白名单 host 上的 HTTPS，或 RFC 8252 loopback host 上的
+HTTP。内置白名单包括：
+
+- loopback：`localhost`、完整 `127.0.0.0/8` 地址段和 `[::1]`（端口可有可无）
+- VS Code 托管跳板：`https://vscode.dev/redirect` 和 `https://insiders.vscode.dev/redirect`
+- Amazon Quick：`quicksight.aws.amazon.com`
+
+Kiro / Claude Code / Codex 走 loopback，VS Code 走托管跳板，Amazon Quick 走
+QuickSight host，因此当前客户端都不需要额外配置。
 
 未来如需放行其他 host：
 `EXTRA_ALLOWED_DOMAINS=<host> ./scripts/deploy.sh --yes`

@@ -414,5 +414,29 @@
       "message": "%s has been authorized.",
       "hint_close": "Permission granted. You may close this tab."
     }
+  },
+  "activate": {
+    "zh": {
+      "title": "授权成功 - 访问令牌",
+      "heading": "✓ 授权成功",
+      "message": "%s 已完成飞书授权。请复制下面的访问令牌。",
+      "token_label": "访问令牌（有效期 30 天）",
+      "copy_hint": "把它填入 MCP 客户端配置的请求头：",
+      "warn_title": "此令牌仅显示一次",
+      "warn_once": "关闭页面后无法再次查看。请立即保存到密码管理器或客户端配置中。",
+      "warn_secret": "它等同于你的飞书授权，请勿粘贴到聊天、工单或代码仓库。",
+      "warn_revoke": "如果泄露，请让管理员执行 ops.sh revoke <user_id> 撤销授权，该用户的所有令牌会立即失效。"
+    },
+    "en": {
+      "title": "Authorized - Access Token",
+      "heading": "✓ Authorized",
+      "message": "%s has been authorized. Copy the access token below.",
+      "token_label": "Access token (valid for 30 days)",
+      "copy_hint": "Put it in your MCP client's request headers:",
+      "warn_title": "This token is shown only once",
+      "warn_once": "It cannot be retrieved after you close this page. Save it to a password manager or your client config now.",
+      "warn_secret": "It is equivalent to your Feishu authorization. Never paste it into chat, tickets, or a code repository.",
+      "warn_revoke": "If it leaks, ask an admin to run ops.sh revoke <user_id>; every token for that user stops working immediately."
+    }
   }
 }
