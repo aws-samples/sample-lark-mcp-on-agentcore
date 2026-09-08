@@ -104,7 +104,7 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 
 **CRITICAL — 创建、大幅改写或整页写回后，MUST 按 `lark_get_skill(domain="slides", section="workflow/validation-xml")` 做显式验证：回读全文 XML、核对页数和关键元素，并使用 `lark_exec_script(script="lark-slides/scripts/xml_lint.py", args=["--input", "-"], stdin="<待提交 XML>")` 统一检查 XML、越界、重叠、空白页和内容稀疏风险。**
 
-> 除本地这道准出 lint，写入类工具（`lark_slides_create`、`lark_slides_add_slide`、`lark_slides_update_slide`、`lark_slides_replace_slide`）默认还会由服务端再 lint 一遍，不通过直接拒绝写入。这两道是叠加关系：服务端 lint 不替代提交前必须自跑的 `xml_lint.py`。这些工具都带一个 `no_lint` 布尔参数用于跳过服务端 lint，**默认不要传**，只在确认服务端误报且已自行 lint 通过时作为应急逃生口。
+> 写入类工具（`lark_slides_create`、`lark_slides_add_slide`、`lark_slides_update_slide`、`lark_slides_replace_slide`）每次调用都会向服务端请求一次版式 lint，`no_lint=true` 用于放弃这次请求。**但不要依赖它**：该开关是很新的字段，飞书网关的接口元数据尚未发布它，实测提交违反版式的页面仍会被写入且无任何提示，`no_lint` 传与不传的可观察行为相同。因此**本地 `xml_lint.py` 是唯一可靠的准出闸门**，务必在提交前自跑，不要因为"服务端还会再查一遍"而跳过。等后端启用该检查后，写入可能开始被拒绝并返回带 `error_count` 的版式报告——那时按报告修正即可。
 
 **CRITICAL — 创建前自检或失败排障时，MUST 按 `lark_get_skill(domain="slides", section="workflow/error-handling")` 检查 XML 转义、结构、图片 token、3350001 和布局风险。**
 

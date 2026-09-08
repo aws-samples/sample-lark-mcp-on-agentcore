@@ -33,7 +33,7 @@ lark_slides_replace_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX",
 | `parts` | 是 | JSON 数组（`[{...}, ...]`），单次最多 200 条。支持 `@<file>` 和 `-`（stdin）读取 |
 | `revision_id` | 否 | 基础版本号；默认 `-1` 表示基于最新版执行 |
 | `tid` | 否 | 并发事务 ID；单次单人调用留空 |
-| `no_lint` | 否 | 布尔。跳过服务端版式 lint 提交 XML。默认服务端会 lint 受影响页面，不通过就拒绝写入。**默认不要传**：它只是应急逃生口，不豁免提交前必须自跑的 `xml_lint.py` |
+| `no_lint` | 否 | 布尔。放弃本次调用对服务端版式 lint 的请求（受影响页面）。**目前不要依赖服务端 lint**：该字段新于飞书网关接口元数据，实测违反版式的页面仍会被写入且无提示，传与不传行为相同；本地 `xml_lint.py` 是唯一可靠的准出闸门 |
 
 ## parts 元素结构
 

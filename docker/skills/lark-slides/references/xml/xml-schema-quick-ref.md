@@ -135,6 +135,8 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 - `<formula>`
 
 > `<shadow>`（外阴影）、`<innerShadow>`（内阴影）、`<presetShadow>`（预设阴影，`preset` 取 `shdw1`-`shdw20`）三者三选一，不要叠加。
+>
+> ⚠️ **实测状态（1.0.94）**：`<glow>`、`<innerShadow>`、`<presetShadow>` 这三个新元素虽已进入 schema（本地 lint 不再判为 unsupported），但飞书后端**尚未落盘**——写入返回成功，回读时元素已被静默剥离，空标签形式与显式带属性形式皆然。同批的 `<span letterSpacing>` 与 `<reflection>` 可正常落盘。属性 `wrap` 同样被静默丢弃（`autoFit` 保留）。需要这些效果时不要依赖它们生效，也不要因为回读缺失而反复重试。
 
 公式写法：
 
@@ -211,7 +213,7 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 - `<glow>`
 - `<content>`
 
-> `<shadow>` / `<innerShadow>` / `<presetShadow>` 三选一。`<glow>` 空标签即默认发光（`color="rgba(0, 111, 171, 0.4)"`、`radius="5"`）。
+> `<shadow>` / `<innerShadow>` / `<presetShadow>` 三选一。`<glow>` 空标签在 schema 上即默认发光（`color="rgba(0, 111, 171, 0.4)"`、`radius="5"`），但见本文「内联元素」一节的 ⚠️ 实测状态：`<glow>` / `<innerShadow>` / `<presetShadow>` 目前后端不落盘。
 
 ### line
 
