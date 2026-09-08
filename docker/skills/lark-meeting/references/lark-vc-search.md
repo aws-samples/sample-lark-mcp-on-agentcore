@@ -1,6 +1,6 @@
 # vc +search
 
-搜索已结束的历史会议记录，支持关键词、时间范围、组织者、参与者、会议室多条件过滤。只读，仅支持用户身份。
+搜索已结束的历史会议记录，支持关键词、时间范围、组织者、参与者、会议室多条件过滤。只读。接口本身支持用户身份和应用身份（机器人身份），MCP server 始终以用户身份调用。
 
 （认证由 MCP server 自动处理，始终以用户身份执行。）
 
@@ -55,9 +55,9 @@ lark_vc_search(query="周会", page_token="<PAGE_TOKEN>")
 | `query` | 否 | 9 位会议号或搜索关键词 |
 | `start` | 否 | 开始时间（ISO 8601 或仅日期） |
 | `end` | 否 | 结束时间（ISO 8601 或仅日期） |
-| `organizer_ids` | 否 | 组织者 open_id 列表，逗号分隔 |
-| `participant_ids` | 否 | 参与者 open_id 列表，逗号分隔 |
-| `room_ids` | 否 | 会议室 ID 列表，逗号分隔 |
+| `organizer_ids` | 否 | 组织者 open_id 列表，逗号分隔；多值为 OR 语义 |
+| `participant_ids` | 否 | 参与者 open_id 列表，逗号分隔；多值为 OR 语义 |
+| `room_ids` | 否 | 会议室 ID 列表，逗号分隔；多值为 OR 语义 |
 | `page_size` | 否 | 每页数量，默认 `15`，最大 `30` |
 | `page_token` | 否 | 翻页标记，用于获取下一页 |
 
@@ -75,9 +75,11 @@ lark_vc_search(query="周会", page_token="<PAGE_TOKEN>")
 
 `lark_vc_search` 只能搜索已结束的历史会议记录，不用于查询未来日程。查询未来会议安排请使用 `lark_get_skill(domain="calendar")`。
 
-### 3. 仅支持用户身份
+### 3. 接口支持用户身份和应用身份，MCP server 只走用户身份
 
-该接口仅支持用户身份（认证由 MCP server 自动处理），需具备 `vc:meeting.search:read` 权限。
+上游接口同时支持用户身份和应用身份（机器人身份），需具备 `vc:meeting.search:read` 权限。MCP server 始终以用户身份调用（认证自动处理），应用身份路径不可通过 MCP server 使用。
+
+搜索得到 `meeting_id` 后，`lark_vc_detail`、`lark_vc_recording`、`lark_invoke(tool_name="lark_vc_meeting_get", ...)` 和 `lark_note_detail` 必须沿用本次搜索使用的身份；通过 MCP server 时这始终是同一个用户身份，不需要也无法逐条传递身份参数。不要为了绕过权限错误尝试切换身份或改用其他工具。
 
 ### 4. 支持分页
 
@@ -131,7 +133,7 @@ lark_vc_search(query="周会", page_size="15", page_token="<PAGE_TOKEN>")
 | 调用直接报错，要求提供过滤条件 | 没有传入 `query`、时间范围或任何过滤 ID | 至少补充一个过滤条件后重试 |
 | 时间参数校验失败 | `start` 或 `end` 格式不合法 | 改用 ISO 8601 或 `YYYY-MM-DD` |
 | 搜不到未来会议 | `lark_vc_search` 只查历史会议 | 改用 `lark_get_skill(domain="calendar")` 查询未来日程 |
-| 权限不足 | 未授权 `vc:meeting.search:read` | 联系管理员授权对应 scope |
+| 权限不足 | 未授权 `vc:meeting.search:read` | 按提示完成用户授权（必要时联系管理员开通对应 scope）；⚠️ 应用身份路径在 MCP server 上不可用，不要试图改用应用身份重试 |
 
 ## 提示
 - 必须使用 `format="json"` 输出，便于稳定解析。

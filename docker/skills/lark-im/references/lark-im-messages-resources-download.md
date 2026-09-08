@@ -26,7 +26,7 @@ lark_im_messages_resources_download(message_id="om_xxx", file_key="img_v3_xxx", 
 | `message_id` | Yes | Message ID (`om_xxx` format) |
 | `file_key` | Yes | Resource key (`img_xxx` or `file_xxx`) |
 | `type` | Yes | Resource type: `image` or `file` |
-| `output` | No | Relative output path; absolute paths and `..` traversal are rejected. When omitted, the command uses the attachment name when available and otherwise falls back to the resource key |
+| `output` | No | Output path, relative or absolute, that must resolve inside the built-in allowed roots (the working directory, `/tmp`, `~/files`); system and credential directories stay refused. When omitted, the command uses the attachment name when available and otherwise falls back to the resource key |
 
 ## Choose `type`
 

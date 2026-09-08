@@ -24,13 +24,13 @@
 | 快速查看纯值数据、批量处理 | `lark_sheets_csv_get` | 对话上下文 | 返回 CSV 文本（每行带 `[row=N]` 前缀）；大表请按 `range` 行窗口分批读（截断时看 `has_more`） |
 | 按列类型结构化读出（喂 DataFrame / round-trip 回 `lark_sheets_table_put`） | `lark_sheets_table_get` | 对话上下文 | 返回 typed 协议（`columns:[列名]` + `data` + `dtypes`/`formats` + `range`），输出形状对齐 pandas split；可一行 `pd.DataFrame(sheet["data"], columns=sheet["columns"]).astype(sheet["dtypes"])` 还原 DataFrame，或直接 round-trip 回 `lark_sheets_table_put`。不带 `range` 时读**完整 used range**（跨过表中部空行 / 空列），每个子表回传读取范围 `range`；被 `max_chars` 裁掉时**该子表**带 `truncated: true` 与 `truncation_warning`，预算耗尽导致后续整表未读时**顶层**也带同组字段——**先看截断字段再用数据；两层都没报也不等于逻辑读全**，仍要用返回数据实际行数、关键末行与源数据交叉核对（详见下文）。注意这与下文 `current_region` "遇表中部空行截断"不矛盾：`lark_sheets_table_get` 读的是子表物理 used range（飞书记录的已用矩形，含中间空行），`current_region` 是从锚点连通扩展、遇整行空行就断 |
 | 查看公式、样式、批注、数据验证 | `lark_sheets_cells_get` | 对话上下文 | 返回单元格完整信息，token 开销较大 |
-| 查看某区域的下拉框（数据验证）选项 | `lark_sheets_dropdown_get` | 对话上下文 | 返回该 A1 范围已配置的下拉列表选项 |
+| 查看某区域的下拉框（数据验证）配置 | `lark_sheets_dropdown_get` | 对话上下文 | 返回该 A1 范围的下拉选项、多选开关和胶囊配色 |
 
 **选择原则**：
 - 只看值或做数据处理 → `lark_sheets_csv_get`；大表分批读取，避免一次拉全表撑爆上下文
 - 要按列类型结构化读出（喂 DataFrame / round-trip 回 `lark_sheets_table_put`）→ `lark_sheets_table_get`
 - 需要公式/样式/批注 → `lark_sheets_cells_get`
-- 只想知道某区域下拉框有哪些选项 → `lark_sheets_dropdown_get`
+- 查看某区域下拉框的选项、多选开关或胶囊配色 → `lark_sheets_dropdown_get`
 
 ⚠️ **大数据优先分窗读、别灌进上下文**：`lark_sheets_csv_get` / `lark_sheets_cells_get` 都受上下文输出量约束（返回过大会被截断或转存为文件）。纯值分析优先 `lark_sheets_csv_get` 按 `range` 行窗口（`A1:Z500` / `A501:Z1000` …）分批处理 + `lark_sheets_csv_put` 分批回写；若确实要让结果直接进上下文又不想触发转存，给任一工具把 `max_chars`（默认 500000）调小到略低于上限（如 `25000`），改为优雅截断 + `has_more` 分页。
 

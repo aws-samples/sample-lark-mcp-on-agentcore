@@ -33,7 +33,7 @@
 
 | 工具 | 用途 | Risk |
 |---|---|---|
-| `lark_apps_automation_list` | 列出应用所有触发器（可按类型过滤、`page_all` 聚合翻页） | read |
+| `lark_apps_automation_list` | 列出应用所有触发器（可按类型过滤、`all=true` 聚合翻页） | read |
 | `lark_apps_automation_get` | 查看单个触发器完整配置（Webhook Bearer Token 恒脱敏） | read |
 | `lark_apps_automation_create` | 创建触发器，四类共用一个工具，按 `trigger_type` 分派 | write |
 | `lark_apps_automation_update` | 改条件/描述，或经专用参数管理 Webhook URL·Token | high-risk-write |
@@ -206,7 +206,7 @@ lark_apps_release_create(app_id="<app_id>", branch="sprint/default")
 
 启用 trigger 的授权不等于制造 runtime 事件的授权，测试授权也不等于任意数据库写入授权。cron 可等待计划时间；webhook 只能向既有 runtime URL 发送已授权、安全且不泄露凭证的请求。record-change 在执行任何 DML 前，必须明确并取得覆盖以下作用域的授权：环境、表、操作、精确测试记录或筛选条件、payload、预期结果和清理方式。
 
-优先使用专用测试记录，不要任取线上业务记录。用户已明确授权精确、可撤回的测试夹具及其清理时，不机械追加一轮确认；目标或影响仍不清楚时必须停下。record-change probe 前先执行 `lark_apps_automation_list(trigger_type="record-change", page_all=true)`，检查同一环境、表和操作可能命中的其他 enabled trigger；若存在 sibling match，必须说明聚合业务影响并取得覆盖这些影响的授权，或换成隔离夹具/经授权临时停用后再测。`UPDATE` 要限定精确条件并保留恢复方式；`INSERT` 要预先约定清理；恢复 UPDATE 或清理 INSERT 也可能再次触发自动化，必须纳入影响说明和授权。`DELETE` 必须遵循 `lark_get_skill(domain="apps", section="db-execute")`：先 `SELECT count(*)`、用 `dry_run=true` 预览，展示影响后取得针对该删除目标的明确授权，再带 `_confirm=true` 执行；清理动作若包含未预先授权的删除，同样走该门槛。
+优先使用专用测试记录，不要任取线上业务记录。用户已明确授权精确、可撤回的测试夹具及其清理时，不机械追加一轮确认；目标或影响仍不清楚时必须停下。record-change probe 前先执行 `lark_apps_automation_list(trigger_type="record-change", all=true)`，检查同一环境、表和操作可能命中的其他 enabled trigger；若存在 sibling match，必须说明聚合业务影响并取得覆盖这些影响的授权，或换成隔离夹具/经授权临时停用后再测。`UPDATE` 要限定精确条件并保留恢复方式；`INSERT` 要预先约定清理；恢复 UPDATE 或清理 INSERT 也可能再次触发自动化，必须纳入影响说明和授权。`DELETE` 必须遵循 `lark_get_skill(domain="apps", section="db-execute")`：先 `SELECT count(*)`、用 `dry_run=true` 预览，展示影响后取得针对该删除目标的明确授权，再带 `_confirm=true` 执行；清理动作若包含未预先授权的删除，同样走该门槛。
 
 缺少安全、已授权且可清理的事件入口时，记录 blocked，不得用"测试一下"推导任意 online 数据写入。
 

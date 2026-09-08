@@ -48,7 +48,7 @@ avoids that loop. It does **not** widen what users see at first authorization (s
 minimal set); the only cost is a larger declared permission ceiling and more items for
 your admin to approve.
 
-Scope list (236 entries, copy-paste ready):
+Scope list (239 entries, copy-paste ready):
 
 ```json
 {
@@ -192,6 +192,7 @@ Scope list (236 entries, copy-paste ready):
       "im:feed_group_v1:write",
       "im:message",
       "im:message.group_msg:get_as_user",
+      "im:message.history:readonly",
       "im:message.p2p_msg:get_as_user",
       "im:message.pins:read",
       "im:message.pins:write_only",
@@ -229,6 +230,9 @@ Scope list (236 entries, copy-paste ready):
       "minutes:minutes:update",
       "minutes:permission:apply",
       "offline_access",
+      "okr:okr.comment.delete",
+      "okr:okr.comment.readonly",
+      "okr:okr.comment.writeonly",
       "okr:okr.content:readonly",
       "okr:okr.content:writeonly",
       "okr:okr.period:readonly",
@@ -242,7 +246,6 @@ Scope list (236 entries, copy-paste ready):
       "search:docs:read",
       "search:message",
       "sheets:spreadsheet",
-      "sheets:spreadsheet.meta:read",
       "sheets:spreadsheet:create",
       "sheets:spreadsheet:read",
       "sheets:spreadsheet:readonly",

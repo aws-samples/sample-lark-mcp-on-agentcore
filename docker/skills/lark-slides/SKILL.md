@@ -104,6 +104,8 @@ description: "飞书幻灯片：创建和编辑幻灯片。创建演示文稿、
 
 **CRITICAL — 创建、大幅改写或整页写回后，MUST 按 `lark_get_skill(domain="slides", section="workflow/validation-xml")` 做显式验证：回读全文 XML、核对页数和关键元素，并使用 `lark_exec_script(script="lark-slides/scripts/xml_lint.py", args=["--input", "-"], stdin="<待提交 XML>")` 统一检查 XML、越界、重叠、空白页和内容稀疏风险。**
 
+> 除本地这道准出 lint，写入类工具（`lark_slides_create`、`lark_slides_add_slide`、`lark_slides_update_slide`、`lark_slides_replace_slide`）默认还会由服务端再 lint 一遍，不通过直接拒绝写入。这两道是叠加关系：服务端 lint 不替代提交前必须自跑的 `xml_lint.py`。这些工具都带一个 `no_lint` 布尔参数用于跳过服务端 lint，**默认不要传**，只在确认服务端误报且已自行 lint 通过时作为应急逃生口。
+
 **CRITICAL — 创建前自检或失败排障时，MUST 按 `lark_get_skill(domain="slides", section="workflow/error-handling")` 检查 XML 转义、结构、图片 token、3350001 和布局风险。**
 
 **编辑已有幻灯片页面**：单个标题、文本块、图片或局部元素优先用 `lark_slides_replace_slide`（块级替换/插入，不动页序）；一页里改动很多（例如批量换字体）、要改背景、或要删掉若干元素时用 `lark_slides_update_slide` 整页覆盖（`slide_id` 和页序不变，但没写进 `content` 的元素会被删除）；**多页大改就对每一页各跑一次 `lark_slides_update_slide`**。选择 action 和完整读-改-写流程见 `lark_get_skill(domain="slides", section="workflow/slides-editing")`。

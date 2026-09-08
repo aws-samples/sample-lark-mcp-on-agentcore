@@ -20,15 +20,17 @@ description: "飞书日历：管理日历日程和会议室。查看/搜索日�
 | Shortcut | 说明 |
 |----------|------|
 | `lark_calendar_agenda` | 查看日程安排（默认今天） |
-| `lark_calendar_meeting` | 通过日程事件 ID 获取关联的视频会议信息（meeting_id、meeting_note），日程开过视频会议才会有meeting_id（详见 lark_get_skill(domain="calendar", section="meeting")） |
+| `lark_calendar_meeting` | 通过日程事件 ID 获取关联的视频会议信息（meeting_id、meeting_note），日程开过视频会议才会有meeting_id，**注意**：视频会议链接获取走 `lark_calendar_get`（详见 lark_get_skill(domain="calendar", section="meeting")） |
 | `lark_calendar_create` | 创建日程并邀请参会人（ISO 8601 时间） |
-| `lark_calendar_update` | 更新既有日程字段，或独立增量添加/移除参会人和会议室 |
-| `lark_calendar_freebusy` | 查询用户主日历的忙闲信息和 RSVP 状态（纯查询场景；预约场景走 `lark_calendar_suggestion`） |
+| `lark_calendar_update` | 更新既有日程字段，或独立增量添加/移除参会人和会议室；重复性日程/例外必须传 `apply_to`（详见 lark_get_skill(domain="calendar", section="recurring")） |
+| `lark_calendar_delete` | 删除日程；重复性日程/例外必须传 `apply_to`（详见 lark_get_skill(domain="calendar", section="recurring")）。高风险写操作，真实执行需 `_confirm=true` |
+| `lark_calendar_freebusy` | 查询主日历的忙闲/RSVP状态/空闲时间段。(**如需预约/推荐时间段**走 `lark_calendar_suggestion`——它综合工作时间、忙碌区间和休息时间推荐。) |
 | `lark_calendar_room_find` | 针对一个或多个**明确的**时间块查找可用会议室（无明确时间时禁止直接调用，需先走 lark_calendar_suggestion） |
 | `lark_calendar_rsvp` | 回复日程（接受/拒绝/待定）（详见 lark_get_skill(domain="calendar", section="rsvp")） |
 | `lark_calendar_join_event` | 凭分享 token 加入日程（分享链接/二维码/分享卡片/RSVP 卡片）（详见 lark_get_skill(domain="calendar", section="join-event")） |
 | `lark_calendar_suggestion` | 根据非明确时间或一段时间范围，推荐多个可用时间块方案 |
 | `lark_calendar_transfer` | 把日程组织者转让给另一个用户或机器人；不可逆，真实执行需 `_confirm=true`（详见 lark_get_skill(domain="calendar", section="transfer")） |
+| `lark_calendar_list_attendees` | 列出日程的参与人和会议室（支持按 `type` 过滤：user / resource / chat / third_party）（详见 lark_get_skill(domain="calendar", section="list-attendees")） |
 
 ### `lark_calendar_get` — 单日程详情
 
@@ -41,6 +43,8 @@ lark_calendar_get(calendar_id="<calendar_id>", event_id="<event_id>")
 
 日程描述统一使用 `description` 一个字段，按 **Markdown** 富文本处理。读取日程时 `description` 返回 Markdown 富文本（仅有纯文本描述时返回该纯文本）；创建/更新日程时也通过 `description` 传入 Markdown。
 
+> `lark_calendar_get` 返回不含参会人和会议室。需要参与人视角（用户 / 会议室 / 群 / 三方邮箱）请调用 `lark_calendar_list_attendees`（详见 lark_get_skill(domain="calendar", section="list-attendees")）。
+
 ### `lark_calendar_search_event` — 按关键词、时间范围和参会人搜索日程
 
 仅返回基础字段（`event_id`/`summary`/`start`/`end` 等），需要详情请走 `lark_calendar_get`。
@@ -52,6 +56,19 @@ lark_calendar_get(calendar_id="<calendar_id>", event_id="<event_id>")
 # page_token 分页游标，用于继续翻页 可选
 # page_size 每页数量，默认 30 可选
 lark_calendar_search_event(query="周会", start="2026-04-20", end="2026-04-27", attendee_ids="ou_user1,oc_chat1,omm_room1", page_token="<page_token>", page_size="30")
+```
+
+`attendee_ids` 的多值语义：**同类型内为 OR（并集）**——只要日程命中列表中的任意一个同类型 ID，就会返回。
+
+- `attendee_ids="ou_A,ou_B"` = A **或** B 参加的日程（**不是** A 和 B 都参加的）。
+
+### `lark_calendar_delete` — 删除日程
+
+高风险写操作：真实执行需先向用户确认，再带 `_confirm=true` 重新调用；MCP server 会拒绝第一次未带确认的调用并给出提示。重复性日程/例外必须传 `apply_to`（详见 lark_get_skill(domain="calendar", section="recurring")）。
+
+```
+# calendar_id 不传，默认 primary
+lark_calendar_delete(calendar_id="<calendar_id>", event_id="<event_id>", notify=true, _confirm=true)
 ```
 
 ### `lark_calendar_agenda` — 查看近期日程安排
@@ -68,20 +85,36 @@ lark_calendar_agenda(start="2026-03-10", end="2026-03-17", calendar_id="<calenda
 - 已取消的日程自动过滤；无日程时直接告知"日程清空"。
 - 时间范围超过 40 天会自动拆分查询并合并结果。
 
-### `lark_calendar_freebusy` — 查询主日历忙闲时段和 RSVP 状态
+### `lark_calendar_freebusy` — 查询主日历忙闲时段 / 事件 / 公共空闲
 
-仅返回忙碌时段起止时间，不含日程标题等隐私信息；其他订阅日历不在范围内。
+`lark_calendar_freebusy` 一个入口承担四种视角：几何计算类（`busy` / `free` / `common_free`）走自动合并；事件维度类（`raw_busy`）保留每条上游日程 + `rsvp_status`。
 
 ```
 # start/end 时间范围（ISO 8601 / YYYY-MM-DD / Unix 秒），均可选；默认当天
-# user_id 目标用户 open_id（ou_ 前缀）可选；默认当前登录用户
-lark_calendar_freebusy(start="2026-03-11", end="2026-03-12", user_id="ou_xxx")
+# user_id 目标用户 open_id，多个用逗号分隔；默认当前登录用户
+# type 视角四选一（默认 busy）：
+#   busy         每个 user 合并后的忙碌区间（找空档、看忙碌时段）
+#   raw_busy     每个 user 的原始日程块 + rsvp_status（数会议、看每个会的 rsvp）
+#   free         每个 user 在时间窗内的空闲区间（可带 min_duration 过滤）
+#   common_free  所有 user 的共同空闲区间（可带 min_duration 过滤）
+# min_duration 仅对 free / common_free 生效；Go duration 格式，例如 30m、1h、90m
+
+# 查询忙碌时间段（去重并合并相邻/重叠段）
+lark_calendar_freebusy(start="2026-03-11", end="2026-03-11", user_id="ou_a,ou_b", type="busy")
+
+# 看别人有几个会、每个会的起止 + rsvp（不合并相邻/重叠段，带 rsvp 状态）
+lark_calendar_freebusy(start="2026-03-11", end="2026-03-11", user_id="ou_a,ou_b", type="raw_busy")
+
+# 查询用户空闲时间段
+lark_calendar_freebusy(start="2026-03-11", end="2026-03-11", user_id="ou_a,ou_b", type="free")
+
+# 多人公共空闲时间段（推荐替代手工合并）
+lark_calendar_freebusy(start="2026-03-11T09:00:00+08:00", end="2026-03-11T18:00:00+08:00", user_id="ou_a,ou_b", type="common_free", min_duration="30m")
 ```
 
 用法提示：
-- **仅判断是否有空** → `lark_calendar_freebusy`；**需要日程详情** → `lark_calendar_agenda`。
-- 检查多人可用性：分别调用并对比，找共同空闲。
-- 预约/改约场景下，调用规则（参与人过多、含群组、来自 `lark_calendar_suggestion` 等）详见 lark_get_skill(domain="calendar", section="schedule-clear-time")（§ 查询忙闲）。
+- **`lark_calendar_freebusy` 只适用于查询忙碌/空闲时间段这一事实**。如果目标是"给会议**推荐**一个合适的时间段"（单人或多人），必须优先使用 `lark_calendar_suggestion`（详见 lark_get_skill(domain="calendar", section="suggestion")）——它会综合**工作时间段、忙碌时间段、休息时间段**来推荐，`lark_calendar_freebusy` 只回答"哪些区间空着"，不判断该区间是否适合排会。
+- **多人公共空闲**：只想拿"哪些区间共同没被占"→ `type="common_free"`（可选 `min_duration`）；想拿"推荐的会议时间段"→ 走 `lark_calendar_suggestion`。
 
 ## 前置条件路由
 
@@ -105,6 +138,9 @@ lark_calendar_freebusy(start="2026-03-11", end="2026-03-12", user_id="ou_xxx")
 - **时间块 vs 时间范围**：时间块是具体确定的连续时间段（如 `14:00~15:00`），时间范围是泛指（如"今天下午"）。`lark_calendar_room_find` 必须基于确定时间块，不能基于模糊范围。
 - **会议室（Room）**："room"不是"房间"，是"会议室"。会议室是日程的一种参与人（resource attendee），不能脱离日程单独预定。
 - **日程会议 ID（Meeting ID）**：日程的历史视频会议 ID，在日程上开过视频会议才会有。
+- **日程分享链接 vs 会议链接**：两者是不同事物，不可混用。
+  - 日程分享链接：`https://<domain>/calendar/share?token=<token>`，指向日程本身，用于分享日程详情。**分享日程给某个人、某个群或粘贴到文档中，需要的都是这个日程分享链接（通过 `lark_invoke` 调用 `lark_calendar_events_share_info` 获取），不是 applink**；禁止自己拼接 applink 或用 applink 代替。
+  - 会议链接：`https://<domain>/j/<number>`，指向视频会议入口；同一重复性日程序列的所有实例共用同一个会议链接。
 
 ## 术语映射
 
@@ -112,18 +148,20 @@ lark_calendar_freebusy(start="2026-03-11", end="2026-03-12", user_id="ou_xxx")
 
 ## 意图路由
 
+**日程与会议的关系**：用户口中的「会议」通常不区分日程和视频会议。定义、三种查询意图（当前/未来/过去）的分流规则见 lark_get_skill(domain="calendar", section="meeting-relation")。
+
 | 用户意图 | 路由到 |
 |----------|--------|
-| 查询过去的会议（"昨天的会议""上周的会"） | lark_get_skill(domain="meeting")（会议数据含即时会议，仅查日程会遗漏） |
-| 今天有哪些会议 | 需要合并两部分内容：lark_get_skill(domain="meeting") 中的 `lark_vc_search` 查询今天已结束的会议，`lark_calendar_agenda` 查询进行中或未开始的日程。 |
-| 查询日历/日程或未来时间的会议 | 本 skill |
+| 查询过去的会议（"昨天的会议""上周的会"）/今天有哪些会议 / 当前正在开的会议 | 先调用 lark_get_skill(domain="calendar", section="meeting-relation") |
+| 未来的会议 / 明天/下周的会议 | 本 skill：视频会议不存在于未来，等价于查日程 |
 | 按关键词搜索日程 | 本 skill（`lark_calendar_search_event`） |
-| 从日程获取关联的视频会议 ID 或用户绑定的会议纪要文档 | 本 skill（`lark_calendar_meeting`） |
-| 把日程分享给某人 / 群 | 本 skill：先用 `lark_invoke` 调用 `lark_calendar_events_share_info` 取**日程分享链接**，再走 lark_get_skill(domain="im") 发送该链接；分享链接不是 applink，不要自己拼接或用 applink 代替 |
+| 从日程获取关联的视频会议 ID 或用户绑定的会议纪要文档 | 本 skill（`lark_calendar_meeting`，详见 lark_get_skill(domain="calendar", section="meeting")） |
+| 查看日程的参会人 / 会议室（含 `type="resource"` 只看会议室） | 本 skill（`lark_calendar_list_attendees`，详见 lark_get_skill(domain="calendar", section="list-attendees")） |
+| 把日程分享给某人 / 群 / 粘贴到文档 | 本 skill：先用 `lark_invoke` 调用 `lark_calendar_events_share_info` 取**日程分享链接**，再走 lark_get_skill(domain="im") 发送或粘贴该链接；**分享日程给某个人、某个群或粘贴到文档中，需要的都是日程分享链接，不是 applink**，不要自己拼接或用 applink 代替 |
 | 从日程进一步拿 AI 智能纪要 / 逐字稿 / 妙记产物 | 先用 `lark_calendar_meeting` 取 `meeting_id`，再进入 lark_get_skill(domain="meeting")：`lark_vc_detail`（lark_get_skill(domain="meeting", section="lark-vc-detail")）→ `lark_note_detail`（lark_get_skill(domain="meeting", section="lark-note-detail")） / `lark_minutes_detail`（lark_get_skill(domain="meeting", section="lark-minutes-detail")） |
 | 预约/改约日程、调整时间、添加/更换会议室、查会议室 | 先判断新建 vs 编辑，再进入 lark_get_skill(domain="calendar", section="schedule-meeting") 工作流 |
 | 仅编辑日程字段（标题/描述）或增删参会人（不涉及时间和会议室） | 先定位 `event_id`，再调用 lark_get_skill(domain="calendar", section="update") 执行变更 |
-| 编辑/删除重复性日程（「改这个重复日程」「删掉后面的」「全部取消」等） | 先调用 lark_get_skill(domain="calendar", section="recurring")，确认操作范围后执行 |
+| 编辑/删除重复性日程（「改这个重复日程」「删掉后面的」「全部取消」等） | 先调用 lark_get_skill(domain="calendar", section="recurring")；`lark_calendar_update` / `lark_calendar_delete` 均通过 `apply_to="single"｜"all"｜"this-and-following"` 指定范围 |
 | 转让日程组织者（「把这个日程交给 XX」「组织者改成 XX」「这个会转给我」「bot 建完还给我」） | 先调用 lark_get_skill(domain="calendar", section="transfer")；转出方必须是日程**当前组织者**身份，`to_user_id` 传接收人（用户或机器人）。⚠️ MCP server 始终以用户身份执行，只能转让当前登录用户作为组织者的日程；bot 组织的日程转出需要 bot 身份，MCP server 不可用 |
 
 ## 任务类型分流
@@ -154,9 +192,6 @@ lark_calendar_freebusy(start="2026-03-11", end="2026-03-12", user_id="ou_xxx")
 # 查询用户主日历
 lark_invoke(tool_name="lark_calendar_calendars_primary")
 
-# 获取日程详情及 app_link
-lark_invoke(tool_name="lark_calendar_events_get", args={params: {"calendar_id": "<calendar_id>", "event_id": "<event_id>"}})
-
 # 获取日程分享链接（分享给他人/群前必须先拿到）
 # 返回形如 {{domain}}/calendar/share?token=<token> 的分享链接，不是 applink；直接把该链接发给对方（对方可凭链接中的 token 走 lark_calendar_join_event 加入）
 lark_invoke(tool_name="lark_calendar_events_share_info", args={params: {"calendar_id": "<calendar_id>", "event_id": "<event_id>"}})
@@ -177,8 +212,8 @@ lark_invoke(tool_name="lark_calendar_events_delete", args={params: {"calendar_id
 ## 常用其他域命令
 
 ```
-# 搜索用户，更多参数详见 lark_get_skill(domain="contact")
-lark_contact_search_user(query="<query>")
+# 批量搜索多个用户，更多参数详见 lark_get_skill(domain="contact")
+lark_contact_search_user(queries="<q1>,<q2>")
 
 # 搜索群聊，更多参数详见 lark_get_skill(domain="im")
 lark_im_chat_search(query="<query>")

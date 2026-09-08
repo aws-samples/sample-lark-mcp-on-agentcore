@@ -58,6 +58,7 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 | `title` | 否 | 演示文稿标题（不传则默认 "Untitled"） |
 | `slide` | 否 | `<slide>` XML 数组，每项一页；与 `slides` 二选一，同时传会报错 |
 | `slides` | 否 | 页面 XML 的 JSON 字符串数组，最多 10 个；与 `slide` 二选一 |
+| `no_lint` | 否 | 布尔。跳过服务端版式 lint 提交 XML。默认服务端会逐页 lint，不通过就拒绝写入。**默认不要传**：它只是应急逃生口，不豁免提交前必须自跑的 `xml_lint.py` |
 
 10 页是上限，服务端每次只接收一页。超过 10 页时先创建空白 PPT，再用 `lark_slides_add_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-add-slide")`）逐页添加。
 

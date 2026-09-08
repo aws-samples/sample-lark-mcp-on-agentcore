@@ -57,8 +57,8 @@ lark_minutes_search(query="预算复盘", page_size="20", page_token="<PAGE_TOKE
 | 参数                        | 必填 | 说明                                   |
 | ------------------------- | -- | ------------------------------------ |
 | `query`          | 否  | 搜索关键词                                |
-| `owner_ids`       | 否  | 所有者 open\_id 列表，逗号分隔；支持传 `me` 表示当前用户 |
-| `participant_ids` | 否  | 参与者 open\_id 列表，逗号分隔；支持传 `me` 表示当前用户 |
+| `owner_ids`       | 否  | 所有者 open\_id 列表，逗号分隔；多值为 OR 语义；支持传 `me` 表示当前用户 |
+| `participant_ids` | 否  | 参与者 open\_id 列表，逗号分隔；多值为 OR 语义；支持传 `me` 表示当前用户 |
 | `start`          | 否  | 开始时间（ISO 8601 或仅日期）                  |
 | `end`            | 否  | 结束时间（ISO 8601 或仅日期）                  |
 | `page_size`         | 否  | 每页数量，默认 `15`，最大 `30`                 |

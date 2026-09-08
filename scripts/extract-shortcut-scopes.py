@@ -98,15 +98,101 @@ def main():
         return []
 
     # Phase 2: Extract Shortcut structs
-    shortcut_pattern = re.compile(
-        r'(?:var\s+\w+\s*=\s*)?common\.Shortcut\s*\{(.*?)\n\}',
-        re.DOTALL
-    )
+    #
+    # Brace-BALANCED, not regex-terminated. The previous pattern
+    # (`common\.Shortcut\s*\{(.*?)\n\}`) required a closing brace at COLUMN 0,
+    # which silently dropped any shortcut that closes on an indented line — the
+    # `\t}}` style upstream uses when it folds the final `Execute:` closure and
+    # the struct literal onto one line. `OKRDeleteComment` (lark-cli 1.0.94,
+    # shortcuts/okr/okr_comment.go) is the last declaration in its file and ends
+    # in `\t}}`, so no column-0 `}` followed it and the whole entry vanished from
+    # the map — a SILENT failure: incremental auth just stops working for it.
+    # Balancing braces has no such dependency on upstream formatting.
+    shortcut_open = re.compile(r'common\.Shortcut\s*\{')
+
+    def balanced_body(content, i):
+        """Return the text between an already-consumed `{` at `i` and its match.
+
+        `i` is the index just past the opening brace. Skips Go string/rune
+        literals so braces inside them (`map[string]any{...}`, `"}"`) do not
+        unbalance the count. Returns None when the brace never closes.
+        """
+        depth, start, n = 1, i, len(content)
+        while i < n and depth:
+            c = content[i]
+            if c == '"':                      # interpreted string literal
+                i += 1
+                while i < n and content[i] != '"':
+                    i += 2 if content[i] == '\\' else 1
+            elif c == '`':                    # raw string literal
+                i += 1
+                while i < n and content[i] != '`':
+                    i += 1
+            elif c == "'":                    # rune literal
+                i += 1
+                while i < n and content[i] != "'":
+                    i += 2 if content[i] == '\\' else 1
+            elif c == '{':
+                depth += 1
+            elif c == '}':
+                depth -= 1
+                if not depth:
+                    return content[start:i]
+            i += 1
+        return None
+
+    def iter_balanced_bodies(content, open_pattern):
+        """Yield the inner text of each `<open_pattern>{ ... }` block."""
+        for m in open_pattern.finditer(content):
+            body = balanced_body(content, m.end())
+            if body is not None:
+                yield body
 
     def strip_comments(text):
-        text = re.sub(r'//[^\n]*', '', text)
-        text = re.sub(r'/\*.*?\*/', '', text, flags=re.DOTALL)
-        return text
+        """Remove Go comments WITHOUT touching string/rune literals.
+
+        A naive `re.sub(r'//[^\\n]*', '', text)` corrupts any literal containing
+        `//` — a URL is the common case:
+
+            Desc: `form description (… like [text](https://example.com))`},
+
+        There the naive strip eats `//example.com))` **and the closing backtick**,
+        leaving an unterminated literal. That went unnoticed while shortcuts were
+        matched by a `\\n\\}` regex (which ignores literals), but it desynchronises
+        any brace-balancing scan: the balancer treats the orphaned backtick as an
+        opening quote and skips past the struct's real closing brace, silently
+        dropping the shortcut (`base +form-create`, `+url-resolve`, …).
+        """
+        out = []
+        i, n = 0, len(text)
+        while i < n:
+            c = text[i]
+            if c == '"' or c == '`' or c == "'":
+                q = c
+                out.append(c)
+                i += 1
+                while i < n:
+                    d = text[i]
+                    if d == '\\' and q != '`':      # no escapes in raw strings
+                        out.append(text[i:i + 2])
+                        i += 2
+                        continue
+                    out.append(d)
+                    i += 1
+                    if d == q:
+                        break
+            elif c == '/' and i + 1 < n and text[i + 1] == '/':
+                while i < n and text[i] != '\n':
+                    i += 1
+            elif c == '/' and i + 1 < n and text[i + 1] == '*':
+                i += 2
+                while i + 1 < n and not (text[i] == '*' and text[i + 1] == '/'):
+                    i += 1
+                i += 2
+            else:
+                out.append(c)
+                i += 1
+        return ''.join(out)
 
     def extract_string_field(body, field):
         pattern = re.compile(rf'{field}\s*:\s*"([^"]+)"')
@@ -204,9 +290,7 @@ def main():
             continue
         content = strip_comments(gofile.read_text())
 
-        for m in shortcut_pattern.finditer(content):
-            body = m.group(1)
-
+        for body in iter_balanced_bodies(content, shortcut_open):
             service = extract_string_field(body, "Service")
             command = extract_string_field(body, "Command")
 
@@ -319,17 +403,12 @@ def main():
     # Service and the scope fields ARE literals in the factory body, so read them
     # from there and pair them with every command literal in the same file —
     # unlike 3a-3c this needs no hardcoded service/scope guesses.
-    #
-    # The factory's `common.Shortcut{` closes at an INDENTED brace, so
-    # shortcut_pattern (which anchors `\n}` at column 0) swallows the rest of the
-    # function into one match. That is harmless here: the fields are read by name.
     config_cmd_pattern = re.compile(r'^\s*Command\s*:\s*"(\+[^"]+)"\s*,', re.MULTILINE)
     for gofile in sorted(src.rglob("*.go")):
         if "_test.go" in gofile.name:
             continue
         content = strip_comments(gofile.read_text())
-        for m in shortcut_pattern.finditer(content):
-            body = m.group(1)
+        for body in iter_balanced_bodies(content, shortcut_open):
             # Only factories: a Command that is a field selector, not a literal.
             if not re.search(r'Command\s*:\s*\w+\.\w+\s*,', body):
                 continue
@@ -364,6 +443,80 @@ def main():
                         entry["userCallable"] = False
                     results.append(entry)
                     extracted_keys.add((service, cmd))
+
+    # 3e: Parameterised factories — a `common.Shortcut{}` returned from a helper
+    # whose Command comes from a *function parameter* rather than a config field:
+    #
+    #   func makeRuleToggleShortcut(command string, enabled bool) common.Shortcut {
+    #       return common.Shortcut{Service: "mail", Command: command,
+    #                              Scopes: []string{"mail:user_mailbox.rule:write"}, ...}}
+    #   var MailRuleEnable  = makeRuleToggleShortcut("+rule-enable", true)
+    #   var MailRuleDisable = makeRuleToggleShortcut("+rule-disable", false)
+    #
+    # Phase 2 skips these (Command is not a literal) and 3d skips them (Command is
+    # a bare identifier, not `cfg.Command`). lark-cli 1.0.93/1.0.94 introduced the
+    # shape for `mail +rule-enable/-disable` and `okr +comment-solve/-reopen`.
+    #
+    # Unlike 3a-3c this hardcodes NO function names, service, or scopes: the
+    # factory body carries Service and the scope fields as literals, and the
+    # command names come from the call sites. A future factory is picked up for
+    # free. 3a-3c stay for the sheets helpers whose scopes are NOT declared in the
+    # returned literal; extracted_keys keeps this pass from overriding them.
+    factory_decl = re.compile(r'func\s+(\w+)\s*\([^()]*\)\s*common\.Shortcut\s*\{')
+    for gofile in sorted(src.rglob("*.go")):
+        if "_test.go" in gofile.name:
+            continue
+        content = strip_comments(gofile.read_text())
+        for fm in factory_decl.finditer(content):
+            fname = fm.group(1)
+            fbody = balanced_body(content, fm.end())
+            if fbody is None:
+                continue
+            for body in iter_balanced_bodies(fbody, shortcut_open):
+                # Command must be a bare identifier (a parameter), not a literal
+                # (phase 2) and not a field selector (3d).
+                if not re.search(r'Command\s*:\s*(\w+)\s*,', body):
+                    continue
+                if re.search(r'Command\s*:\s*(?:"|\w+\.\w+)', body):
+                    continue
+                service = extract_string_field(body, "Service")
+                if not service:
+                    continue
+                user_scopes, has_user = extract_scope_field(body, "UserScopes")
+                generic_scopes, _ = extract_scope_field(body, "Scopes")
+                cond_user, _ = extract_scope_field(body, "ConditionalUserScopes")
+                cond_generic, _ = extract_scope_field(body, "ConditionalScopes")
+                bot_scopes, _ = extract_scope_field(body, "BotScopes")
+                cond_bot, _ = extract_scope_field(body, "ConditionalBotScopes")
+                bot_declared.update(bot_scopes)
+                bot_declared.update(cond_bot)
+                auth_types, has_auth = extract_scope_field(body, "AuthTypes")
+                base_scopes = user_scopes if has_user and user_scopes else generic_scopes
+                cond_scopes = cond_user if cond_user else cond_generic
+                all_scopes, user_callable = merge_user_scopes(
+                    base_scopes, cond_scopes, bot_scopes, auth_types,
+                    from_user_field=bool(has_user and user_scopes),
+                    has_auth=has_auth,
+                )
+                # Command names come from every call site of this factory, across
+                # the whole tree — `var X = fname("+cmd", ...)`.
+                call_pattern = re.compile(rf'\b{re.escape(fname)}\s*\(\s*"(\+[^"]+)"')
+                for other in sorted(src.rglob("*.go")):
+                    if "_test.go" in other.name:
+                        continue
+                    for cm in call_pattern.finditer(strip_comments(other.read_text())):
+                        cmd = cm.group(1)
+                        if (service, cmd) in extracted_keys:
+                            continue
+                        entry_scopes, entry_user_callable = apply_user_unavailable_override(
+                            service, cmd, all_scopes, user_callable
+                        )
+                        entry = {"service": service, "command": cmd,
+                                 "scopes": entry_scopes}
+                        if not entry_user_callable:
+                            entry["userCallable"] = False
+                        results.append(entry)
+                        extracted_keys.add((service, cmd))
 
     results.sort(key=lambda x: (x["service"], x["command"]))
 

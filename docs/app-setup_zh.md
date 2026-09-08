@@ -38,7 +38,7 @@ Manager。请妥善保管，不要提交到代码库。
 反复。它**不影响**用户首次授权看到的范围（那始终是最小集），代价只是应用声明的权限上限更大、
 管理员审核项更多。
 
-scope 清单（236 条，可直接复制导入）：
+scope 清单（239 条，可直接复制导入）：
 
 ```json
 {
@@ -182,6 +182,7 @@ scope 清单（236 条，可直接复制导入）：
       "im:feed_group_v1:write",
       "im:message",
       "im:message.group_msg:get_as_user",
+      "im:message.history:readonly",
       "im:message.p2p_msg:get_as_user",
       "im:message.pins:read",
       "im:message.pins:write_only",
@@ -219,6 +220,9 @@ scope 清单（236 条，可直接复制导入）：
       "minutes:minutes:update",
       "minutes:permission:apply",
       "offline_access",
+      "okr:okr.comment.delete",
+      "okr:okr.comment.readonly",
+      "okr:okr.comment.writeonly",
       "okr:okr.content:readonly",
       "okr:okr.content:writeonly",
       "okr:okr.period:readonly",
@@ -232,7 +236,6 @@ scope 清单（236 条，可直接复制导入）：
       "search:docs:read",
       "search:message",
       "sheets:spreadsheet",
-      "sheets:spreadsheet.meta:read",
       "sheets:spreadsheet:create",
       "sheets:spreadsheet:read",
       "sheets:spreadsheet:readonly",

@@ -1,12 +1,12 @@
 # lark_okr_progress_delete
 
-根据 ID 删除一条 OKR 进展记录。此操作为高风险操作，删除后不可恢复。
+根据 ID 删除一条 OKR 进展记录。此操作为高风险操作，删除后不可恢复：真实执行必须在向用户确认后显式传 `_confirm=true`（MCP server 会拒绝第一次未带确认的调用并给出提示）。
 
 ## 用法
 
 ```
 # 删除指定 ID 的进展记录
-lark_okr_progress_delete(progress_id="1234567890123456789")
+lark_okr_progress_delete(progress_id="1234567890123456789", _confirm=true)
 ```
 
 ## 参数
@@ -14,12 +14,13 @@ lark_okr_progress_delete(progress_id="1234567890123456789")
 | 参数              | 必填 | 默认值    | 说明                    |
 |-----------------|----|--------|-----------------------|
 | `progress_id` | 是  | —      | 进展记录 ID（int64 类型，正整数） |
+| `_confirm`    | 真实执行时是 | —  | 高风险确认；MCP server 会拒绝第一次未带确认的调用并给出提示 |
 | `format`      | 否  | `json` | 输出格式。                 |
 
 ## 工作流程
 
 1. 使用 `lark_okr_progress_get` 确认要删除的进展记录 ID 和内容。
-2. 执行 `lark_okr_progress_delete(progress_id="1234567890123456789")`。
+2. 向用户说明删除不可恢复；得到确认后执行 `lark_okr_progress_delete(progress_id="1234567890123456789", _confirm=true)`。
 3. 报告结果：已删除的进展记录 ID。
 
 > **注意**：此操作不可恢复，建议在删除前先用 `lark_okr_progress_get` 确认记录内容。

@@ -27,6 +27,7 @@ lark_slides_add_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX", sli
 | `slide` | 是 | 一个完整的 `<slide>...</slide>` 文档 |
 | `before_slide_id` | 否 | 插到该 `slide_id` 之前；**不传就是追加到末尾** |
 | `revision_id` | 否 | 演示文稿版本号，默认 `-1`（最新）；传具体版本号做乐观锁 |
+| `no_lint` | 否 | 布尔。跳过服务端版式 lint 提交 XML。默认服务端会逐页 lint，不通过就拒绝写入。**默认不要传**：它只是应急逃生口，不豁免提交前必须自跑的 `xml_lint.py` |
 
 ## 本地图片：`@路径` 占位符
 

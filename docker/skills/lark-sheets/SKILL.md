@@ -160,6 +160,7 @@ description: "飞书电子表格：创建和操作电子表格。支持创建表
 | Lark Sheet Float Image — `lark_get_skill(domain="sheets", section="float-image")` | 管理飞书表格中的浮动图片。当用户需要在表格中插入浮动图片、调整图片位置和大小、查看已有浮动图片、删除图片时使用。也适用于"插入图片"、"添加 logo"、"放一张图"等场景。注意：如果用户需要将图片嵌入到某个单元格内部（单元格图片），请阅读 write-cells。 |
 | Lark Sheet History — `lark_get_skill(domain="sheets", section="history")` | 查询飞书表格的历史版本并回滚到指定版本。当用户需要查看一张表的编辑历史版本列表、回滚到某个历史版本、或查询回滚的异步状态（进行中/成功/失败）时使用。回滚为异步操作，发起后通过状态查询轮询结果。仅针对飞书表格。 |
 | Lark Sheet Changeset — `lark_get_skill(domain="sheets", section="changeset")` | 读取两个版本（CS revision）之间的 changeset（原始变更操作清单），用于复核某次编辑——尤其是 AI 编辑——是否真实满足用户诉求。传入起始版本（编辑前基线），可选结束版本（省略取最新），版本差上限 20；返回里最外层带当前表格最新版本号。当用户需要"看看这次改了什么"、"核对 AI 改动"、"对比两个版本的变更"时使用。 |
+| Lark Sheet 旧命令迁移指南 — `lark_get_skill(domain="sheets", section="legacy-command-migration")` | 重构前的 42 个 sheets 旧命令（`lark_sheets_create`、`lark_sheets_read`、`lark_sheets_write`、`lark_sheets_create_sheet`、`lark_sheets_media_upload` 等）已删除，调用会直接报 `unknown subcommand`。当手上的脚本或提示词早于本次重构、或收到该报错时，用本文查替代工具，以及那些不只是改名的差异：单元格 payload 词汇（`{"type":"formula","text":…}` 已被拒绝）、响应字段路径、`lark_sheets_update_sheet` / `lark_sheets_update_dimension` 拆成多个工具。 |
 
 ## 公共参数速查
 

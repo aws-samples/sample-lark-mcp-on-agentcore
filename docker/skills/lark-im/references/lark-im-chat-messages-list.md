@@ -56,7 +56,7 @@ lark_im_chat_messages_list(chat_id="oc_xxx", format="json")
 
 ## Resource Rendering
 
-Messages are rendered into human-readable text for inspection. Image messages are shown as placeholders such as `![Image](img_xxx)`; files, audio, and videos are rendered with resource keys in the content (e.g. `<audio key="file_xxx" duration="Xs"/>`). By default resource binaries are **not** downloaded.
+Messages are rendered into human-readable text for inspection. Image messages are shown as placeholders such as `![Image](img_xxx)`; files, audio, and videos are rendered with resource keys in the content (e.g. `<audio key="file_xxx" duration="Xs"/>`). `folder` messages are expanded one level (children rendered inside the tag, see the row below). By default resource binaries are **not** downloaded.
 
 Two ways to get the binaries:
 - **In one pass:** add `download_resources=true` to this tool — every eligible resource (image/file/audio/video/media + post-embedded, excluding stickers) is downloaded into `./lark-im-resources/` and a `resources` block (`{message_id, key, type, local_path, size_bytes}`) is attached to each message. See `lark_get_skill(domain="im", section="message-enrichment")`.
@@ -66,6 +66,7 @@ Two ways to get the binaries:
 |---------|-------------|------|
 | Image | `![Image](img_xxx)` | `download_resources=true`, or manually `lark_im_messages_resources_download(type="image")` |
 | File | `<file key="file_xxx" .../>` | `download_resources=true`, or manually `lark_im_messages_resources_download(type="file")` |
+| Folder (message) | `<folder key="file_xxx" name="assets" child_count="N"><file key="..." .../>…</folder>` (first-level children rendered inside; `has_more="true"` past the 10-item cap) | Folder itself is not a single-file resource; children are real files — download one with an explicit `lark_im_messages_resources_download(message_id="<id>", file_key="<child_key>", type="file")` (`download_resources=true` auto-collection does not include folder children) |
 | Audio | `<audio key="file_xxx" duration="Xs"/>` | `download_resources=true`, or manually `lark_im_messages_resources_download(type="file")` |
 | Video | `<video key="file_xxx" .../>` | `download_resources=true`, or manually `lark_im_messages_resources_download(type="file")` |
 | Sticker | `[Sticker]` | Not downloadable (Feishu does not support fetching sticker resources) |

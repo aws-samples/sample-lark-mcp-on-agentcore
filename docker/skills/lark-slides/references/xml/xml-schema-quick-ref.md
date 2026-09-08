@@ -127,8 +127,14 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 - `<del>`
 - `<a>`
 - `<shadow>`
+- `<reflection>`
+- `<innerShadow>`
+- `<presetShadow>`
 - `<outline>`
+- `<glow>`
 - `<formula>`
+
+> `<shadow>`（外阴影）、`<innerShadow>`（内阴影）、`<presetShadow>`（预设阴影，`preset` 取 `shdw1`-`shdw20`）三者三选一，不要叠加。
 
 公式写法：
 
@@ -200,7 +206,12 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 - `<border>`
 - `<reflection>`
 - `<shadow>`
+- `<innerShadow>`
+- `<presetShadow>`
+- `<glow>`
 - `<content>`
+
+> `<shadow>` / `<innerShadow>` / `<presetShadow>` 三选一。`<glow>` 空标签即默认发光（`color="rgba(0, 111, 171, 0.4)"`、`radius="5"`）。
 
 ### line
 
@@ -364,7 +375,7 @@ XSD 中的 `title`、`headline`、`sub-headline`、`body`、`caption` 主要出�
 </embed>
 ```
 
-`<embed>` 直接子元素为一个 `<svg>`（必需），以及可选的 `<reflection>`（倒影）与 `<shadow>`（阴影）。
+`<embed>` 直接子元素为一个 `<svg>`（必需），以及可选的 `<reflection>`（倒影）、`<shadow>`（外阴影）、`<innerShadow>`（内阴影）、`<presetShadow>`（预设阴影）与 `<glow>`（发光）；三类阴影三选一。
 
 ## 颜色与样式
 

@@ -40,7 +40,7 @@ lark_vc_search(query="<query>", start="<start>", end="<end>")
 
 （认证由 MCP server 自动处理，MCP server 始终以**用户身份**调用，无法切换为**应用身份**。）
 
-- `lark_vc_search` 本身只支持用户身份。`lark_vc_detail`、`lark_vc_recording`、`lark_invoke(tool_name="lark_vc_meeting_get", ...)` 和 `lark_note_detail` 在原生能力上支持用户或应用身份，但通过 MCP server 一律以用户身份执行。
+- `lark_vc_search`、`lark_vc_detail`、`lark_vc_recording`、`lark_invoke(tool_name="lark_vc_meeting_get", ...)` 和 `lark_note_detail` 在原生能力上都支持用户或应用身份，但通过 MCP server 一律以用户身份执行。
 - 因此 `meeting_id`、`note_id`、`minute_token` 及后续 Minutes、Note、Doc、Drive 调用全程都是同一个用户身份，不需要也无法逐条传递身份参数。不要为查询参会人或绕过权限错误尝试切换身份。
 - `lark_note_transcript` 仅支持用户身份，在 MCP server 上可用。
 - ⚠️ 上游按应用身份取得标识后再沿用应用身份的路径（例如应用机器人入会、带 `user_id` 的应用身份活跃会议发现）在 MCP server 上不可用；遇到这类请求时说明限制并停止。

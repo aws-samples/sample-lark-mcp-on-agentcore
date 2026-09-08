@@ -90,7 +90,7 @@ lark_im_threads_messages_list(thread="omt_xxx", page_token="<PAGE_TOKEN>")
 
 ## Resource Rendering
 
-Thread replies are rendered into human-readable text. Image messages appear as placeholders such as `![Image](img_xxx)`; by default resource binaries are **not** downloaded.
+Thread replies are rendered into human-readable text. Image messages appear as placeholders such as `![Image](img_xxx)`; `folder` replies are expanded one level (children rendered inside a `<folder ...>` tag); by default resource binaries are **not** downloaded.
 
 Pass `download_resources=true` to download every eligible resource (image/file/audio/video/media + post-embedded, excluding stickers) into `./lark-im-resources/` in one pass and attach a `resources` block to each reply (see `lark_get_skill(domain="im", section="message-enrichment")`). Otherwise download individual resources manually through `lark_im_messages_resources_download` (see `lark_get_skill(domain="im", section="messages-resources-download")`).
 
