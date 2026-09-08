@@ -10,9 +10,12 @@ Cycle (用户周期)
         ├── KeyResult (关键结果)
         │     └── Indicator (指标)
         │     └── list<Progress> (进展记录列表)
+        │     └── list<Comment> (评论列表)
         └── Indicator (指标)
         └── list<Progress> (进展记录列表)
+        └── list<Comment> (评论列表)
 
+Cycle、Progress 也可以直接挂载 Comment。
 Alignment (对齐关系): Objective ↔ Objective
 Category (分类): Objective 的分组标签
 ```
@@ -49,8 +52,11 @@ Category (分类): Objective 的分组标签
 ### 常用术语
 
 - **当前周期**: 指周期的 start_time/end_time
-  指周期的 start_time / end_time 所在的时间段与当前时间重叠的周期（即： start_time <= 当前时间 且 end_time >= 当前时间）。 注意：时间重叠是判断当前周期的首要且必须的硬性条件，绝对不能仅仅根据 cycle_status == 1 去判断。 如果有多个符合时间重叠标准的周期，再在这些包含当前时间的周期中过滤，保留周期状态为 default (0) 或 normal (1) 的周期。如果仍然有多个，则选择其中较新的一个。当用户提及"上一个周期"，"下一个周期"一类的表述时，通常是以当前周期为准计算。
-  - 如果用户没有提及，那么当前周期一般不考虑年度周期（起止时间从 01-01 至 12-31 的周期）
+  指周期的 start_time / end_time 所在的时间段与当前时间重叠的周期（即： start_time <= 当前时间 且 end_time >= 当前时间）。
+  注意：时间重叠是判断当前周期的首要且必须的硬性条件，绝对不能仅仅根据 cycle_status == 1 去判断。
+  如果有多个符合时间重叠标准的周期，再在这些包含当前时间的周期中过滤，保留周期状态为 default (0) 或 normal (1)
+  的周期。如果仍然有多个，则选择其中较新的一个。当用户提及"上一个周期"，"下一个周期"一类的表述时，通常是以当前周期为准计算。
+    - 如果用户没有提及，那么当前周期一般不考虑年度周期（起止时间从 01-01 至 12-31 的周期）
 - **所有者**: 绝大多数所有者都是用户，少部分租户启用了"团队OKR"功能，所有者可能是部门。用户身份下，只能编辑所有者为当前用户的
   OKR。
 
@@ -173,6 +179,64 @@ Category (分类): Objective 的分组标签
 > - `lark_okr_progress_update` (参见 `lark_get_skill(domain="okr", section="progress-update")`) 更新进展记录内容
 > - `lark_okr_progress_delete` (参见 `lark_get_skill(domain="okr", section="progress-delete")`) 删除进展记录
 > - `lark_okr_progress_list` (参见 `lark_get_skill(domain="okr", section="progress-list")`) 获取目标/关键结果下的进展记录
+
+---
+
+## Comment (评论)
+
+评论可以挂载在 Cycle、Objective、KeyResult 或 Progress 上，用于对 OKR 实体或正文中的一段文字进行讨论。评论分为实体级评论和划词评论两种：
+
+- **实体级评论**：直接附着在 Cycle 或 Progress 上。一条评论就是一个评论项，solve/reopen 只影响该评论。
+- **划词评论**：附着在 Objective 或 KeyResult 的正文选区上，带有 `selection`。同一个 `selection.id`
+  下的评论属于同一个评论串；solve/reopen 按评论串处理，但 delete 仍然只删除指定的一条评论。
+
+### Comment 字段
+
+| 字段               | 类型                 | 必填 | 说明                                                                                            |
+|------------------|--------------------|----|-----------------------------------------------------------------------------------------------|
+| `id`             | `string`           | 是  | 评论 ID，int64 正整数。                                                                              |
+| `target`         | `CommentTarget`    | 是  | 评论挂载对象，包含 `target_type` 和 `target_id`。类型为 `cycle`、`progress`、`objective` 或 `key_result`。      |
+| `commentator_id` | `string`           | 是  | 评论者 ID，返回 ID 类型由请求参数 `user_id_type` 决定。                                                       |
+| `status`         | `string`           | 是  | 评论状态：`open`（打开）或 `solved`（已解决）。                                                               |
+| `create_time`    | `string`           | 是  | 创建时间；                                                                                         |
+| `update_time`    | `string`           | 是  | 最后更新时间；                                                                                       |
+| `content`        | `ContentBlock`     | 否  | 评论正文，见 `lark_get_skill(domain="okr", section="contentblock")`。                                |
+| `solver_id`      | `string`           | 否  | 解决评论的用户 ID。                                                                                   |
+| `solved_time`    | `string`           | 否  | 评论解决时间，毫秒时间戳。                                                                                 |
+| `ref_comment_id` | `string`           | 否  | 被引用评论 ID。Progress/Cycle 等实体级评论可用它表示回复关系；Objective/KeyResult 的划词评论创建时可用它定位已有划词串，但新评论本身不建立引用关系。 |
+| `selection`      | `CommentSelection` | 否  | 划词信息。实体级评论为空；划词评论包含 selection ID 和可选的选区文本。                                                    |
+
+### CommentTarget (评论目标)
+
+| 字段            | 类型       | 必填 | 说明                                             |
+|---------------|----------|----|------------------------------------------------|
+| `target_type` | `string` | 是  | `cycle`、`progress`、`objective` 或 `key_result`。 |
+| `target_id`   | `string` | 是  | 对应 Cycle、Progress、Objective 或 KeyResult 的 ID。  |
+
+### CommentSelection (划词信息)
+
+| 字段              | 类型       | 必填 | 说明                          |
+|-----------------|----------|----|-----------------------------|
+| `id`            | `string` | 是  | 划词 ID。同一 `id` 下的评论属于同一个评论串。 |
+| `selected_text` | `string` | 否  | 划词锚定的正文文字。                  |
+
+### 评论创建与状态规则
+
+- Cycle/Progress 创建实体级评论时不传 `selected_text`；可以通过 `ref_comment_id` 回复已有评论。
+- Objective/KeyResult 创建划词评论时，`selected_text` 与 `ref_comment_id` 二选一：前者新建划词，后者将评论挂入被引用评论所属的已有划词串。工具
+  另外提供 `select_all` 替代 `selected_text` 以选中 O/KR 内的全部内容。
+- `solve` / `reopen` 的请求参数是单条评论 ID。对实体级评论只影响该评论；对划词评论会影响整条评论串。
+- `delete` 永久删除指定评论，不会连带删除同一评论串的其他评论，且删除后不可找回。
+
+> **SHORTCUT：**
+> - `lark_okr_comment_detail` (参见 `lark_get_skill(domain="okr", section="comment-detail")`) 获取周期下全部对象的评论并按评论串整理
+> - `lark_okr_comment_list` (参见 `lark_get_skill(domain="okr", section="comment-list")`) 分页获取单个评论目标下的评论
+> - `lark_okr_comment_get` (参见 `lark_get_skill(domain="okr", section="comment-get")`) 获取单条评论
+> - `lark_okr_comment_create` (参见 `lark_get_skill(domain="okr", section="comment-create")`) 创建评论、回复或挂入已有划词串
+> - `lark_okr_comment_patch` (参见 `lark_get_skill(domain="okr", section="comment-patch")`) 修改评论正文
+> - `lark_okr_comment_delete` (参见 `lark_get_skill(domain="okr", section="comment-delete")`) 永久删除单条评论
+> - `lark_okr_comment_solve` (参见 `lark_get_skill(domain="okr", section="comment-solve-reopen")`) 解决评论/评论串
+> - `lark_okr_comment_reopen` (参见 `lark_get_skill(domain="okr", section="comment-solve-reopen")`) 重新打开评论/评论串
 ---
 
 ## Indicator (指标)

@@ -29,7 +29,11 @@ lark_calendar_room_find(slot=["<start>~<end>"], attendee_ids="<ids>", city="<cit
 ### 2. 查询忙闲
 
 ```
-lark_calendar_freebusy(start="<start>", end="<end>")
+# 单人 / 多人查忙：user_id 多个用逗号分隔；服务端已合并相邻/重叠忙碌区间
+lark_calendar_freebusy(start="<start>", end="<end>", user_id="ou_a,ou_b")
+
+# 直接求共同空闲（推荐用于「找几个人一起有空」）
+lark_calendar_freebusy(start="<start>", end="<end>", user_id="ou_a,ou_b,ou_c", type="common_free", min_duration="30m")
 ```
 
 规则：
@@ -37,6 +41,7 @@ lark_calendar_freebusy(start="<start>", end="<end>")
 - 参与人过多（超过 5 人）：仅查询**当前用户**及少数核心人员忙闲即可
 - 参与人含**群组**：无需展开群组成员查询忙闲
 - 如果用户是从 `lark_calendar_suggestion` 确认了时间块后进入本分支的，**无需再调用 `lark_calendar_freebusy`**
+- 找多人共同空闲：直接用 `type="common_free"`（可选 `min_duration`），让工具一次算出共同空闲；不要自己再合并求交
 
 ### 3. 冲突处理
 

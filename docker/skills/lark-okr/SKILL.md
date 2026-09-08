@@ -20,6 +20,7 @@ description: "飞书 OKR：管理目标与关键结果。查看和编辑 OKR 周
 | 更新数字进度/完成度     | 百分比或不带单位数字用 `lark_okr_indicator_update`；需要改单位/目标值时查指标后用 `lark_invoke` 调用 `lark_okr_indicators_patch` | `lark_get_skill(domain="okr", section="indicator-update")`、`lark_get_skill(domain="okr", section="indicators")`                                                                                                      |
 | 写文字进展          | 用 `lark_okr_progress_create`；如果文本和数字都有，百分比或默认单位可使用 `progress_percent` 统一改，非百分比单位更新量化指标 | `lark_get_skill(domain="okr", section="progress-create")`、`lark_get_skill(domain="okr", section="progress-list")`、`lark_get_skill(domain="okr", section="progress-update")`                                          |
 | 对齐目标           | 直接按对齐关系工作流处理                                                                     | `lark_get_skill(domain="okr", section="alignments")`                                                                                                                                                                 |
+| 查询/创建/修改/解决 OKR 评论 | 获取周期下全部评论聚合用 `lark_okr_comment_detail`，查询单个 O/KR/进展或仅查询周期全局评论用 `lark_okr_comment_list` | `lark_get_skill(domain="okr", section="comment-list")`、`lark_get_skill(domain="okr", section="comment-create")`、`lark_get_skill(domain="okr", section="comment-solve-reopen")`                                        |
 
 分类只在用户明确要求分类，或创建 Objective 返回 `invalid parameters` 且怀疑租户强制开启分类时处理：用 `lark_invoke(tool_name="lark_okr_categories_list", args={params: {"owner_type":"user","page_size":100}})` 查可用分类，选择语义合适且 `enabled=true` 的分类 ID；分类可后续调整，不必停下等待用户确认。
 
@@ -67,6 +68,14 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_okr_weight` (参见 `lark_get_skill(domain="okr", section="weight")`)                     | 调整 Objective 或 KR 的权重                                                             |
 | `lark_okr_indicator_update` (参见 `lark_get_skill(domain="okr", section="indicator-update")`) | 更新 Objective 或 KR 的当前进度指标。更复杂的量化指标操作见 `lark_get_skill(domain="okr", section="indicators")` |
 | `lark_okr_patch` (参见 `lark_get_skill(domain="okr", section="patch")`)                       | 部分更新 Objective 或 KR（content、notes、score、deadline） |
+| `lark_okr_comment_detail` (参见 `lark_get_skill(domain="okr", section="comment-detail")`)     | 获取周期下 Cycle/Objective/KeyResult/Progress 的全部评论                                    |
+| `lark_okr_comment_list` (参见 `lark_get_skill(domain="okr", section="comment-list")`)         | 分页获取单个 OKR 实体下的评论                                                                |
+| `lark_okr_comment_get` (参见 `lark_get_skill(domain="okr", section="comment-get")`)           | 获取单条评论详情                                                                          |
+| `lark_okr_comment_create` (参见 `lark_get_skill(domain="okr", section="comment-create")`)     | 创建新评论或回复已有评论（仅支持用户身份）                                                     |
+| `lark_okr_comment_patch` (参见 `lark_get_skill(domain="okr", section="comment-patch")`)       | 修改评论内容（仅支持用户身份）                                                               |
+| `lark_okr_comment_delete` (参见 `lark_get_skill(domain="okr", section="comment-delete")`)     | 永久删除单条评论（仅支持用户身份；高风险写操作，真实执行需 `_confirm=true`）                  |
+| `lark_okr_comment_solve` (参见 `lark_get_skill(domain="okr", section="comment-solve-reopen")`)  | 解决评论或划词评论串（仅支持用户身份）                                                       |
+| `lark_okr_comment_reopen` (参见 `lark_get_skill(domain="okr", section="comment-solve-reopen")`) | 重新打开评论或划词评论串（仅支持用户身份）                                                   |
 
 ### 创建场景选择
 

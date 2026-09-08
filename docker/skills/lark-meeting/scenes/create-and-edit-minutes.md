@@ -74,6 +74,10 @@ lark_minutes_todo(minute_token="<token>", operation="add|update|delete", ...)
 
 ## 批量替换逐字稿关键词
 
+`lark_minutes_word_replace` 修改的是妙记「转写／逐字稿／文字记录」中的字面词条（同一产物的不同叫法）。
+
+`minute_token` 必须是妙记 token（例如 `obcn...`），合法输入只有两种：`lark_minutes_search` / `lark_vc_recording` 等工具返回的 `token` 字段，或从妙记 URL 里提取最后一段路径并去掉 query 参数后的裸 token。禁止直接传妙记标题、URL 里的 slug、会议主题或完整妙记 URL；不确定时先调用 `lark_minutes_search` / `lark_vc_recording` 拿到 `minute_token` 再执行替换。
+
 ```
 lark_minutes_word_replace(minute_token="<token>", replace_words=[{"source_word":"<old>","target_word":"<new>"}])
 ```

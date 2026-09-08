@@ -57,7 +57,9 @@ description: "飞书邮箱：Use when user mentions 起草邮件、写邮件、�
 | 不可逆删除 | `*.delete`、`drafts.delete` | ✅ 必须 |
 | 软删除 | `*.trash`、`*.batch_trash` | ✅ 必须 |
 | 取消定时 | `*.cancel_scheduled_send` | ✅ 必须 |
-| 修改收信规则 | `rules.create` / `update` / `delete` | ✅ 必须 |
+| 删除收信规则 | `rules.delete` | ✅ 必须 |
+| 创建 / 更新收信规则 | `rules.create` / `update` | ✅ 必须 |
+| 启停 / 排序收信规则 | `rules.enable` / `disable` / `reorder` | ❌ 普通写操作，免 `_confirm` |
 | 标签变更 | `*.add_label`、`*.remove_label` | ❌ 可逆，免确认 |
 | 已读状态 | `*.mark_read` / `mark_unread` | ❌ 可逆，免确认 |
 | 移动文件夹 | `*.move` | ❌ 可逆，免确认 |
@@ -76,16 +78,19 @@ description: "飞书邮箱：Use when user mentions 起草邮件、写邮件、�
 
 ## 身份选择
 
-邮箱是用户的个人资源。MCP server 自动使用 user identity（authentication is handled automatically by the MCP server）。
+邮箱是用户的个人资源。MCP server 始终以 user identity 访问（authentication is handled automatically by the MCP server），因此上游文档里的身份限制在这里都自动满足：
 
-**注意：bot identity 仅适用于读取类操作，所有写操作（发送、回复、转发、草稿编辑等）仅支持 user identity。**
+- 发信 / 草稿类写操作（发送、回复、转发、草稿编辑）仅支持 user identity。
+- message 级整理（`lark_mail_message_modify` / `lark_mail_message_trash`）仅支持 user identity。
+- 会话级批量整理（`lark_mail_thread_modify` / `lark_mail_thread_trash`）同时支持 user 和 bot identity；bot identity 下不能使用默认邮箱、必须显式传 `mailbox`，而 MCP server 走 user identity，省略 `mailbox` 即默认当前用户邮箱。
+- 读取类操作在 user identity 下均可用；bot identity 的应用级批量读取不适用于 MCP server。
 
 ## 典型工作流
 
 1. **确认身份** — 首次操作邮箱前先调用 `lark_invoke(tool_name="lark_mail_user_mailboxes_profile", args={params: {"user_mailbox_id": "me"}})` 获取当前用户的真实邮箱地址（`primary_email_address`），不要通过系统用户名猜测。后续判断"发件人是否为用户本人"时以此地址为准。
 2. **浏览** — `lark_mail_triage` 查看收件箱摘要，获取 `message_id` / `thread_id`
 3. **阅读** — `lark_mail_message` 只读单封邮件；已有多个 `message_id` 时用 `lark_mail_messages` 批量读取，不要循环调用 `lark_mail_message`；`lark_mail_thread` 读整个会话
-4. **整理** — 标签、已读/未读状态和移动文件夹优先用 `lark_mail_message_modify`；软删除优先用 `lark_mail_message_trash`
+4. **整理** — 标签、已读/未读状态和移动文件夹优先用 `lark_mail_message_modify`；软删除优先用 `lark_mail_message_trash`；会话级批量整理可用 `lark_mail_thread_modify`，软删除会话可用 `lark_mail_thread_trash`
 5. **回复** — `lark_mail_reply` / `lark_mail_reply_all`（默认存草稿，加 `confirm_send=true` 则立即发送）
 6. **转发** — `lark_mail_forward`（默认存草稿，加 `confirm_send=true` 则立即发送）
 7. **新邮件** — `lark_mail_send` 存草稿（默认），加 `confirm_send=true` 发送
@@ -110,8 +115,10 @@ description: "飞书邮箱：Use when user mentions 起草邮件、写邮件、�
 - 使用邮件模板：区分个人模板和静态 HTML 模板，发信类工具用 `template_id` 套用模板。ref: `lark_get_skill(domain="mail", section="template")`
 - 撤回已发送邮件：撤回邮件并查询异步撤回状态。ref: `lark_get_skill(domain="mail", section="recall")`
 - 修改邮件标签/已读状态/文件夹：优先使用 `lark_mail_message_modify`。ref: `lark_get_skill(domain="mail", section="message-modify")`
+- 修改会话标签/文件夹：使用 `lark_mail_thread_modify`。ref: `lark_get_skill(domain="mail", section="thread-modify")`
 - 软删除邮件：优先使用 `lark_mail_message_trash`。ref: `lark_get_skill(domain="mail", section="message-trash")`
-- 收信规则：创建、验证、删除自动处理收到邮件的规则。ref: `lark_get_skill(domain="mail", section="rules")`
+- 软删除会话：已有 `thread_id` 时可使用 `lark_mail_thread_trash`。ref: `lark_get_skill(domain="mail", section="thread-trash")`
+- 收信规则：查看、创建、更新、删除、启停、排序自动处理收到邮件的规则，分别对应 `lark_mail_rule_list` / `lark_mail_rule_get` / `lark_mail_rule_create` / `lark_mail_rule_update` / `lark_mail_rule_delete` / `lark_mail_rule_enable` / `lark_mail_rule_disable` / `lark_mail_rule_reorder`。ref: `lark_get_skill(domain="mail", section="rules")`
 - 分享邮件到 IM：分享邮件或会话到群聊、个人会话。ref: `lark_get_skill(domain="mail", section="share-to-chat")`
 - 发送日程邀请邮件：在邮件中嵌入 `text/calendar` 日程邀请。ref: `lark_get_skill(domain="mail", section="calendar-invite")`
 - 编写复杂 HTML 正文：复杂 HTML、本地图片、安全不确定时读取规范或运行 `lark_mail_lint_html`；普通正文无需预读。ref: `lark_get_skill(domain="mail", section="html")`
@@ -184,7 +191,7 @@ lark_mail_messages(message_ids="<id1>,<id2>,<id3>", html=false)
 
 ## 原生 API 调用规则
 
-没有 Shortcut 工具覆盖的操作才使用原生 API。标签、已读状态、移动文件夹优先使用 `lark_mail_message_modify`；软删除优先使用 `lark_mail_message_trash`。调用步骤以本节为准；资源和 method 用 `lark_discover(category="mail")` / `lark_discover(query="mail.<resource>")` 发现，不在入口保留完整资源表。
+没有 Shortcut 工具覆盖的操作才使用原生 API。标签、已读状态、移动文件夹优先使用 `lark_mail_message_modify`；软删除优先使用 `lark_mail_message_trash`。会话或 thread ID 级标签/文件夹整理可使用 `lark_mail_thread_modify`；软删除会话可使用 `lark_mail_thread_trash`。调用步骤以本节为准；资源和 method 用 `lark_discover(category="mail")` / `lark_discover(query="mail.<resource>")` 发现，不在入口保留完整资源表。
 
 ### Step 1 — 用 `lark_discover` 确定要调用的 API（必须，不可跳过）
 
@@ -232,8 +239,11 @@ lark_invoke(tool_name="lark_mail_<resource>_<method>", args={params: {...}, data
 **GET — 只有 `params`**（`parameters` 中有 path + query，无 `requestBody`）：
 
 ```
-# schema 中：user_mailbox_id (path, required), page_size (query, required), folder_id (query, optional)
-lark_invoke(tool_name="lark_mail_user_mailbox_messages_list", args={params: {"user_mailbox_id": "me", "page_size": 20, "folder_id": "INBOX"}})
+# schema 中：user_mailbox_id (path, required), page_size (query, required)
+# user_mailbox.threads.list 要求 folder_id / label_id 必须且只能提供一个
+lark_invoke(tool_name="lark_mail_user_mailbox_threads_list", args={params: {"user_mailbox_id": "me", "page_size": 20, "folder_id": "INBOX"}})
+
+lark_invoke(tool_name="lark_mail_user_mailbox_threads_list", args={params: {"user_mailbox_id": "me", "page_size": 20, "label_id": "FLAGGED"}})
 ```
 
 **POST — `params` + `data`**（`parameters` 中有 path，`requestBody` 有 body 字段）：
@@ -258,6 +268,8 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_mail_message` | Use only when reading full content for one email by one message ID. For multiple message IDs, use `lark_mail_messages`; do not loop `lark_mail_message`. 详见 `lark_get_skill(domain="mail", section="message")`。 |
 | `lark_mail_messages` | Use when reading full content for multiple emails by message ID. Accepts comma-separated message IDs; the server handles more than 20 IDs in batches and merges output. 详见 `lark_get_skill(domain="mail", section="messages")`。 |
 | `lark_mail_thread` | Use when querying a full mail conversation/thread by thread ID. Returns all messages in chronological order, including replies and drafts, with body content and attachments metadata, including inline images. 详见 `lark_get_skill(domain="mail", section="thread")`。 |
+| `lark_mail_thread_modify` | Modify existing mail threads by adding/removing label IDs or moving them to a folder. Batches thread IDs in groups of 20 and returns success_thread_ids / failed_thread_ids. 详见 `lark_get_skill(domain="mail", section="thread-modify")`。 |
+| `lark_mail_thread_trash` | Soft-delete existing mail threads. Batches thread IDs in groups of 20 and returns success_thread_ids / failed_thread_ids. Requires `_confirm=true`. 详见 `lark_get_skill(domain="mail", section="thread-trash")`。 |
 | `lark_mail_triage` | List mail summaries (date/from/subject/message_id). Use query for full-text search, filter for exact-match conditions. 详见 `lark_get_skill(domain="mail", section="triage")`。 |
 | `lark_mail_watch` | Watch for incoming mail events via WebSocket (requires scope mail:event and bot event mail.user_mailbox.event.message_received_v1 added). Run with print_output_schema=true to see per-format field reference before parsing output. 详见 `lark_get_skill(domain="mail", section="watch")`。 |
 | `lark_mail_reply` | Reply to a message and save as draft (default). Use confirm_send=true to send immediately after user confirmation. Sets Re: subject, In-Reply-To, and References headers automatically. 详见 `lark_get_skill(domain="mail", section="reply")`。 |

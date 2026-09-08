@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.92",
-    "extracted_at": "2026-09-01",
+    "lark_cli_version": "1.0.94",
+    "extracted_at": "2026-09-08",
     "source": "https://github.com/larksuite/cli",
     "bot_declared_scopes": [
       "base:app:copy",
@@ -1591,6 +1591,14 @@
     },
     {
       "service": "calendar",
+      "command": "+delete",
+      "scopes": [
+        "calendar:calendar.event:read",
+        "calendar:calendar.event:delete"
+      ]
+    },
+    {
+      "service": "calendar",
       "command": "+freebusy",
       "scopes": [
         "calendar:calendar.free_busy:read"
@@ -1608,6 +1616,13 @@
       "command": "+join-event",
       "scopes": [
         "calendar:calendar.event:join"
+      ]
+    },
+    {
+      "service": "calendar",
+      "command": "+list-attendees",
+      "scopes": [
+        "calendar:calendar.event:read"
       ]
     },
     {
@@ -2429,6 +2444,62 @@
     },
     {
       "service": "mail",
+      "command": "+rule-create",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+rule-delete",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+rule-disable",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+rule-enable",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+rule-get",
+      "scopes": [
+        "mail:user_mailbox.rule:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+rule-list",
+      "scopes": [
+        "mail:user_mailbox.rule:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+rule-reorder",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+rule-update",
+      "scopes": [
+        "mail:user_mailbox.rule:write"
+      ]
+    },
+    {
+      "service": "mail",
       "command": "+send",
       "scopes": [
         "mail:user_mailbox.message:send",
@@ -2489,6 +2560,20 @@
         "mail:user_mailbox.message.address:read",
         "mail:user_mailbox.message.subject:read",
         "mail:user_mailbox.message.body:read"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+thread-modify",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
+      ]
+    },
+    {
+      "service": "mail",
+      "command": "+thread-trash",
+      "scopes": [
+        "mail:user_mailbox.message:modify"
       ]
     },
     {
@@ -2648,6 +2733,64 @@
     },
     {
       "service": "okr",
+      "command": "+comment-create",
+      "scopes": [
+        "okr:okr.comment.writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "command": "+comment-delete",
+      "scopes": [
+        "okr:okr.comment.delete"
+      ]
+    },
+    {
+      "service": "okr",
+      "command": "+comment-detail",
+      "scopes": [
+        "okr:okr.comment.readonly",
+        "okr:okr.content:readonly",
+        "okr:okr.progress:readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "command": "+comment-get",
+      "scopes": [
+        "okr:okr.comment.readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "command": "+comment-list",
+      "scopes": [
+        "okr:okr.comment.readonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "command": "+comment-patch",
+      "scopes": [
+        "okr:okr.comment.writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "command": "+comment-reopen",
+      "scopes": [
+        "okr:okr.comment.writeonly"
+      ]
+    },
+    {
+      "service": "okr",
+      "command": "+comment-solve",
+      "scopes": [
+        "okr:okr.comment.writeonly"
+      ]
+    },
+    {
+      "service": "okr",
       "command": "+create",
       "scopes": [
         "okr:okr.content:writeonly"
@@ -2739,22 +2882,6 @@
     },
     {
       "service": "sheets",
-      "command": "+add-dimension",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+append",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
       "command": "+batch-chart-create",
       "scopes": [
         "sheets:spreadsheet:write_only"
@@ -2766,14 +2893,6 @@
       "scopes": [
         "sheets:spreadsheet:read",
         "sheets:spreadsheet:write_only"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+batch-set-style",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
       ]
     },
     {
@@ -2964,53 +3083,6 @@
     },
     {
       "service": "sheets",
-      "command": "+copy-sheet",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+create",
-      "scopes": [
-        "sheets:spreadsheet:create",
-        "sheets:spreadsheet:write_only"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+create-filter-view",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+create-filter-view-condition",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+create-float-image",
-      "scopes": [
-        "sheets:spreadsheet:write_only"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+create-sheet",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
       "command": "+csv-get",
       "scopes": [
         "sheets:spreadsheet:read"
@@ -3021,53 +3093,6 @@
       "command": "+csv-put",
       "scopes": [
         "sheets:spreadsheet:write_only"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+delete-dimension",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+delete-dropdown",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+delete-filter-view",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+delete-filter-view-condition",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+delete-float-image",
-      "scopes": [
-        "sheets:spreadsheet:write_only"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+delete-sheet",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
       ]
     },
     {
@@ -3157,14 +3182,6 @@
     },
     {
       "service": "sheets",
-      "command": "+export",
-      "scopes": [
-        "docs:document:export",
-        "drive:file:download"
-      ]
-    },
-    {
-      "service": "sheets",
       "command": "+filter-create",
       "scopes": [
         "sheets:spreadsheet:write_only"
@@ -3221,13 +3238,6 @@
     },
     {
       "service": "sheets",
-      "command": "+find",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
       "command": "+float-image-create",
       "scopes": [
         "sheets:spreadsheet:write_only"
@@ -3263,34 +3273,6 @@
     },
     {
       "service": "sheets",
-      "command": "+get-dropdown",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+get-filter-view",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+get-filter-view-condition",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+get-float-image",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
       "command": "+history-list",
       "scopes": [
         "sheets:spreadsheet:read"
@@ -3307,66 +3289,6 @@
       "service": "sheets",
       "command": "+history-revert-status",
       "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+info",
-      "scopes": [
-        "sheets:spreadsheet.meta:read",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+insert-dimension",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+list-filter-view-conditions",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+list-filter-views",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+list-float-images",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+media-upload",
-      "scopes": [
-        "docs:document.media:upload"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+merge-cells",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+move-dimension",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
         "sheets:spreadsheet:read"
       ]
     },
@@ -3428,21 +3350,6 @@
     },
     {
       "service": "sheets",
-      "command": "+read",
-      "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+replace",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
       "command": "+revision-get",
       "scopes": [
         "sheets:spreadsheet:read"
@@ -3453,22 +3360,6 @@
       "command": "+rows-resize",
       "scopes": [
         "sheets:spreadsheet:write_only"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+set-dropdown",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+set-style",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
       ]
     },
     {
@@ -3608,61 +3499,6 @@
     },
     {
       "service": "sheets",
-      "command": "+unmerge-cells",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+update-dimension",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+update-dropdown",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+update-filter-view",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+update-filter-view-condition",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+update-float-image",
-      "scopes": [
-        "sheets:spreadsheet:write_only"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+update-sheet",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
       "command": "+workbook-create",
       "scopes": [
         "sheets:spreadsheet:create",
@@ -3690,22 +3526,6 @@
       "service": "sheets",
       "command": "+workbook-info",
       "scopes": [
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+write",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
-        "sheets:spreadsheet:read"
-      ]
-    },
-    {
-      "service": "sheets",
-      "command": "+write-image",
-      "scopes": [
-        "sheets:spreadsheet:write_only",
         "sheets:spreadsheet:read"
       ]
     },
