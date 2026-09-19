@@ -15,6 +15,9 @@ lark_im_chat_messages_list(chat_id="oc_xxx")
 # Get direct messages with a user (pass open_id and resolve p2p chat_id automatically)
 lark_im_chat_messages_list(user_id="ou_xxx")
 
+# Read message context as compact Markdown
+lark_im_chat_messages_list(chat_id="oc_xxx", concise=true)
+
 # Specify a time range (ISO 8601)
 lark_im_chat_messages_list(chat_id="oc_xxx", start="2026-03-10T00:00:00+08:00", end="2026-03-11T00:00:00+08:00")
 
@@ -49,6 +52,7 @@ lark_im_chat_messages_list(chat_id="oc_xxx", format="json")
 | `page_limit` | No | Maximum pages fetched by `page_all` (default 10, range 1-1000) |
 | `no_reactions` | No | Skip auto-fetching the `reactions` block |
 | `download_resources` | No | Download message resources (image/file/audio/video/media + post-embedded, excluding stickers) into `./lark-im-resources/` and attach a `resources` block. Off by default; no extra requests when omitted |
+| `concise` | No | Render compact Markdown for message context. Mutually exclusive with an explicit `format` |
 
 > Rule: `chat_id` and `user_id` are mutually exclusive. You must provide exactly one of them.
 

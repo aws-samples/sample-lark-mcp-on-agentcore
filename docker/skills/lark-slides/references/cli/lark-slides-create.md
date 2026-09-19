@@ -73,7 +73,7 @@ lark_slides_create(title="项目汇报", slides='["<slide xmlns=...>...</slide>"
 ]
 ```
 
-JSON string 数组，每个元素是一页 slide 的完整 XML；数组元素是页面 XML 原文，包装成 API 所需的 `{"slide": {"content": …}}` 并逐页调用由服务端完成。
+JSON string 数组，每个元素是一页 slide 的完整 XML；数组元素是页面 XML 原文，请求封装和逐页提交由 `lark_slides_create` 完成。
 
 ### 本地图片：`@<path>` 占位符
 

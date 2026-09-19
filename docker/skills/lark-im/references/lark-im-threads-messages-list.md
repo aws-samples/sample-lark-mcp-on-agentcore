@@ -28,6 +28,9 @@ lark_im_threads_messages_list(thread="omt_xxx", page_all=true)
 lark_im_threads_messages_list(thread="omt_xxx", format="pretty")
 lark_im_threads_messages_list(thread="omt_xxx", format="table")
 lark_im_threads_messages_list(thread="omt_xxx", format="csv")
+
+# Read thread context as compact Markdown
+lark_im_threads_messages_list(thread="omt_xxx", concise=true)
 ```
 
 ## Parameters
@@ -43,6 +46,7 @@ lark_im_threads_messages_list(thread="omt_xxx", format="csv")
 | `page_all` | No | Automatically fetch and merge subsequent pages; capped by `page_limit` |
 | `page_limit` | No | Maximum pages fetched by `page_all` (default 10, range 1-1000) |
 | `format` | No | Output format: `json` (default) / `pretty` / `table` / `ndjson` / `csv` |
+| `concise` | No | Render compact Markdown for thread context. Mutually exclusive with an explicit `format` |
 
 ## Core Constraints
 

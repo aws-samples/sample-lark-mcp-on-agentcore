@@ -142,4 +142,4 @@ lark_sheets_sparkline_delete(url="...", sheet_id="<SID>", group_id="grpA", _conf
   - **`lark_sheets_sparkline_delete`**：只接 `group_id`（整组删除），**没有** `properties`，无法删组内单项。
   - `properties`（仅 `lark_sheets_sparkline_create` / `lark_sheets_sparkline_update`）顶层只接 `config`（同组共享样式）和 `sparklines`（迷你图项数组）；`lark_sheets_sparkline_create` 要求每个 `sparklines[i]` 含 `position` 与 `source`（或 `source_range`，二选一）。
   - `lark_sheets_sparkline_delete`（high-risk-write）需 `_confirm=true`。
-- `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_sparkline_list(group_id="<id>")` 查看 `config` / `sparklines`。
+- `Execute`：create/update 后必须调用 `lark_sheets_sparkline_list(group_id="<id>")` 核对 config、项目数量、source 与 position；delete 后 list 确认目标组不存在。

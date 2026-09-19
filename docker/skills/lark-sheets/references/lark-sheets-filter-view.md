@@ -131,4 +131,4 @@ lark_sheets_filter_view_create(url="...", sheet_id="<SID>", view_name="活跃用
 ### Validate / Execute 约束
 
 - `Validate`：XOR 公共四件套；`lark_sheets_filter_view_create` 校验 `range` 起始行为表头（第一行）；`lark_sheets_filter_view_update` 必须先 `lark_sheets_filter_view_list` 确认 view 存在，`properties` 必传（整组覆盖式）；`lark_sheets_filter_view_delete` 为高风险写操作，需 `_confirm=true` 确认。
-- `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_filter_view_list(view_id="<new>")` 比对当前 range + rules。
+- `Execute`：写后不自动回读；create/update 后必须调用 `lark_sheets_filter_view_list(view_id="<id>")` 比对 range + rules；delete 后 list 确认目标 view 不存在。

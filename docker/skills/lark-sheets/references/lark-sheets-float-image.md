@@ -21,7 +21,7 @@
 典型工作流：先读取现有浮动图片了解配置 → 执行创建/更新/删除 → **必须再次读取验证结果**。
 
 **常见配置错误（必须注意）**：
-- **单元格图片 vs 浮动图片选择错误（最易选错）**：图与某条记录一一对应、要随行排序 / 筛选 / 增删时，应走 `lark_sheets_cells_set_image`（见顶部判别），用浮动图会错位。
+- **单元格图片 vs 浮动图片选择错误**：图与某条记录一一对应、要随行排序 / 筛选 / 增删时，应走 `lark_sheets_cells_set_image`（见顶部判别），用浮动图会错位。
 - **图片位置参数要精确**：锚点单元格的行列索引和偏移量决定了图片位置，设置不当会导致图片遮挡数据
 - **创建后必须验证**：调用 `lark_sheets_float_image_list` 确认图片位置和大小正确
 
@@ -141,4 +141,4 @@ lark_sheets_float_image_delete(url="...", sheet_id="<SID>", float_image_id="<IMG
 
 - `Validate`：XOR 公共四件套；`lark_sheets_float_image_create` 要求 `image` / `image_token` / `image_uri` **恰好给一个**，`position_row` / `position_col` 与 `size_width` / `size_height` 必填且为合法整数；传 `image` 时还会校验路径安全。`lark_sheets_float_image_update` 必须传 `float_image_id`，并和 create 一样必填 `image_name` / `position_row` / `position_col` / `size_width` / `size_height`（缺任一核心字段直接报错，不会静默发 0）；图片源 `image_token` / `image_uri` 可省（省略保留原图），给则二选一；`lark_sheets_float_image_delete` 为 high-risk-write，需 `_confirm=true` 确认。
 - 传 `image` 时会多走一步本地图片上传（`POST /open-apis/drive/v1/medias/upload_all`，`parent_type=sheet_image`）。
-- `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_float_image_list(float_image_id="<id>")` 比对新位置 / 尺寸。
+- `Execute`：写后不自动回读；create/update 后必须调用 `lark_sheets_float_image_list(float_image_id="<id>")` 比对位置与尺寸（它不回传 `image_name`，名称无从核对）；delete 后 list 确认目标不存在。

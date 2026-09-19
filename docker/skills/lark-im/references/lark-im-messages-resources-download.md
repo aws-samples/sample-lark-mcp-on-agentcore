@@ -41,6 +41,8 @@ Different resource markers in message content correspond to different `file_key`
 
 Stickers cannot be downloaded with this tool.
 
+A folder itself cannot be downloaded: expand it first through `lark_invoke` with `tool_name="lark_im_files_folder"`, passing `file_key` / `srctype` / `srcid` inside `params` (see the Folder resources note in `lark_get_skill(domain="im")`), then download the files it contains.
+
 ## Output
 
 On success, read:

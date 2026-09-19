@@ -237,7 +237,6 @@ export const SCOPE_ALLOWLIST: ReadonlySet<string> = new Set([
   "task:tasklist:read",
   "task:tasklist:write",
   "task:tasklist:writeonly",
-  "vc:meeting.bot.join:write",
   "vc:meeting.interaction:write",
   "vc:meeting.meetingevent:read",
   "vc:meeting.message:write",

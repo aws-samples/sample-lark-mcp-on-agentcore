@@ -1,11 +1,11 @@
 # im +chat-create
 
-Create a group chat. Supports both user identity and bot identity. You can specify the group name, description, members (users/bots), owner, chat type (private/public), and group mode. Set `chat_mode="topic"` to create a topic chat.
+Create a group chat. Under this server the caller is always the authorized **user**. You can specify the group name, description, members (users/bots), owner, chat type (private/public), and group mode. Set `chat_mode="topic"` to create a topic chat.
 
 This tool maps to: `lark_im_chat_create` (internally calls `POST /open-apis/im/v1/chats`).
 
-- Bot identity requires the `im:chat:create` scope.
-- User identity requires the `im:chat:create_by_user` scope.
+- This shortcut needs the `im:chat:create_by_user` scope, which is grantable here.
+- ⚠️ The bot-identity path needs `im:chat:create`, a bot-exclusive scope this deployment cannot grant. Do not report it as the missing scope on a permission error — `im:chat:create_by_user` is the operative one.
 
 ## Commands
 
@@ -31,14 +31,8 @@ lark_im_chat_create(name="My Group", bots="cli_aaa,cli_bbb")
 # Invite both users and bots
 lark_im_chat_create(name="My Group", users="ou_aaa", bots="cli_aaa")
 
-# Make the creating bot a group manager (bot identity only)
-lark_im_chat_create(name="My Group", set_bot_manager=true)
-
 # JSON output
 lark_im_chat_create(name="My Group", format="json")
-
-# Create a group with bot identity
-lark_im_chat_create(name="My Group", users="ou_aaa")
 ```
 
 ## Parameters
@@ -52,48 +46,27 @@ lark_im_chat_create(name="My Group", users="ou_aaa")
 | `owner` | No | Format `ou_xxx` | Owner open_id (defaults to the bot when using bot identity, or the authorized user when using user identity) |
 | `type` | No | `private` (default) or `public` | Group type. Default to `private`; pass `public` only when the user explicitly asks for a discoverable/public group. |
 | `chat_mode` | No | `group` (default) or `topic` | Group mode; `topic` creates a topic chat (not the same as `group_message_type=thread`). When the user asks for a topic chat, pass `topic` explicitly — do not rely on the default. |
-| `set_bot_manager` | No | - | Set the creating bot as a group manager (only effective with bot identity) |
+| `set_bot_manager` | No | - | Set the creating bot as a group manager. ⚠️ Only effective under bot identity — passing it here is accepted and silently does nothing, so do not use it |
 | `format` | No | - | Output as JSON |
 
 > **`chat_mode="topic"` vs "normal group with topic-message mode"**: `chat_mode="topic"` here creates a 话题群 — the entire group is a topic chat. This is different from "normal group (`chat_mode=group`) + topic-message mode (`group_message_type=thread`)". This tool exposes only `chat_mode`; `group_message_type` is intentionally not surfaced.
 
 ## AI Usage Guidance
 
-### When using bot identity
-
-Bot may fail to invite users who are mutually invisible to it during group creation (error 232043). To avoid this, use the **two-step flow** below instead of passing other users' open_ids in `users`.
-
-1. **Get the current user's open_id:** Call `lark_contact_search_user(query="<name or email>")` to retrieve it.
-2. **Create the group — by default include the current user:**
-
-   ```
-   lark_im_chat_create(name="<group name>", users="<current user open_id>")
-   ```
-
-   **Default behavior:** Always add the current user to the group, unless the user explicitly says "do not add me" or "bot-only group" — only then omit `users`.
-
-3. **Add other members via user identity** (requires the current user to be in the group):
-
-   ```
-   lark_invoke(tool_name="lark_im_chat_members_create", args={
-     params: {"chat_id": "<chat_id from step 2>", "member_id_type": "open_id", "succeed_type": 1},
-     data: {"id_list": ["ou_aaa", "ou_bbb"]}
-   })
-   ```
-
-   `succeed_type=1` ensures reachable users are added successfully; unreachable ones are returned in `invalid_id_list` instead of failing the whole request.
-
-4. **Check `invalid_id_list`** in the response. If non-empty, report to the user which members could not be added.
-
-### When using user identity
-
-User identity does not have the bot visibility limitation, so you can create the group and invite members in one step:
+This server always acts as the authorized **user**, so the one-step flow below is the operative guidance.
 
 ```
 lark_im_chat_create(name="<group name>", users="ou_aaa,ou_bbb")
 ```
 
-The authorized user is automatically the group creator and member.
+The authorized user is automatically the group creator and member. User identity has no bot-visibility limitation, so members can be invited in the same call.
+
+<details>
+<summary>⚠️ Bot-identity background (not reachable here) — why a two-step flow exists</summary>
+
+Under bot identity a bot may fail to invite users who are mutually invisible to it during group creation (error 232043), which is why upstream documents a two-step create-then-add flow. **This server never uses bot identity, so neither the error nor the workaround applies** — do not follow it, and do not offer it to the user as an option.
+
+</details>
 
 ## Output Fields
 
@@ -143,7 +116,7 @@ lark_im_messages_send(chat_id="<chat_id>", text="Welcome, everyone!")
 | `invalid user id: expected open_id (ou_xxx)` | Invalid user ID format | Use the `ou_xxx` format for users |
 | `invalid bot id: expected app ID (cli_xxx)` | Invalid bot ID format | Use the `cli_xxx` format for bots |
 | `invalid owner: expected open_id (ou_xxx)` | Invalid owner ID format | Use the `ou_xxx` format for the owner |
-| `bot is invisible to user` (232043) | The bot and target users are mutually invisible | Follow the two-step flow in AI Usage Guidance above — do not pass other users in `users` during creation |
+| `bot is invisible to user` (232043) | The bot and target users are mutually invisible | ⚠️ Bot-identity only — unreachable here. Under user identity this error does not occur; if you see it, the call did not run as this server's user |
 
 ## References
 

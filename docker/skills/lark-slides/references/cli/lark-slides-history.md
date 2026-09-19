@@ -123,11 +123,3 @@ lark_slides_history_revert_status(presentation="<slides_url_or_token>", task_id=
 ```
 lark_slides_xml_get(presentation="<slides_url_or_token>", output=".lark-slides/plan/<presentation>/readback.xml")
 ```
-
-如果只需要快速检查返回结构，也可以走底层原生 API：
-
-```
-lark_invoke(tool_name="lark_slides_xml_presentations_get", args={
-  params: {"xml_presentation_id": "<xml_presentation_id>", "revision_id": -1}
-})
-```

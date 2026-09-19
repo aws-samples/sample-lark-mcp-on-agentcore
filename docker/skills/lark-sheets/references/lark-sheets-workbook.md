@@ -31,7 +31,8 @@
 **常见配置错误（必须注意）**：
 - **获取结构是第一步**：任何表格操作前必须先调用 `lark_sheets_workbook_info`，不要跳过直接操作。返回的行列数、子表列表是后续所有操作的基础
 - **sheet_id 不要写错**：从 `lark_sheets_workbook_info` 返回值中精确获取 `sheet_id`，不要手动拼写或从 URL 中猜测
-- **优先使用 `sheet_id`**：虽然飞书表格不允许子表重名，但 `sheet_id` 是稳定标识符，跨多轮操作时不会因用户中途重命名而失效
+- **未点名网格目标**：默认候选仅 `resource_type=sheet && is_hidden=false` 的可见普通网格；唯一候选才自动选，多候选按用户给的表名/表头/内容匹配，仍不唯一则询问。禁止按 `index` 或猜 `Sheet1`；用户显式点名 hidden sheet 可操作，bitable / `#UNSUPPORTED_TYPE` 改走对应产品的工具。
+- **xlsx 验收触发边界**：普通在线交付不导出。只有用户明确要求本地 xlsx / 下载 / 打印时，才在 `output_path` 导出后验收；本地 Excel 输入则直接验证导入前已有的本地文件，导入在线后不再导出回验。允许触发时确认文件存在、可重开，并核对公式错误值、样式和对象。
 
 ## 工具
 
@@ -150,7 +151,7 @@ _仅含公共参数。_
 | `title` | string | required | 新 spreadsheet 标题 |
 | `folder_token` | string | optional | 目标文件夹 token；省略时放在云空间根目录 |
 | `values` | string（简单 JSON） | optional | untyped 初始数据，一个 JSON 二维数组（表头并入第一行）：`[["列A","列B"],["alice",95]]`；值原样写入、类型由飞书自动识别（日期 / 数字会落成文本，需类型保真改用 `sheets`），走与 `sheets` 相同的分批 `lark_sheets_cells_set`；配 `styles` 控制格式/颜色/合并/行列尺寸 |
-| `sheets` | string（复合 JSON） | optional | 建表后写入的 typed 表格协议 JSON（同 `lark_sheets_table_put`）：顶层 `{"sheets":[...]}`，每个数组项是一张子表 `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` —— `name` 与外层 `sheets` 数组都不可省。Agents 用 `lark-sheets/scripts/sheets_df.py` 的 `df_to_sheet(df, name)` 把 DataFrame 转成一项再包 `{"sheets":[...]}`。与 `values` 互斥；新表默认子表复用为第一个子表，日期/数字类型保真。 |
+| `sheets` | string（复合 JSON） | optional | 建表后写入的 typed 表格协议 JSON（同 `lark_sheets_table_put`）：顶层 `{"sheets":[...]}`，每个数组项是一张子表 `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` —— `name` 与外层 `sheets` 数组都不可省。Agents 用 `lark-sheets/scripts/lark_sheets_df.py` 的 `df_to_sheet(df, name)` 把 DataFrame 转成一项再包 `{"sheets":[...]}`。与 `values` 互斥；新表默认子表复用为第一个子表，日期/数字类型保真。 |
 | `styles` | string（复合 JSON） | optional | 建表时同时写入的视觉处理操作 JSON：顶层 `{styles:[...]}`，每项对应一个目标子表、含 `name`，并至少给 `cell_styles` / `row_sizes` / `col_sizes` / `cell_merges` 之一。`cell_styles` 用 A1 单元格 range + 扁平样式字段（字段同 `lark_sheets_cells_set_style`，含 number_format / 颜色 / 对齐 / border_styles）；row/col sizes 用行/列范围 + type/size；merges 用单元格 range + 可选 merge_type。与 `sheets` 搭配时 styles 数组长度/顺序/name 必须与 `sheets.sheets` 对应；与 `values` 搭配时只给一个 styles 项（其 name 忽略）。 |
 
 ### `lark_sheets_workbook_export`
@@ -223,6 +224,8 @@ _一个或多个子表的 typed 数据，每个数组元素写入一张子表；
 
 新建电子表格，可选预填数据。两种数据入口（untyped `values` / typed `sheets` JSON）**互斥**，按需选一——两者都走同一条分批写入：
 
+> ⚠️ **`title` 必填，且不会从数据里推断**：它是这张表在云空间里的名字，漏了会在建表之前就失败（`required flag(s) "title" not set`），数据一行都不会写。子表名写在 `sheets` 的 `name` 字段里，两者是两码事——`title="2026年Q3销售分析"` 配 `sheets` 里的 `"name": "明细"`。
+
 ```
 # 1) untyped：values（一个二维数组，表头并入第一行；值原样写、类型由飞书自动识别，
 #    日期会落成文本，配 styles 控制格式）
@@ -242,7 +245,7 @@ lark_sheets_workbook_create(title="交易", sheets={
 
 `sheets` 协议与 `lark_sheets_table_put` 完全同构（字段含义见 `lark_get_skill(domain="sheets", section="write-cells")` 的 `lark_sheets_table_put`）。关键差异：**新建工作簿的默认子表会被复用为第一个子表**（重命名后承载数据），不会残留空 `Sheet1`；其余子表按需新建。它把 `lark_sheets_table_put` 单独做不到的"建表 + typed 写入"合到一次调用，是「pandas 算完直接落地一张带真日期的新表」的首选。回读校验用 `lark_sheets_table_get`（与 `sheets` 同构、可 round-trip）。
 
-> 💡 pandas DataFrame 走 `sheets` 时用 `from sheets_df import df_to_sheet`（脚本 `lark-sheets/scripts/sheets_df.py`，与 `lark_sheets_table_put` 共用同一份 helper；import 前先把该 `scripts/` 目录加入 `sys.path`），多子表场景 helper 优势更明显：
+> 💡 pandas DataFrame 走 `sheets` 时用 `from lark_sheets_df import df_to_sheet`（脚本 `lark-sheets/scripts/lark_sheets_df.py`，与 `lark_sheets_table_put` 共用同一份 helper；import 前先把该 `scripts/` 目录加入 `sys.path`），多子表场景 helper 优势更明显：
 > ```python
 > payload = {"sheets": [df_to_sheet(income, "Income Statement"),
 >                       df_to_sheet(balance, "Balance Sheet"),
@@ -333,9 +336,11 @@ lark_sheets_workbook_import(file="./report.csv", folder_token="<FOLDER_TOKEN>", 
 
 - **不接受任何 spreadsheet / sheet 定位参数**（它是新建，不操作已有表）：只有 `file`（必填）/ `folder_token` / `name`。
 - **`file` 只接受相对路径**：传 `./file.xlsx` / `data/file.xlsx`；传 `/home/.../file.xlsx`、`C:\...\file.xlsx` 这类绝对路径会被判定 `unsafe file path` 拒绝。
-- 导入成功后把新表链接交付给用户。
+- 导入成功后把新表链接通过宿主的产物交付通道交出去，并确认这次调用返回成功；只写进回复正文不算交付。
 - 本地表格文件 → 飞书电子表格一律用本工具，**不要**用 `lark_drive_import` 导电子表格——它是 sheets 之外的通用导入、还需额外指定 `type`，绕路且更易错。只有要把本地表格导入成**多维表格**（bitable）时，才改用 `lark_drive_import` 并传 `type="bitable"`。
-- 返回 `token` / `url`（导入完成的新表格）/ `ticket` / `ready` / `job_status`；未在内置轮询窗口内完成时返回 `timed_out=true` 与续查命令 `next_command`。
+- 返回 `token` / `url` / `ticket` / `ready` / `job_status`。只有 `ready=true` 且 `job_status=0` 才算导入完成；随后用新 URL 调 `lark_sheets_workbook_info`，有点名内容契约时再回读关键 sheet/range。`timed_out=true` 时按 `next_command` 续查，不能交付为成功。
+- **值与公式保真，版式不保真**：走一圈后值、公式、数字格式、合并区、冻结、下拉校验都原样保留；行高列宽、边框、主题色填充（`fgColor theme=N`）、以及**跟随工作簿默认字体的格**（源表默认字体是中文字体时，这类格会回落到系统默认）则会变，与本轮做了什么无关。要求保留原版式时，导入后按源文件的值用 `lark_sheets_rows_resize` / `lark_sheets_cols_resize` 回写尺寸（飞书用像素、Excel 行高用磅，换算约 `px ≈ pt × 4/3`），其余版式差异回写不了，在交付说明里写明。
+- 轮询由工具内部完成：本工具与其它异步工具都内置轮询，返回时状态已是最新，`next_command` 直接重跑即可，不必也不要额外等待。
 
 ### `lark_sheets_workbook_export`
 
@@ -355,7 +360,7 @@ lark_sheets_workbook_export(url="...", output_path="./downloads/")
 lark_sheets_workbook_export(url="...", file_extension="csv", sheet_id="<SID>", output_path="./sheet.csv")
 ```
 
-> ⚠️ **默认不下载**：省略 `output_path` 时只触发并轮询导出任务，不写本地文件——给「先排队再续传」用例留出口。要落盘必须显式给 `output_path`。
+> ⚠️ **默认不下载**：省略 `output_path` 时只创建并轮询导出任务。普通在线交付不得为了内部验证主动导出；只有用户明确要求本地 xlsx / 下载 / 打印时才给 `output_path` 并验收。验收时确认文件存在、可重开，并核对公式错误值、样式和对象。
 >
 > **与 `lark_drive_export`（`doc_type="sheet"`）的关系**：本工具是它的特化封装，固定 `doc_type="sheet"`，并把 drive 的 `output_dir` / `file_name` / `overwrite` 三参数折叠成单一 `output_path` 简化常见用例。代价是默认值不同：`lark_drive_export` 默认下载到当前目录、本工具默认不下载。需要细控目录/文件名/是否覆盖的，回退到 `lark_drive_export` 并传 `doc_type="sheet"`。
 
@@ -419,4 +424,4 @@ lark_sheets_sheet_hide_gridline(url="...", sheet_id="<SID>")
 ### Validate / Execute 约束
 
 - `Validate`：XOR 公共四件套；`lark_sheets_sheet_create` 校验 `title` 非空、`row_count` ≤ 50000、`col_count` ≤ 200；`lark_sheets_workbook_create` 的 `sheets` 与 `values` **互斥**，给了 `sheets` 则按 typed 协议校验 payload（其余约束同 `lark_sheets_table_put`）。
-- `Execute`：写操作不自动回读；如需确认目标 sheet 的新状态，自行调用 `lark_sheets_workbook_info`。
+- `Execute`：sheet create/rename/move/copy/hide/unhide/delete 后必须调用 `lark_sheets_workbook_info`，按稳定的 `sheet_id` 核对名称、顺序、可见性与数量；import 按上方 ready/job_status + workbook-info 闭环；需要本地文件的 export 按 output_path + 文件存在/可重开闭环。

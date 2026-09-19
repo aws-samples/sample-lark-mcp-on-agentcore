@@ -110,11 +110,32 @@ function translateFlagDescription(desc) {
   // parenthetical without the "supports" verb (calendar +create/+update
   // `--description`). Same noise, different shape.
   out = out.replace(/\s*\(@file or -(?:[^()]|\([^()]*\))*\)/g, '');
+  // "…, or @file / - for stdin" — MUST come before the generic " or @file" rule
+  // below, which would otherwise consume only the `@file` half and leave a
+  // dangling "/ - for stdin" fragment (apps +user-id-convert `--ids`).
+  out = out.replace(/,?\s*or @file\s*\/\s*-\s*for stdin/gi, '');
   // inline "or @file" alternatives ("filter JSON object or @file, ...")
   out = out.replace(/\s+or @file/gi, '');
   // ", inline or via @file/-" — lark-cli 1.0.86 states the channel up front
   // instead of as a trailing hint (apps +db-sync-create/update `--config`).
   out = out.replace(/,?\s*inline or via @file(?:\/-)?/gi, '');
+  // "use @file-path or - for stdin" / ", @file-path, or - for stdin" — the
+  // channel hint written with a DESCRIPTIVE placeholder rather than the literal
+  // token `@file` (docs +script `--content` / `--presentation-decision`). The
+  // placeholder is renamed across releases (`@relative-file` at 1.0.94 →
+  // `@file-path` at 1.0.96), so match any `@<word>` rather than one spelling:
+  // the hint is CLI-only either way — an MCP agent has no local filesystem and
+  // no stdin, it passes the value inline.
+  out = out.replace(/[;,]?\s*(?:use\s+)?@[a-z][a-z0-9-]*,?\s*or\s+-\s+for stdin/gi, '');
+  // "…, or @path to read one from a file" — the hint as a relative clause
+  // rather than a parenthetical (slides +create `--slide`). NOTE this must not
+  // touch `<img src="@./local.png">`, which is a DATA literal the agent writes
+  // into the XML, not a channel hint; that one carries no "to read from a file".
+  out = out.replace(/,?\s*or @[a-z][a-z0-9-]*\s+to read\s+(?:one\s+)?from a file/gi, '');
+  // "Accepts inline JSON, `@reference-map.json` (relative path), or `-` to read
+  // from stdin." — keep the inline channel, drop the two the agent cannot use
+  // (docs +create / +update `--reference-map`).
+  out = out.replace(/,\s*`?@[a-z][a-z0-9-]*\.[a-z]+`?\s*\([^)]*\),?\s*or\s*`?-`?\s*to read from stdin\.?/gi, '.');
   // "run `--print-schema` for the full structure" → point at the embedded
   // schema. Consume a leading connector (`;`, `—`, `-`) so "Deeply nested —
   // run …" doesn't leave a dangling dash before the replacement.

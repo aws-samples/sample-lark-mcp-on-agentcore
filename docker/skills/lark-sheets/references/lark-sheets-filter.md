@@ -126,4 +126,4 @@ lark_sheets_filter_delete(url="...", sheet_id="<SID>")
 ### Validate / Execute 约束
 
 - `Validate`：XOR 公共四件套；`lark_sheets_filter_create` 校验 `range` 至少 2 行（表头 + 至少 1 行数据）；`lark_sheets_filter_update` 必须先 `lark_sheets_filter_list` 确认目标存在；`lark_sheets_filter_delete` 为高风险写操作，需 `_confirm=true` 确认。
-- `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_filter_list` 查看当前筛选条件 + 已过滤行数。
+- `Execute`：写后不自动回读；create/update 后必须调用 `lark_sheets_filter_list` 核对 range、rules 与已过滤行数；delete 后 list 确认筛选器不存在。

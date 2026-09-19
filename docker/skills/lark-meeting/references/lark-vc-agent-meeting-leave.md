@@ -8,12 +8,9 @@
 
 本工具对应 shortcut：`lark_vc_meeting_leave`（调用 `POST /open-apis/vc/v1/bots/leave`）。
 
-## 调用方式（应用身份，MCP server 不可用）
+## 可用性（应用身份，本服务无对应工具）
 
-```
-# 通过 meeting_id 离会
-lark_vc_meeting_leave(meeting_id="69xxxxxxxxxxxxx28")
-```
+上游已把机器人离会收窄为**仅应用身份**（`tenant_access_token`）。本 MCP server 始终使用用户身份，因此**没有对应工具**：`lark_discover` 查不到它，也不能通过 `lark_invoke` 调用。下面的参数说明仅用于理解上游能力边界，不构成可执行调用。
 
 ## 参数
 

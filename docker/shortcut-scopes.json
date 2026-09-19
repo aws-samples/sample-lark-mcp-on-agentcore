@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.94",
-    "extracted_at": "2026-09-08",
+    "lark_cli_version": "1.0.96",
+    "extracted_at": "2026-09-19",
     "source": "https://github.com/larksuite/cli",
     "bot_declared_scopes": [
       "base:app:copy",
@@ -29,7 +29,8 @@
       "im:chat:create",
       "im:message.group_msg",
       "im:message.p2p_msg:readonly",
-      "im:message:send_as_bot"
+      "im:message:send_as_bot",
+      "vc:meeting.bot.join:write"
     ]
   },
   "shortcuts": [
@@ -349,6 +350,13 @@
       "command": "+env-set",
       "scopes": [
         "spark:app:write"
+      ]
+    },
+    {
+      "service": "apps",
+      "command": "+export",
+      "scopes": [
+        "spark:app:read"
       ]
     },
     {
@@ -2002,6 +2010,7 @@
       "command": "+preview",
       "scopes": [
         "drive:file:download",
+        "drive:drive.metadata:readonly",
         "wiki:node:retrieve"
       ]
     },
@@ -3479,7 +3488,8 @@
       "service": "sheets",
       "command": "+styles-put",
       "scopes": [
-        "sheets:spreadsheet:write_only"
+        "sheets:spreadsheet:write_only",
+        "sheets:spreadsheet:read"
       ]
     },
     {
@@ -3799,16 +3809,14 @@
     {
       "service": "vc",
       "command": "+meeting-join",
-      "scopes": [
-        "vc:meeting.bot.join:write"
-      ]
+      "scopes": [],
+      "userCallable": false
     },
     {
       "service": "vc",
       "command": "+meeting-leave",
-      "scopes": [
-        "vc:meeting.bot.join:write"
-      ]
+      "scopes": [],
+      "userCallable": false
     },
     {
       "service": "vc",
@@ -3938,7 +3946,8 @@
       "service": "wiki",
       "command": "+node-delete",
       "scopes": [
-        "wiki:node:create"
+        "wiki:node:create",
+        "wiki:node:retrieve"
       ]
     },
     {

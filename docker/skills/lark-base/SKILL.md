@@ -87,7 +87,7 @@ description: "飞书多维表格（Base）操作：建表、字段、记录、�
 | 写记录 | `lark_base_record_batch_create()` / `lark_base_record_batch_update()` | 外层 JSON 形状和 CellValue 见下方「Record 核心路径」；`select` 选项、人员/群组 ID 先用 `lark_base_field_list()` / `lark_contact_search_user()` / `lark_im_chat_search()` 确认 |
 | 附件字段 | `lark_base_record_upload_attachment()` / `lark_base_record_download_attachment()` / `lark_base_record_remove_attachment()` | 使用附件操作工具上传本地文件系统中的文件，下载/删除按 file token 或字段定位 |
 | 删除记录 / 分享记录链接 / 历史 | `lark_base_record_delete()` / `lark_base_record_share_link_create()` / `lark_base_record_history_list()` | 删除前确认 record；分享链接最多 100 条；历史读 `lark_get_skill(domain="base", section="record-history-list")`，只查单条记录，不做整表审计 |
-| 管理视图 | `lark_base_view_*` | `lark_base_view_set_filter()` 读 `lark_get_skill(domain="base", section="view-set-filter")`（filter 条件结构见公共协议 `lark_get_skill(domain="base", section="filter-condition")`）；其余配置先 get 现状，再按返回结构更新 |
+| 管理视图 | `lark_base_view_*` | 读取已有视图用 `lark_base_view_list()` / `lark_base_view_get()`；**所有 View 编辑（创建、改名、筛选、排序、分组、字段显隐、时间条、卡片、删除）前必读 `lark_get_skill(domain="base", section="view")`**，视图选型和完整操作示例都在该 reference 中；筛选 JSON 细节继续读 `lark_get_skill(domain="base", section="view-set-filter")`（filter 条件结构见公共协议 `lark_get_skill(domain="base", section="filter-condition")`） |
 | 公式字段 | `lark_base_field_create(json='{"type":"formula",...}')` | 必读 `lark_get_skill(domain="base", section="field-formula")`，读后再加隐藏确认 flag `i_have_read_guide=true` |
 | Lookup 字段 | `lark_base_field_create(json='{"type":"lookup",...}')` | 必读 `lark_get_skill(domain="base", section="field-lookup")`，读后再加隐藏确认 flag `i_have_read_guide=true` |
 | 表单提交 | `lark_base_form_submit()` | 先读 `lark_get_skill(domain="base", section="form-detail")` 获取题目、filter 和附件所需 `base_token`；提交 JSON 读 `lark_get_skill(domain="base", section="form-submit")` |
@@ -227,7 +227,8 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 - `lark_base_form_submit()` 是高风险写操作，必须带 `_confirm=true` 确认；调用前必须先跑 `lark_base_form_detail()`，读取 `questions[].type`、`required`、`filter` 和附件场景需要的 `base_token`；不要填写被 filter 隐藏的问题。
 - `lark_base_form_questions_update()` 是题目配置全量覆盖，不是 patch；未传字段会回落默认值，传空字符串 / `null` / 空数组会直接写入空或清空。更新前先 `lark_base_form_questions_list()` 读取当前题目，把要保留的 `title` / `description` / `required` / `option_display_mode` / `visible_rule` 等字段带回请求。
 - 表单附件不要写进 `fields`，放在 `json` 的 `attachments` 中；提交附件时必须同时传表单所属 Base 的 `base_token`。
-- `lark_base_view_set_filter()` 是唯一保留的 view reference；sort/group/card/timebar/visible-fields 这类配置先用对应 get 命令读现状，保留未修改字段，只替换用户要求变更的配置。
+- **所有 View 编辑前必读 `lark_get_skill(domain="base", section="view")`**，包括创建、改名、配置修改（筛选、排序、分组、字段显隐、时间条、卡片）和删除；视图选型、各类型适用配置和完整操作示例统一在该 reference 中。View 共享 Table 的底层记录，没有特殊展示需求时优先使用 `grid`；读取已有视图用 `lark_base_view_list()` / `lark_base_view_get()`。筛选 JSON 细节读 `lark_get_skill(domain="base", section="view-set-filter")`；sort/group/card/timebar/visible-fields 这类配置先用对应 get 工具读现状，保留未修改字段，只替换用户要求变更的配置。
+- 调整表单题目显隐和顺序：Form 在 `visible_fields` 接口中作为 View，`form_id` 传给 `view_id`。用 `lark_base_view_get_visible_fields()` 读取当前可见题目，再用 `lark_base_view_set_visible_fields()` 提交最终需要展示的完整有序题目 ID 列表；省略当前可见题目会隐藏它，加入已有隐藏 Form 成员会重新展示，空列表会隐藏全部题目。目标只能包含已有 Form 成员；仍显示题目的 `visible_rule` 只能引用位于它之前的可见题目。
 - 视图适合持久化、共享和 UI 复用；一次性筛选/排序可先用 `lark_base_record_list()` / `lark_base_record_search()` 的 filter/sort 验证结果，再按需要沉淀为持久视图。
 
 ## Dashboard / Workflow / Role
@@ -272,6 +273,7 @@ MCP server 自动使用用户身份执行所有 Base 操作（authentication is 
 - `lark_get_skill(domain="base", section="field-create")` / `lark_get_skill(domain="base", section="field-update")`：字段创建/更新工具级补充
 - `lark_get_skill(domain="base", section="field-extension")`：字段插件配置、prompt 结构与单元格更新任务
 - `lark_get_skill(domain="base", section="record-history-list")`：单条记录历史返回解释
+- `lark_get_skill(domain="base", section="view")`：View 类型选型与生命周期——创建、改名、配置修改和删除前必读
 - `lark_get_skill(domain="base", section="view-set-filter")`：视图筛选 JSON
 - `lark_get_skill(domain="base", section="filter-condition")`：视图 filter、记录 `filter_json`、表单 `visible_rule` 的 tuple 条件结构公共协议 SSOT
 - `lark_get_skill(domain="base", section="form-detail")` / `lark_get_skill(domain="base", section="form-submit")` / `lark_get_skill(domain="base", section="form-questions-create")` / `lark_get_skill(domain="base", section="form-questions-update")`：表单详情、提交和复杂 JSON

@@ -207,6 +207,10 @@ describe("scope coverage", () => {
       "im +messages-edit",
       "vc +meeting-end",
       "vc +meeting-invite",
+      // lark-cli 1.0.96 narrowed these two to AuthTypes ["bot"], so the
+      // extractor drops their scopes and the catalog stops exposing them.
+      "vc +meeting-join",
+      "vc +meeting-leave",
       "vc +meeting-screenshot",
     ]);
     expect(

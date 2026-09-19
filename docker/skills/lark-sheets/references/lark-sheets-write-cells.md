@@ -4,30 +4,39 @@
 
 1. **明确写入边界**：写入前建议能回答"目标 range 的起止行列号是多少？是否落在用户授权范围内？"。除用户明示要修改的区域外，避免扩张到原数据列以外或新建 Sheet。
 2. **完整性断言**：批量写入前建议把"预期写入条数"硬编码到代码里（如要填 106 条翻译 → `expected = 106`），写完后回读比较 `actual == expected`。少于预期时优先补齐，补不齐则在交付说明里列出缺口。
-3. **回读抽样校验**：写完关键值 / 公式后，用 `lark_sheets_csv_get` 或 `lark_sheets_cells_get` 重新读取写入区域，至少抽样 3-5 个代表性单元格（首 / 中 / 末），核对值与预期一致（与本地脚本计算的预期值对照）。公式特定的"先验证模板再 copy_to_range / 修完再读回"细则见下方相关章节。
+3. **回读抽样校验**：写完关键值 / 普通公式后，用 `lark_sheets_csv_get` 或 `lark_sheets_cells_get` 重新读取写入区域，至少抽样 3-5 个代表性单元格（首 / 中 / 末），核对值与预期一致（与本地脚本计算的预期值对照）。AI 公式的计算状态不要先用 `lark_sheets_cells_get` 轮询，直接按 `lark_get_skill(domain="sheets", section="formula-verify")` 的 `lark_sheets_formula_verify(ai_only=true, range=…)` 全区间一次异步状态检查规则处理。公式特定的"先验证模板再 copy_to_range / 修完再读回"细则见下方相关章节。
 4. **护原表 · 派生产物落点（写排名 / 标记 / 汇总 / 改写列时易丢数据）**：派生结果优先写到**真实末列 +1 的全新空列**或新建子表，避免复用任何已有原数据列——哪怕该列看起来"空"，也要先 `lark_sheets_csv_get` 回读确认整列无原始数据再写。三条准则：① 尽量不把新公式 / 新值写进原数据列（典型反例：把新算的排名公式写进了原本存放另一份原始数据的列，整列原始数据被覆盖丢失）；② 尽量不改写、不合并原表头字段名（典型反例：把几个独立表头字段合并成一列，原字段名丢失）；③ 慎用 `allow_overwrite`：它一旦让写入区盖到相邻原始列 / 行就是不可逆数据丢失，加它之前建议用 `lark_sheets_sheet_info` / `lark_sheets_csv_get` 核清目标 range 不含任何原始数据。
 
 ## 新增列 / 新增行的样式继承（防止视觉风格不一致）
 
-新增列 / 新增行建议先用 `lark_sheets_cells_get` 读相邻原列 / 原行的完整样式作为模板，避免只传 `value` 期望默认样式与原表一致——飞书新单元格默认对齐通常是 `H:right, V:bottom`，与多数原表的 `H:center, V:middle` 不一致。
+新增列 / 新增行时，先铺样式再写值，分两步——避免只传 `value` 期望默认样式与原表一致（飞书新单元格默认对齐通常是 `H:right, V:bottom`，与多数原表的 `H:center, V:middle` 不一致）。
 
-**完整继承清单**（写新列 / 新行时建议同时携带）：
+**推荐做法（一步到位）**：用 `lark_sheets_range_copy(paste_type="formats")` 把相邻原列/原行的样式复制到目标区域，再写值。`paste_type="formats"` 只复制样式不动值。目标区域尺寸由**源区域**推断，`target_range` 只给目标左上角锚点单元格；要铺满整列，源区域就要覆盖整列（如 `C1:C100`）。调用要带完整定位（`url`/`spreadsheet_token` 与 `sheet_id`/`sheet_name` 各一）：
 
-1. `cell_styles.font_family` / `cell_styles.font_size` / `cell_styles.font_weight` / `cell_styles.font_color` / `cell_styles.font_style`（字体名称 / 字号 / 粗细 / 颜色 / 斜体等）
-2. `cell_styles.horizontal_alignment` / `cell_styles.vertical_alignment`（H-Align / V-Align）—— 漏继承会导致新列对齐与原列不一致（常见）
-3. `cell_styles.number_format`（小数位 / 千分位 / 百分比 / 日期格式）—— 漏继承会导致同列数值格式混乱
-4. `cell_styles.background_color`（背景色）
-5. `border_styles`（四边框）
-6. **`merged_cells`（合并范围）**——续写场景必查：用 `lark_sheets_sheet_info(include="merges")` 读原数据区域的合并信息。**原行有跨列合并**（如标题行 `A1:G1` 合并）时，新行建议用 `lark_sheets_cells_merge` / `lark_sheets_cells_unmerge` 工具复制相同合并模式到新行（如续写第 3 个周报块的标题行 `A23:G23` 建议合并）。仅传 cells 数组的 5 类样式不够——合并范围要单独靠 `lark_sheets_cells_merge` / `lark_sheets_cells_unmerge` 工具落地（典型反例：续写多周记录表时，新增周次的标题行未合并，视觉上与原前几周风格不一致）
+```
+# 新列 D — 把 C 列的样式铺到 D 列（源 100 行 → 目标从 D1 起 100 行）
+lark_sheets_range_copy(url="<表格URL>", sheet_name="<真实表名>",
+  source_range="C1:C100", target_range="D1", paste_type="formats")
 
-**采样模板的正确做法**：
-- 表头新列 → 读相邻表头单元格（如新加 D1 → 读 A1/B1/C1 任一）
-- 数据新列 → 读相邻数据行单元格（如新加 M5:M100 → 读 L5 / L6 / L7）
-- 续写新行 → 读最近一行已有数据（如续写第 20 行 → 读 19 行所有列）
+# 新行 20 — 把第 19 行的样式铺到第 20 行
+lark_sheets_range_copy(url="<表格URL>", sheet_name="<真实表名>",
+  source_range="A19:Z19", target_range="A20", paste_type="formats")
+```
+
+目标锚点 + 源尺寸决定落区，无需在 `target_range` 里写出完整范围。参数细节见 `lark_get_skill(domain="sheets", section="range-operations")`。
+
+**手动做法（需要精确控制时）**：先用 `lark_sheets_cells_get(include="style")` 读相邻单元格的完整样式作为模板，再在 `lark_sheets_cells_set` 的 `cells` 里逐格携带 `cell_styles`。需要继承的字段清单：
+
+1. `cell_styles.font_family` / `cell_styles.font_size` / `cell_styles.font_weight` / `cell_styles.font_color` / `cell_styles.font_style`
+2. `cell_styles.horizontal_alignment` / `cell_styles.vertical_alignment` — 漏继承会导致新列对齐与原列不一致（常见）
+3. `cell_styles.number_format` — 漏继承会导致同列数值格式混乱
+4. `cell_styles.background_color`
+5. `border_styles`
+6. **`merged_cells`（合并范围）**——续写场景必查：用 `lark_sheets_sheet_info(include="merges")` 读原数据区域的合并信息。原行有跨列合并时，新行用 `lark_sheets_cells_merge` / `lark_sheets_cells_unmerge` 复制相同合并模式。仅传 cells 数组的样式不够——合并范围要单独靠 `lark_sheets_cells_merge` / `lark_sheets_cells_unmerge` 落地。
 
 **反模式**（风险）：
 - 只传 `{"value": "四级菜单"}` 给 D1，不传 `cell_styles` → D1 默认非加粗、非居中，与 A1/B1/C1 风格断裂
-- 新列 M5 写入 `=SUM(F5:L5)` 时只传 `formula`，不传 `cell_styles.horizontal_alignment / vertical_alignment / number_format` → M 列对齐变 `H:right`，数字格式变默认
+- 新列 M5 写入 `=SUM(F5:L5)` 时只传 `formula`，不传样式 → M 列对齐变 `H:right`，数字格式变默认
 
 ## 长数字防科学计数法（数值列写入必查）
 
@@ -45,14 +54,20 @@
 
 > **数字还是文本，按"数据本质是量值还是标识符"二选一 —— 不看当下要不要计算**：金额 / 百分比 / 比率 / 计数 / 度量这类**本质是量值**的数据，优先以**数字类型**写入（百分比存小数 `0.54` 配 `number_format:"0%"`），避免设 `@` 文本格式。**这与"用户当下是否要排序 / 求和"无关**——数据类型由数据本质决定、不由当下用途决定：表格数据几乎总会被后续排序 / 图表 / 二次计算复用，`"54%"` 文本与数值列混排本就破坏一致性，且数字 + `number_format` 显示效果与文本**完全相同**，没有任何理由选文本。**最常见的误判就是"这只是 leaderboard / 报表 / 看板展示，又不用算，写成 `54%` 字符串就行"——这是错的，展示用途不改变"百分比是数值"的事实。**（`lark_sheets_table_put` 用 `dtypes` 声明 `int64` / `float64`；版式 `lark_sheets_table_put` 装不下时用 `lark_sheets_cells_set` 传数字 + `number_format`；都别在本地拼成带 `$` / `%` 的字符串走 `lark_sheets_csv_put`。）反过来，编号 `001`、规格 `3-1`、身份证 / 电话 / 单据号等**本质是标识符 / 标签**、要原样保留不被飞书自动解释的内容（否则 `001`→`1`、`3-1`→日期、点分日期 `12.10`→`12.1`（尾零丢失）、长号→科学计数），才以**字符串类型**写入（`dtypes` 设 `object`）并把 `number_format` 设为 `"@"`（文本格式），字面保真。
 
+**typed 列必须显式声明类型**：金额、百分比、日期、布尔、计数，以及后续参与排序 / 聚合 / 图表的量值列，在 `lark_sheets_table_put` 的 `dtypes` 中逐列声明类型，并用 `formats` 控制显示；不要依赖字符串外观或自动猜型。纯文本/标识符表可全部声明 `object`。mixed 列先保留原值并新增清洗结果/失败标记，统计总数、成功、失败和空值；均值/比例必须说明分母，禁止静默把失败值丢掉后改变口径。
+
+**追加数据**：普通表尾追加直接用 `lark_sheets_table_put` payload 里的 `mode: "append"`，它会自动定位末行；只有用户明确要求在中间物理插行、继承模板区块或扩展合并结构时，才先用 `lark_sheets_dim_insert`。
+
 ## 使用场景
 
 写入。向飞书表格的单元格区域写入值、公式、样式、批注、图片或下拉，也可批量写入 CSV / DataFrame。本 reference 覆盖 6 个工具，按数据来源 + 内容形态选：
 
+> ⚠️ **计算结果默认写公式，不写静态值**：需要计算得出的数字 / 统计量 / 排名 / 占比，默认写公式到单元格，不要在本地算好数值再硬编码写入。公式优先原则的例外：外部抓取数据、永不变化的常量、循环引用。
+
 | 场景 | 用这个工具 | 原因 |
 |------|----------------|------|
 | 模型手里已经有 CSV 文本（小规模手动构造、从 `lark_sheets_csv_get` 取到后简单加工） | `lark_sheets_csv_put` | 直接传 CSV 文本 + `start_cell`，不用自己拼二维 cells 数组；必要时自动扩容行列 |
-| 列里有数值语义的数据（数字 / 金额 / 百分比 / 日期 / 计数）→ 飞书，要类型保真（来源不限：DataFrame、Counter、dict、list 都算） | `lark_sheets_table_put` | typed 协议（外层 `{"sheets":[{"name":"…","columns":[...],"data":[[...]],"dtypes":{...},"formats":{...}}]}`，**只有这四件套字段**）：`dtypes` 用 pandas dtype 串声明列类型（`int64` / `float64` / `datetime64[ns]` / `bool` / `object`），`formats` 给每列展示格式（千分位 / 百分比 / 日期）。**date 落真日期、金额 / 百分比 / 计数等数值列保精度且带 `number_format`（可排序 / 求和 / 入图表）**、string 保前导零，多 sheet 一次写。 |
+| 列里有数值语义的数据（数字 / 金额 / 百分比 / 日期 / 计数）→ 飞书，要类型保真（来源不限：DataFrame、Counter、dict、list 都算） | `lark_sheets_table_put` | typed 协议每项必含 `name/columns/data`，可带 `start_cell/mode/header/allow_overwrite/dtypes/formats`；数值语义列显式声明 `dtypes`，`formats` 控制千分位 / 百分比 / 日期。date 落真日期、数值列可排序 / 求和 / 入图表，string 保前导零，多 sheet 一次写。 |
 | 写入含样式、批注、图片、数据校验等任意富写入 | `lark_sheets_cells_set` | 唯一支持完整富字段的工具（公式 `lark_sheets_csv_put` 也能写） |
 | 只改已有 cell 的样式，不动 value/formula | `lark_sheets_cells_set_style` | 拍平 10 个样式字段为独立参数；不触发不必要的值写入 |
 | 单 cell 嵌入图片 | `lark_sheets_cells_set_image` | 比 `lark_sheets_cells_set` 参数更简短 |
@@ -61,7 +76,7 @@
 
 **选命令按内容形态分流（不设"默认首选"）**：① 列有数值语义（金额 / 百分比 / 日期 / 计数）→ `lark_sheets_table_put`（`dtypes` 声明类型 + `formats` 设展示格式），版式装不下时 → `lark_sheets_cells_set` 传数字 + `number_format`；② 要样式 / 批注 / 图片 / 富文本 → `lark_sheets_cells_set`；③ **仅**全文本、无数值语义的内容平铺 → `lark_sheets_csv_put`（入参最短）。判据详见上方「数字还是文本」。
 
-⚠️ `lark_sheets_csv_put` 可写值或公式：以 `=` 开头的单元格会被当作公式计算（读回时 `formula` 字段保留、`value` 为计算结果）。**公式内部含逗号 / 引号 / 换行时建议按 RFC 4180 转义**——含逗号的字段整格用双引号包裹、字段内部的引号再翻倍：如 `=COUNTIF(D5:D22,"及格")` 建议写成 `"=COUNTIF(D5:D22,""及格"")"`（外层双引号包裹整格，内部 `"及格"` 的引号翻倍成 `""及格""`）。漏转义会被 CSV 解析器按逗号拆列、整块写入区域错位（如本该 `G4:H6` 错成 `G4:K4`），详见下方 `lark_sheets_csv_put` 示例。**因此含逗号 / 引号 / 换行的公式优先改用 `lark_sheets_cells_set`（JSON 二维数组）写入——`cells[r][c].formula` 字段直接放公式串，零 CSV 转义负担，从根上避免拆列错位**（`lark_sheets_table_put` 的 typed 协议只接受 `columns / data / dtypes / formats` 四件套、没有 `formula` 字段，公式写入只能走 `lark_sheets_cells_set` / `lark_sheets_csv_put`）。此外 `lark_sheets_csv_put` **不会**携带样式/批注/图片，也无法把 `=` 开头的内容当字面量文本写入；需要样式/批注/图片用 `lark_sheets_cells_set`（或"写值 + 补样式"两步法）。
+⚠️ `lark_sheets_csv_put` 可写值或公式：以 `=` 开头的单元格会被当作公式计算（读回时 `formula` 字段保留、`value` 为计算结果）。**公式内部含逗号 / 引号 / 换行时建议按 RFC 4180 转义**——含逗号的字段整格用双引号包裹、字段内部的引号再翻倍：如 `=COUNTIF(D5:D22,"及格")` 建议写成 `"=COUNTIF(D5:D22,""及格"")"`。漏转义会被 CSV 解析器按逗号拆列、整块写入区域错位。**因此含逗号 / 引号 / 换行的公式优先用 `lark_sheets_cells_set`**；`lark_sheets_table_put` 不支持公式字段。此外 `lark_sheets_csv_put` **不会**携带样式/批注/图片，也无法把 `=` 开头的内容当字面量文本写入；需要样式/批注/图片用 `lark_sheets_cells_set`（或"写值 + 补样式"两步法）。
 
 ⚠️ **`lark_sheets_csv_put` 会把数值落成文本**：把金额 / 百分比 / 计数等在本地拼成带 `$` / `%` / 千分位的字符串（如 `"$1,234.50"` / `"+30.5%"`）再 `lark_sheets_csv_put` 灌进去，单元格就是**文本**——丢失排序 / 求和 / 图表能力，且与数值列混排无法参与计算。数值该怎么写、何时 `lark_sheets_table_put`、版式装不下时何时退 `lark_sheets_cells_set` 传数字 + `number_format`，判据与分流见上方「数字还是文本」；核心一句：**准备把数字 format 成字符串再写时就是走错了路，数值一律以数字写入 + `number_format` 控制显示。**
 
@@ -73,16 +88,17 @@
 
 > 以下是用 `lark_sheets_cells_set`（及 `lark_sheets_cells_set_style`）做富写入时的常用模式与准则；选哪个工具见上方「使用场景」。
 
-`lark_sheets_cells_set` 为一块区域设置值 / 公式 / 批注 / 样式，也支持 `rich_text` 的 `type: "embed-image"` 嵌入单元格图片。**关键：`cells` 恒为二维数组（行 × 格），单格也是 `[[{"value":…}]]`；且行列维度必须与 `range`（闭区间）严格一致，否则触发 `InvalidCellRangeError`**——维度计算示例见文末 `## Schemas` 的 `cells`。
+`lark_sheets_cells_set` 为一块区域设置值 / 公式 / 批注 / 样式，也支持 `rich_text` 的 `type: "embed-image"` 嵌入单元格图片。**关键：`cells` 恒为二维数组（行 × 格），单格也是 `[[{"value":…}]]`；裸 `range="A1"` 是左上角**锚点**，落区由 `cells` 自身的行列数决定；写成矩形（`range="A1:B2"`）则是**边界**——数组比它小会收窄，比它大会被拒绝，而不是写到范围之外**。
 
-> **单元格图片 vs 浮动图片（最易选错）**：图若**属于某条记录、要随那行排序 / 筛选 / 增删**（凭证 / 证件照 / 每行配图，话里带「对应 / 每行 / 这列」等绑定词）→ **单元格图片**（本工具）：用 `lark_sheets_cells_set_image`（最短）或 `lark_sheets_cells_set` 的 `rich_text` + `type: "embed-image"`。只是自由摆放的装饰（logo / 水印 / 封面）→ 浮动图片，见 `lark_get_skill(domain="sheets", section="float-image")`。别因「浮动图更好控制 / 更熟」默认选浮动图——它承载"对应某记录"的图会随增删行 / 排序错位。
+> **单元格图片 vs 浮动图片**：图若**属于某条记录、要随那行排序 / 筛选 / 增删**（凭证 / 证件照 / 每行配图，话里带「对应 / 每行 / 这列」等绑定词）→ **单元格图片**（本工具）：用 `lark_sheets_cells_set_image`（最短）或 `lark_sheets_cells_set` 的 `rich_text` + `type: "embed-image"`。只是自由摆放的装饰（logo / 水印 / 封面）→ 浮动图片，见 `lark_get_skill(domain="sheets", section="float-image")`。别因「浮动图更好控制 / 更熟」默认选浮动图——它承载"对应某记录"的图会随增删行 / 排序错位。
 
 常用模式（推荐，避免逐行写入替代）：
 
 - 整列公式：先在 `H2` 写一个公式，再用 `copy_to_range="H2:H100"` 或 `copy_to_range="H:H"` 向下填充。避免对每一行单独调用 `lark_sheets_cells_set` 写入相同结构的公式
-- **新写入**的整列格式：写模板格（值 + 样式）后 `copy_to_range` 铺开；**已有值**的列 / 行统一格式改用 `lark_sheets_cells_set_style` / `lark_sheets_styles_put`（copy 会连值一起覆盖，见下方 ⚠️）——给已有表头行刷样式同理
-- 用户说”这列 / 整列 / 这行 / 首行 / 向下复制”且目标区**本就要写同构值 / 公式**时，优先使用模板单元格 + `copy_to_range`
-- 多区域写入相同公式 / 值结构时，优先写一个模板，再用 `copy_to_range` 复制到所有目标区域
+- 整列样式：使用 `lark_sheets_cells_set_style` 或 `lark_sheets_styles_put` 指定目标 range；不要用 `copy_to_range` 纯刷样式
+- 首行样式：同上，直接对 `1:1` 或实际表头 range 设置样式
+- 用户说”这列 / 整列 / 这行 / 首行 / 向下复制公式”时，值/公式填充用模板格 + `copy_to_range`；只改样式用 `lark_sheets_cells_set_style` / `lark_sheets_styles_put`
+- 多区域写入相同值/公式结构时，优先写一个模板，再用 `copy_to_range` 复制；仅样式相同仍走样式工具
 
 ⚠️ **`copy_to_range` 复制的是模板格的全部内容（值 + 公式 + 样式），不是只复制样式**：目标区域**已有值**时不要用它"刷样式"——会把整个区域的值覆盖成模板格的值（65 个格子全变成同一个数的事故就是这么来的）。只改样式、值 / 公式不动，用 `lark_sheets_cells_set_style` / `lark_sheets_cells_batch_set_style`；`copy_to_range` 只用于目标区为空或本就要写同构公式 / 值的场景。
 
@@ -90,7 +106,7 @@
 
 ⚠️ **逐行写入公式是常见低效写法**：对每一行单独调用 `lark_sheets_cells_set` 写公式（如 26 次）既慢又易错，且不会自动平移公式引用。正确做法是 1 次模板写入 + 1 次 `copy_to_range`（公式引用自动平移）。
 
-💡 **多个不连续区域写入（批量修公式的正解）**：散布多处（可跨 sheet）的值 / 公式写入，用 `writes` 一次批量交付（fail-fast，失败后先回读再补发）——每项 `{sheet_name, range, cells}`（sheet 定位必须写在每项里），不要为此拼 `lark_sheets_batch_update` 的 `operations`，也不要逐区域多次调用（多次往返、中途失败难恢复）：
+💡 **多个不连续区域写入（批量修公式的正解）**：散布多处（可跨 sheet）的值 / 公式写入，用 `writes` 一次批量交付（fail-fast，失败后先回读再补发）——每项 `{sheet_name, range, cells}`（跨 sheet 的项把 sheet 定位写在项里，项内没写则取顶层 `sheet_name` / `sheet_id`），不要为此拼 `lark_sheets_batch_update` 的 `operations`，也不要逐区域多次调用（多次往返、中途失败难恢复）：
 
 ```
 lark_sheets_cells_set(url="...", writes=[
@@ -103,16 +119,7 @@ lark_sheets_cells_set(url="...", writes=[
 
 💡 **写入公式前先按迁移规则改写**：如果公式来自 Excel 或包含数组场景，先调用 `lark_get_skill(domain="sheets", section="formula-translation")` 读取并遵循其中的规则完成改写，再把最终公式写入 `formula` 字段。
 
-💡 **内容与样式分离写入（推荐）**：当需要同时写入内容和样式时，`cells` 中每个单元格都带上 `cell_styles` / `border_styles` 会导致入参非常冗长。由于同一区域的样式通常高度重复（如整列统一背景色、统一边框），推荐拆成两步：
-1. **先写内容**：`lark_sheets_cells_set` 只传 `value` / `formula`，不带样式，`cells` 入参精简。⚠️ 这里"不带样式"指暂不带 `cell_styles`，**不是**降级用 `lark_sheets_csv_put` 铺文本——数值列（百分比 / 金额 / 计数）仍建议以数字写入（百分比传 `0.44`）：样式能后补，数据类型不能后补（见上方「数字还是文本」）。
-2. **再批量刷样式**：用 `lark_sheets_styles_put` 对整个区域声明统一样式（可与合并 / 行高列宽 / 冻结同一份规格交付，见 `lark_get_skill(domain="sheets", section="styles-put")`）。**不要**在这一步用模板格 `copy_to_range` 刷样式——第 1 步已写入的各行值会被模板格的值整片覆盖（见上方 ⚠️）；`copy_to_range` 只适用于目标区本就要写同构值 / 公式的场景
-
-示例：要对 A2:A100 写入数据并统一设置蓝色背景 + 边框：
-```
-Step 1: lark_sheets_cells_set — range="A2:A100", cells 只含 value（无样式，入参短）
-Step 2: lark_sheets_styles_put — 对 A2:A100 声明统一的 fill + border 样式
-```
-这比在 99 个单元格中都重复写样式 JSON 高效得多。
+💡 **内容与样式分离写入**：当同一区域样式高度重复时，先按正确类型写内容，再用 `lark_sheets_cells_set_style` 或 `lark_sheets_styles_put` 对目标范围补样式；不要用 `copy_to_range` 纯刷样式，它会连模板值 / 公式一起复制。只有目标区为空或本就要复制同构公式 / 值时，才使用模板单元格 + `copy_to_range`。⚠️ 先写内容时"不带样式"指暂不带 `cell_styles`，**不是**降级用 `lark_sheets_csv_put` 铺文本——数值列（百分比 / 金额 / 计数）仍以数字写入（百分比传 `0.44`）：样式能后补，数据类型不能后补（见上方「数字还是文本」）。
 
 💡 **样式更新是「部分合并」，不是整体覆盖**：`lark_sheets_cells_set_style` / `lark_sheets_styles_put`（以及 `lark_sheets_cells_set` 的 `cell_styles` / `border_styles`）只改你**显式传入**的样式属性，未传的属性保留原值。两个实用推论：
 - **可分层叠加**：对同一区域先刷字体色、再单独刷背景色、再单独刷边框，后一步不会清掉前一步——美化已有区域时无需一次带齐所有字段，可拆成多次窄调用。
@@ -129,17 +136,18 @@ Step 2: lark_sheets_styles_put — 对 A2:A100 声明统一的 fill + border 样
 
 > 用户说"样式和原表一致 / 保持原表格式 / 边框继承"时同理：`cell_styles` 只覆盖字体和对齐、**不含边框**，边框建议用独立 `border_styles` 字段传——完整继承清单见上方「新增列 / 新增行的样式继承」。
 
-⚠️ **公式写入建议自己校验结果（后端不会报语法错）**：`lark_sheets_cells_set` 写公式时，即便公式有括号不配对（如 `=IFERROR(VALUE(MID(D5,3,4))), 0)` 比 IFERROR 多一个 `)`）或用了飞书不支持的函数（如 `GOOGLETRANSLATE` / `CUBEVALUE`），**后端工具也会返回 `updated_cells_count=N, rc=0` 的"成功"**——错误会静默写进单元格显示为 `#VALUE!` / `#NAME?` / `#REF!`。因此：
-1. **写完建议读回**：`lark_sheets_cells_set` 后紧跟 `lark_sheets_csv_get`（或 `lark_sheets_cells_get`）读目标范围前几行，检查是否出现 `#VALUE!` / `#NAME?` / `#REF!` / `#N/A` / `#DIV/0!` / `#NUM!`
-2. **看到 `#` 开头的错误值**立即修公式：`#NAME?` 多半是函数名拼错或用了飞书不支持的函数（如 `GOOGLETRANSLATE` / CUBE 系列；注意 `UNIQUE` / `FILTER` 飞书是支持的）；`#VALUE!` 多半是类型不匹配或括号错位；`#REF!` 是引用错误；`~CIRCULAR~REF~` 是循环引用（公式引用了自身或会闭环）
-3. **`copy_to_range` 扩展前建议先验证模板**：模板单元格公式自己都算错，`copy_to_range` 复制到 100 行就是 100 个错误
-4. **去重 / 筛选函数**：飞书**支持** `UNIQUE` / `FILTER`（原生数组函数，详见 `lark_get_skill(domain="sheets", section="formula-translation")`），可直接用；`DISTINCT` 不是飞书函数，去重用 `UNIQUE`。大数据量去重 / 分组也可用透视表（`lark_sheets_pivot_create` / `lark_sheets_pivot_update` / `lark_sheets_pivot_delete`，值字段聚合方式选 count）
-5. **循环引用预检**：写聚合公式（SUM / AVERAGE / COUNT 等）前建议明确**引用范围不包含目标单元格自身或其传递依赖**。典型反例：在 C3 写 `=SUMIF(B:B,LEFT(B3,9)&"*",C:C)`，B 列匹配 B3 前 9 位时 C3 自己也命中，导致 C3 自引用 → `~CIRCULAR~REF~`。修法：用辅助列 / 显式排除自身（`SUMIFS(C:C, B:B, ..., A:A, "<>"&A3)`）/ 缩小范围避开自己
-6. **文本提取公式的覆盖率验证**：用 `LEFT` / `MID` / `FIND` / `SUBSTITUTE` / `TEXTSPLIT` 等从文本里抠数据前，建议用本地脚本在**整列源数据**上跑一遍命中率统计（`df[col].str.contains(pattern).mean()`）；命中率 < 100% 时优先补分支（IFS / 多个 IFERROR 串联）兜底，或改用本地脚本算好写静态值，**避免**只覆盖样本前 N 行就交付（典型反例：按"长123"这种带前缀的尺寸文本取数，对"宽×高"、"×"、"*"等其它写法直接漏匹配）
-7. **公式范围与用户指令字面对齐**：用户说"对 F 至 L 列求和"优先写 `SUM(F2:L2)` 或 `F2+G2+H2+I2+J2+K2+L2`，**不能漏列、多列、错列**。写完用 `lark_sheets_cells_get` 拿回 `formula` 字符串，与用户原话逐字对照（参与求和的列名一致 / 起止列号一致 / 运算符一致），不一致就是风险
-8. **量纲 / 单位换算 / 数量乘项预检（公式不报错但结果整体偏倍数）**：从文本提取数字做计算前，先核对**单位是否统一、是否漏乘数量、口径是否一致**——这类错误公式能跑通、无 `#` 报错，回读也看不出（值"像对的"）。建议用本地脚本对 3–5 个代表行**离线手算一遍预期值**，与公式结果逐格比对量级：① 单位不一致先统一再算（典型反例：尺寸 `320CM*337CM` 直接取数相乘除以 1e6 得 0.11，正确是 CM→MM 换算后得 10.78，**差 100 倍**）；② 按"单件×数量"的量建议乘数量列（典型反例：侧面板面积漏乘 F 列数量，F=2 的行只算了一半）；③ 标准值口径对齐（典型反例：营养成分 mg/kg 与 g/100g 口径混用，整列放大 100 倍）。**口径 / 单位 / 数量任一项错，整列计算结果就是错的；这类错误公式不报错、回读也不易看出，建议靠离线手算对照。**
+⚠️ **公式写入后必须完成验证（后端不会报全部语法 / 运行错误）**：`lark_sheets_cells_set` 写公式时，即便公式有括号不配对（如 `=IFERROR(VALUE(MID(D5,3,4))), 0)` 比 IFERROR 多一个 `)`）或用了飞书不支持的函数（如 `GOOGLETRANSLATE` / `CUBEVALUE`），**后端工具也可能返回 `updated_cells_count=N, rc=0` 的"成功"**——错误会静默写进单元格显示为 `#VALUE!` / `#NAME?` / `#REF!`。因此：
+1. **写完立即回读**：`lark_sheets_cells_set` 后紧跟 `lark_sheets_csv_get`（或 `lark_sheets_cells_get`）读目标范围首、中、末及汇总行，检查错误值并核对 `formula`；AI 公式在这一步只做**一次**公式文本核对（`lark_sheets_cells_get(include="formula")` 看种子格 / 首格，确认引号 / 括号没在 CSV / JSON 层被破坏、落进去的确实是 `=AI(...)`），不要用它轮询计算结果——计算状态走 `lark_sheets_formula_verify(ai_only=true)`
+2. **逐段运行诊断**：对本次新增 / 修改的公式范围调用 `lark_sheets_formula_verify(exit_on_error=true)`；`partial` 拆小续扫，全部分段 `status='success'` 后才完成。AI 公式不套这条：改用 `lark_sheets_formula_verify(ai_only=true)` 按全区间一次异步状态检查规则交付（`failed` / `unsupported` 先修，只剩 pending 可交付并说明后台仍在计算，详见 `lark_get_skill(domain="sheets", section="formula-verify")`）
+3. **看到 `#` 开头的错误值**立即修公式：`#NAME?` 多半是函数名拼错或用了飞书不支持的函数（如 `GOOGLETRANSLATE` / CUBE 系列；注意 `UNIQUE` / `FILTER` 飞书是支持的）；`#VALUE!` 多半是类型不匹配或括号错位；`#REF!` 是引用错误；`~CIRCULAR~REF~` 是循环引用（公式引用了自身或会闭环）
+4. **`copy_to_range` 扩展前先验证模板**：模板单元格公式自己都算错，`copy_to_range` 复制到 100 行就是 100 个错误
+5. **去重 / 筛选函数**：飞书**支持** `UNIQUE` / `FILTER`（原生数组函数，详见 `lark_get_skill(domain="sheets", section="formula-translation")`），可直接用；`DISTINCT` 不是飞书函数，去重用 `UNIQUE`。大数据量去重 / 分组也可用透视表（`lark_sheets_pivot_create` / `lark_sheets_pivot_update` / `lark_sheets_pivot_delete`，值字段聚合方式选 count）
+6. **循环引用预检**：写聚合公式（SUM / AVERAGE / COUNT 等）前建议明确**引用范围不包含目标单元格自身或其传递依赖**。典型反例：在 C3 写 `=SUMIF(B:B,LEFT(B3,9)&"*",C:C)`，B 列匹配 B3 前 9 位时 C3 自己也命中，导致 C3 自引用 → `~CIRCULAR~REF~`。修法：用辅助列 / 显式排除自身（`SUMIFS(C:C, B:B, ..., A:A, "<>"&A3)`）/ 缩小范围避开自己
+7. **文本提取公式的覆盖率验证**：用 `LEFT` / `MID` / `FIND` / `SUBSTITUTE` / `TEXTSPLIT` 等从文本里抠数据前，建议用本地脚本在**整列源数据**上跑一遍命中率统计（`df[col].str.contains(pattern).mean()`）；命中率 < 100% 时优先补分支（IFS / 多个 IFERROR 串联）兜底，或改用本地脚本算好写静态值，**避免**只覆盖样本前 N 行就交付（典型反例：按"长123"这种带前缀的尺寸文本取数，对"宽×高"、"×"、"*"等其它写法直接漏匹配）
+8. **公式范围与用户指令字面对齐**：用户说"对 F 至 L 列求和"优先写 `SUM(F2:L2)` 或 `F2+G2+H2+I2+J2+K2+L2`，**不能漏列、多列、错列**。写完用 `lark_sheets_cells_get` 拿回 `formula` 字符串，与用户原话逐字对照（参与求和的列名一致 / 起止列号一致 / 运算符一致），不一致就是风险
+9. **量纲 / 单位换算 / 数量乘项预检（公式不报错但结果整体偏倍数）**：从文本提取数字做计算前，先核对**单位是否统一、是否漏乘数量、口径是否一致**——这类错误公式能跑通、无 `#` 报错，回读也看不出（值"像对的"）。建议用本地脚本对 3–5 个代表行**离线手算一遍预期值**，与公式结果逐格比对量级：① 单位不一致先统一再算（典型反例：尺寸 `320CM*337CM` 直接取数相乘除以 1e6 得 0.11，正确是 CM→MM 换算后得 10.78，**差 100 倍**）；② 按"单件×数量"的量建议乘数量列（典型反例：侧面板面积漏乘 F 列数量，F=2 的行只算了一半）；③ 标准值口径对齐（典型反例：营养成分 mg/kg 与 g/100g 口径混用，整列放大 100 倍）。**口径 / 单位 / 数量任一项错，整列计算结果就是错的；这类错误公式不报错、回读也不易看出，建议靠离线手算对照。**
 
-💡 **公式写入后的补充诊断可用 `lark_sheets_formula_verify`**：`lark_sheets_csv_get` / `lark_sheets_cells_get` 的抽样回读只能帮你快速发现明显错误，但它覆盖不到整列中段、隐藏行、被条件格式遮蔽的错误，也看不到 `partial` 截断。如果这次 `lark_sheets_cells_set` / `copy_to_range` / `lark_sheets_csv_put` 实际写入了公式，可转到 `lark_get_skill(domain="sheets", section="formula-verify")` 跑 `lark_sheets_formula_verify` 做诊断。不要等用户补一句“再验证下公式”才想到这个工具。
+**公式写入后的诊断入口是 `lark_sheets_formula_verify`**：`lark_sheets_csv_get` / `lark_sheets_cells_get` 的抽样回读只能快速发现明显错误，覆盖不到整列中段、隐藏行、被条件格式遮蔽的错误，也看不到 `partial` 截断。只要本次 `lark_sheets_cells_set` / `copy_to_range` / `lark_sheets_csv_put` 实际写入了公式，就按上方流程对目标范围逐段运行 `lark_sheets_formula_verify(exit_on_error=true)`。AI 公式改走 `ai_only=true` 的全区间一次异步状态检查，不按 `status='success'` 收敛。
 
 ⚠️ **收到 `formula_errors` 反馈后不建议只打补丁**：`lark_sheets_cells_set` 返回值里若出现 `formula_errors: [{cell, formula, error_type, detail}]`，说明某些 cell 公式编译失败（`error_type=compile_failed` 通常是函数语法错，如对数组结果直接写 `[1]` 下标取值——飞书不支持这种写法，取第 N 项要用 `INDEX(<数组表达式>, N)`；`non_formula` 是 `=` 开头但解析不通过）。此时**避免只聚焦修报错点的局部语法**（如仅把 `[1]` 换成 `INDEX(..,1)`），建议：
 
@@ -163,7 +171,7 @@ Step 2: lark_sheets_styles_put — 对 A2:A100 声明统一的 fill + border 样
 
 **正确做法**（二选一）：
 
-- **做法 A（推荐）**：按上方「内容与样式分离写入」两步法——先用模板单元格 + `copy_to_range` 铺**完整样式**（`cell_styles` + `border_styles` 都要，不能只铺 border，否则新行字体 / 对齐 / 背景色全裸奔），再单独 `lark_sheets_cells_set` 写 value / formula。汇总行的 `cell_styles` 要点（bold / 背景色 / 上边框）见 `lark_get_skill(domain="sheets", section="visual-standards")` 的「场景一 → 1A. 添加汇总行 / 表头行」。
+- **做法 A（推荐）**：先按正确类型写 value / formula，再用 `lark_sheets_cells_set_style` 或 `lark_sheets_styles_put` 对整行补齐 `cell_styles` + `border_styles`；不要用 `copy_to_range` 纯刷样式。汇总行的 bold / 背景色 / 上边框见 `lark_get_skill(domain="sheets", section="visual-standards")` 的「场景一 → 1A. 添加汇总行 / 表头行」。
 - **做法 B**：一次写入，但每个 cell（含空白格）都显式带 `cell_styles` + `border_styles`，**不能用 `{}`**。
 
 **判断是不是"新行"**：写入 range 超出 `lark_sheets_csv_get` 返回的 `current_region` 右 / 下边界（如 `current_region=A1:H10`、写 `A11:H11`）即新行，建议按上述做法补边框。
@@ -281,10 +289,9 @@ _公共四件套_
 | 参数 | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
 | `range` | string | xor | 写入区域（A1 格式）。与 `writes` 二选一（单区域用 range+cells，多区域用 writes） |
-| `cells` | string（复合 JSON） | xor | JSON：2D 数组 `[[{cell},...],...]`，维度与 `range` 完全一致；每个 cell 可含 `value` / `formula` / `multiple_values` / `cell_styles` / `note` / `rich_text`（含 `type="embed-image"` 单元格嵌图）等。向启用多选的下拉单元格写入选中值时，必须用 `multiple_values:[{"value":...}]`，不要把多个选项用逗号拼成一个 `value`；完整字段见 `## Schemas` |
-| `writes` | string（复合 JSON） | xor | 多区域写入 JSON 数组（最多 100 项），每项 `{sheet_name\|sheet_id, range, cells}`——**sheet 定位必须写在每项里**（与 batch-update 子操作、styles-put 项同惯例，不认顶层 `sheet_name`），cells 结构同 `cells`（二维数组，可逐格带 cell_styles/border_styles）。整批展开为**单次批量提交**（fail-fast，失败后先回读再补发），支持跨 sheet；典型场景：批量修复散布多处的公式、跨表同构写入——不要为此拼 batch-update 的 `operations`。与 `range`+`cells` 二选一；范围级统一样式不在此做，写完接 `lark_sheets_styles_put` |
+| `cells` | string（复合 JSON） | xor | JSON：2D 数组 `[[{cell},...],...]`；裸 `range="A1"` 是左上角锚点，写入范围按本数组的行列数推断；`range` 写成矩形（`A1:B2`）则是边界——本数组比它小会收窄，比它大会被拒绝。每个 cell 可含 `value` / `formula` / `multiple_values` / `cell_styles` / `note` / `rich_text`（含 `type="embed-image"` 单元格嵌图）等。向启用多选的下拉单元格写入选中值时，必须用 `multiple_values:[{"value":...}]`，不要把多个选项用逗号拼成一个 `value`；完整字段见 `## Schemas` |
+| `writes` | string（复合 JSON） | xor | 多区域写入 JSON 数组（最多 100 项），每项 `{sheet_name\|sheet_id, range, cells}`——**跨 sheet 的项把 sheet 定位写在项里**（与 batch-update 子操作、styles-put 项同惯例），项内没写则取顶层 `sheet_name` / `sheet_id`，cells 结构同 `cells`（二维数组，可逐格带 cell_styles/border_styles）。整批展开为**单次批量提交**（fail-fast，失败后先回读再补发），支持跨 sheet；典型场景：批量修复散布多处的公式、跨表同构写入——不要为此拼 batch-update 的 `operations`。与 `range`+`cells` 二选一；范围级统一样式不在此做，写完接 `lark_sheets_styles_put` |
 | `allow_overwrite` | bool | optional | 允许覆盖非空 cell（默认 true）；设为 false 时遇非空 cell 报错 |
-| `max_cells` | int | optional | 防爆，默认 50000 |
 | `copy_to_range` | string | optional | 复制范围（A1 表示法）：把 `range` 中 `cells` 写入的内容（值/公式/样式，取决于实际传入字段）复制到该区域，公式引用自动平移（如 C2=B2 → C3=B3）。适合先写一行/一块模板再扩展填充整列/整区域（如 `range="A1:G1"` 写模板、`copy_to_range="A1:G100"` 填充 100 行）。支持整行 3:6、整列 C:E、到列尾 D3:D、到行尾 D3:3；支持英文逗号分隔多个目标区域，如 C1:D2,E5:F6 |
 
 ### `lark_sheets_cells_set_style`
@@ -347,7 +354,7 @@ _公共：URL/token（无 sheet 定位）_
 
 | 参数 | Type | 必填 | 说明 |
 | --- | --- | --- | --- |
-| `sheets` | string（复合 JSON） | required | Typed 表格协议（pandas-DataFrame-shaped）JSON：顶层 `{"sheets":[...]}`，每个数组项是一张子表 `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` —— `name` 与外层 `sheets` 数组都不可省。Agents 用 `lark-sheets/scripts/sheets_df.py` 的 `df_to_sheet(df, name)` 一行把 DataFrame 转成一项（多子表就 list 拼起来再包 `{"sheets":[...]}`）。`dtypes` 值是 pandas dtype 字符串（`int64`、`float64`、`Int64`、`bool`、`boolean`、`datetime64[ns]`、`object`、...），运行时映射成内部 string/number/date/bool —— 省略 `dtypes` 时该列按文本写入（适合原始 CSV-shaped 数据）。`formats[col]` 是 Excel number_format 字符串（如 `#,##0.00`、`0.0%`、`yyyy-mm`）；缺省时 date 列用 `yyyy-mm-dd`，string 列用文本格式 `@`。 |
+| `sheets` | string（复合 JSON） | required | Typed 表格协议（pandas-DataFrame-shaped）JSON：顶层 `{"sheets":[...]}`，每个数组项是一张子表 `{name, start_cell?, mode?, header?, allow_overwrite?, columns:["colA","colB",...], data:[[...]], dtypes?:{colA:pandasDtype, ...}, formats?:{colA:numberFormat, ...}}` —— `name` 与外层 `sheets` 数组都不可省。Agents 用 `lark-sheets/scripts/lark_sheets_df.py` 的 `df_to_sheet(df, name)` 一行把 DataFrame 转成一项（多子表就 list 拼起来再包 `{"sheets":[...]}`）。`dtypes` 值是 pandas dtype 字符串（`int64`、`float64`、`Int64`、`bool`、`boolean`、`datetime64[ns]`、`object`、...），运行时映射成内部 string/number/date/bool —— 省略 `dtypes` 时该列按文本写入（适合原始 CSV-shaped 数据）。`formats[col]` 是 Excel number_format 字符串（如 `#,##0.00`、`0.0%`、`yyyy-mm`）；缺省时 date 列用 `yyyy-mm-dd`，string 列用文本格式 `@`。 |
 | `styles` | string（复合 JSON） | optional | 类型保真写入后再应用的视觉处理操作 JSON：顶层 `{styles:[...]}`，每项对应一个被写入的子表、含 `name`，并至少给 `cell_styles` / `row_sizes` / `col_sizes` / `cell_merges` 之一。`cell_styles` 用 A1 单元格 range + 扁平样式字段（字段同 `lark_sheets_cells_set_style`，含 number_format / 颜色 / 对齐 / border_styles）；row/col sizes 用行/列范围 + type/size；merges 用单元格 range + 可选 merge_type。styles 数组的长度/顺序/name 必须与被写入的子表对应（与 `sheets.sheets` 一一对应）。 |
 
 ## Schemas
@@ -356,7 +363,7 @@ _公共：URL/token（无 sheet 定位）_
 
 ### `lark_sheets_cells_set` `cells`
 
-_【维度】行列数必须与 range 完全一致：'A1:C2'→[[_,_,_],[_,_,_]]（2行×3列），'B5:B7'→[[_],[_],[_]]（3行×1列），'A1'→[[_]]（1×1）_
+_【维度】裸 range 是锚点、矩形 range 是边界；数组本身各行必须等宽：'A1:C2'→[[_,_,_],[_,_,_]]（2行×3列），'B5:B7'→[[_],[_],[_]]（3行×1列），'A1'→[[_]]（1×1）_
 
 **二维数组项**（类型 object）：
 - `value` (oneOf?) — 静态单元格值（文本、数字、布尔）
@@ -453,7 +460,7 @@ lark_sheets_cells_set(spreadsheet_token="shtXXX", sheet_id="<SID>", range="C2:C1
 
 `cells` 富格式见 `## Schemas` 段（cells 元素含 value / formula / cell_styles / border_styles / data_validation / multiple_values / note / rich_text）；值 / 公式 / 样式 / 批注 / 嵌入图片可同一次写入混合提交。
 
-> 中间想跳过的 cell 用空对象 `{}` 占位（底层语义为"保留原值不变"），`cells` 维度仍须与 `range` 完全一致。例：`range="A1:A5"`, `cells=[[{"value":1}],[{}],[{}],[{}],[{"value":5}]]` 只写 A1 和 A5。
+> 中间想跳过的 cell 用空对象 `{}` 占位（底层语义为"保留原值不变"）。例：`range="A1:A5"`, `cells=[[{"value":1}],[{}],[{}],[{}],[{"value":5}]]` 只写 A1 和 A5。
 >
 > 跨多个不连续区域散点写入（如 `D2` + `F7` + `J15`）超出单次 `range` + `cells` 的范围，但**仍在 `lark_sheets_cells_set` 之内**：用本工具的 `writes` 复数形态一次批量交付（每项 `{sheet_name, range, cells}`，可跨 sheet，见上方「多个不连续区域写入」）。**不要为此拼 `lark_sheets_batch_update` 的 `operations`**——那是给跨类型、有顺序依赖的操作链用的。
 
@@ -511,7 +518,7 @@ lark_sheets_csv_put(url="https://example.feishu.cn/sheets/shtXXX", sheet_name="S
 > # 裸写 =COUNTIF(D5:D22,"及格") 会被 CSV 按逗号拆成两格、写入区域从 G4:H6 错位成 G4:K4。
 > ```
 >
-> 💡 **含逗号 / 引号 / 换行的公式优先用 `lark_sheets_cells_set`（JSON 二维数组）写入**——`cells[r][c].formula` 字段直接放公式串，没有 CSV 转义负担，从根上杜绝拆列错位。`lark_sheets_table_put` 的 typed 协议只有 `columns / data / dtypes / formats` 四件套、没有 `formula` 字段，公式写入用 `lark_sheets_cells_set` 或 `lark_sheets_csv_put`。准备给 `lark_sheets_csv_put` 的公式加逗号时，先考虑换 `lark_sheets_cells_set`：
+> 💡 **含逗号 / 引号 / 换行的公式优先用 `lark_sheets_cells_set`（JSON 二维数组）写入**——`cells[r][c].formula` 字段直接放公式串，没有 CSV 转义负担，从根上杜绝拆列错位。`lark_sheets_table_put` 的 typed payload 可带 `name/start_cell/mode/header/allow_overwrite/columns/data/dtypes/formats`，但没有公式字段；公式写入用 `lark_sheets_cells_set` 或转义后的 `lark_sheets_csv_put`。准备给 `lark_sheets_csv_put` 的公式加逗号时，先考虑换 `lark_sheets_cells_set`：
 >
 > ```
 > # 同样的统计块，结构化写入无需任何转义
@@ -521,7 +528,7 @@ lark_sheets_csv_put(url="https://example.feishu.cn/sheets/shtXXX", sheet_name="S
 
 > **定位 + 写入边界（关键，避免误覆盖）**：
 > - 定位用 `start_cell`（锚点 = 左上角单元格）；也接受 `range` 别名（与 `lark_sheets_csv_get` / `lark_sheets_cells_set` 一致，传区间会自动取左上角）。
-> - ⚠️ `start_cell` / `range` **只定左上角、不限制写入大小**：CSV 从锚点按自身行列数 auto-expand 铺开。给一个"小 range"**不会**截断数据——超出部分照写，且默认覆盖。这与 `lark_sheets_cells_set` 的 `range`（精确矩形、`cells` 必须与 range 同维）语义相反，别把那套心智搬过来。
+> - ⚠️ `start_cell` / `range` **只定左上角、不限制写入大小**：CSV 从锚点按自身行列数 auto-expand 铺开。给一个"小 range"**不会**截断数据——超出部分照写，且默认覆盖。`lark_sheets_cells_set` 只有裸 `range="A1"` 是这个语义；`range` 一旦写成矩形就是边界，`cells` 超出它会被拒绝。
 > - 成功响应回显 `writes_range`（实际落区，如 `B2:D4`）：核对不会盖到相邻数据。
 > - 要保护非空 cell：`allow_overwrite=false`（落区内出现非空 cell 即报错）。
 
@@ -542,10 +549,10 @@ lark_sheets_table_put(spreadsheet_token="<token>", sheets={"sheets":[{"name":"�
 
 #### DataFrame → 协议（用 `df_to_sheet` helper）
 
-pandas 的 `df.to_json(orient="split", date_format="iso")` 一步完成所有清洗（NaN→null、Timestamp→ISO 字符串、numpy 标量→原生数字），把 dtypes 拼上即可。本 skill 把这段 5 行 helper 打包成可 import 的脚本 `lark-sheets/scripts/sheets_df.py`（含 `df_to_sheet` 和 `sheet_to_df`，写入 / 读回成对），在本地分析脚本里直接复用：
+pandas 的 `df.to_json(orient="split", date_format="iso")` 一步完成所有清洗（NaN→null、Timestamp→ISO 字符串、numpy 标量→原生数字），把 dtypes 拼上即可。本 skill 把这段 5 行 helper 打包成可 import 的脚本 `lark-sheets/scripts/lark_sheets_df.py`（含 `df_to_sheet` 和 `sheet_to_df`，写入 / 读回成对），在本地分析脚本里直接复用：
 
 ```python
-from sheets_df import df_to_sheet
+from lark_sheets_df import df_to_sheet
 
 # 单 sheet（显式 format 覆盖默认显示）
 payload = {"sheets": [df_to_sheet(df, "销售", {"营收": "#,##0.00", "毛利率": "0.0%"})]}
@@ -594,5 +601,5 @@ lark_sheets_table_put(url="<表URL>",
 
 ### Validate / Execute 约束
 
-- `Validate`：XOR 公共四件套；`lark_sheets_cells_set` 的 `cells` 必须能解析为 JSON 二维矩阵且行列数与 `range` 完全一致；`lark_sheets_cells_set_style` 的样式参数至少一个非空（或带 `border_styles`）；`lark_sheets_cells_set_image` 的 `range` 必须是单 cell（起止 cell 相同）；`lark_sheets_csv_put` 的 `csv` 必须能按 RFC 4180 解析；`lark_sheets_table_put` 给了 `styles` 则按子表名 / 顺序 / 数量与 `sheets.sheets` 对齐校验；防爆参数上限校验。
-- `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_cells_get(range="<写入区域>", include="value,formula")` 抽样核对。
+- `Validate`：XOR 公共四件套；`lark_sheets_cells_set` 的 `cells` 必须能解析为各行等宽的 JSON 二维矩阵（落区按其行列数推断）；`lark_sheets_cells_set_style` 的样式参数至少一个非空（或带 `border_styles`）；`lark_sheets_cells_set_image` 的 `range` 必须是单 cell（起止 cell 相同）；`lark_sheets_csv_put` 的 `csv` 必须能按 RFC 4180 解析；`lark_sheets_table_put` 给了 `styles` 则按子表名 / 顺序 / 数量与 `sheets.sheets` 对齐校验；防爆参数上限校验。
+- `Execute`：写后必须按写入范围回读首、中、末及用户点名项；公式同时读取 `formula`，并按公式完成流程验证。

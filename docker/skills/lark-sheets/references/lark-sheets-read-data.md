@@ -11,7 +11,7 @@
 - **空值与 0 / "0" 混杂**
 - **大小写 / 全角半角差异**（"办公费" vs "办公费 "、"Sales" vs "sales"）
 
-预探后必须在公式 / 筛选条件里用 `IFERROR` / `IFS` / 提取数值的辅助列处理所有变体；不能为了通过 head(10) 的样本就直接落地。一旦设计的逻辑只覆盖 sample 中出现的格式，就属于违规。
+预探后必须在公式 / 筛选条件里用 `IFERROR` / `IFS` / 提取数值的辅助列处理所有变体；不能为了通过 head(10) 的样本就直接落地。设计的逻辑只覆盖 sample 中出现的格式，在 sample 外的行必然出错。
 
 ⚠️ **大数字（15 位以上的身份证 / 参考号 / 流水号）做去重 / 比较时禁止用 `lark_sheets_csv_get` 的显示值**：`lark_sheets_csv_get` 返回的是**格式化显示值**，15 位以上数字会被显示成 `1.04E+14` 这类科学计数法——多个本不相同的号在显示层全变成同一个 `1.04E+14`，拿去判重会**整列误判为重复**。比较 / 去重 / 匹配大数字时必须改用 `lark_sheets_cells_get`（取原始精确值）或把该列读为文本，禁止用 csv-get 的科学计数显示值（反例：大批长参考号被显示成科学计数后，互不相同的号全变成同一个值，被当成整列重复并错误高亮）。
 
@@ -31,6 +31,8 @@
 - 要按列类型结构化读出（喂 DataFrame / round-trip 回 `lark_sheets_table_put`）→ `lark_sheets_table_get`
 - 需要公式/样式/批注 → `lark_sheets_cells_get`
 - 查看某区域下拉框的选项、多选开关或胶囊配色 → `lark_sheets_dropdown_get`
+
+⚠️ **解析返回值只取数据字段**：工具返回统一 envelope，业务数据在 `data` 里、诊断与警告另行给出；解析时只取数据字段，不要把警告 / 诊断文本混进 JSON 再解析（会解析失败）。调用失败先读错误内容再调整，别原样重发。
 
 ⚠️ **大数据优先分窗读、别灌进上下文**：`lark_sheets_csv_get` / `lark_sheets_cells_get` 都受上下文输出量约束（返回过大会被截断或转存为文件）。纯值分析优先 `lark_sheets_csv_get` 按 `range` 行窗口（`A1:Z500` / `A501:Z1000` …）分批处理 + `lark_sheets_csv_put` 分批回写；若确实要让结果直接进上下文又不想触发转存，给任一工具把 `max_chars`（默认 500000）调小到略低于上限（如 `25000`），改为优雅截断 + `has_more` 分页。
 
@@ -179,7 +181,7 @@ lark_sheets_cells_get(url="https://example.feishu.cn/sheets/shtXXX", sheet_name=
 
 `lark_sheets_table_put`（写入侧，见 write-cells reference）的镜像：把表格读回与 `sheets` 完全同构的 typed 协议（`sheets[]` + `columns:[列名]` + `data:[[行]]` + `dtypes:{列名:pandas_dtype}` + `formats?:{列名:number_format}` + `range`），可直接喂回 `lark_sheets_table_put` 或一行还原 DataFrame。
 
-**默认（不带 `range`）读取整张子表的完整 used range**：会跨过表中部的整行空行 / 整列空列，覆盖到真实数据边界。每个子表都回传实际读取的 `range`（如 `A1:F10`）。**截断信号分两层**：① 子表数据被 `max_chars` 裁掉时，该子表带 `truncated: true` + `truncation_warning`；② 字符预算耗尽导致后续整表一行未读时，**顶层**也带同组字段（按提示改用 `sheet_name` 单表重跑或提高 `max_chars`）。**任何一层都没报截断，也不等于逻辑读全**——used range 探测在特殊布局（大段整空行 / 空列）下可能偏窄：拿 `range` 连同返回 `data` 的实际行数、关键末行 / 末日期，与源数据行列数（`lark_sheets_workbook_info` / 源 xlsx）交叉核对，确认覆盖真实边界。仍要精确控制范围时显式传 `range`；分段续读时配 `no_header=true`，表头行与各段 dtypes 需自行拼接对齐。
+**默认（不带 `range`）先按整张子表物理网格探测 used range**：可跨过表中部空行 / 空列定位真实数据边界，再读取该区域。仍受 `max_chars` 上限约束；返回 `truncated=true` 或 `complete=false` 时，响应只有部分数据，改用 `output_path`、提高上限或按 sheet/range 续读。每个子表的 `range` 只表示本次目标区域，不能单独证明内容已完整返回。**任何一层都没报截断，也不等于逻辑读全**——used range 探测在特殊布局（大段整空行 / 空列）下可能偏窄：拿 `range` 连同返回 `data` 的实际行数、关键末行 / 末日期，与源数据行列数（`lark_sheets_workbook_info` / 源 xlsx）交叉核对，确认覆盖真实边界。仍要精确控制范围时显式传 `range`；分段续读时配 `no_header=true`，表头行与各段 dtypes 需自行拼接对齐。
 
 列类型从每列 `number_format` 推断（日期格式→`date`/`datetime64[ns]`、数值→`number`/`float64`、bool→`bool`），`date` 列的序列号转回 ISO `yyyy-mm-dd`——日期、数字往返不丢类型。**列类型只在该列所有非空值一致时才定（`number` / `date` / `bool`）；一列混了类型（如数字列混入「暂无」、日期列混入裸数字）会降为 `string`（dtypes 输出 `object`），让 `dtypes` 与 `data` 里每个值自洽——能 round-trip 回 `lark_sheets_table_put`、不让 pandas `astype` 崩。降级是无损的（脏值原样保留为文本）；若要把零星脏值转成数值列，交给调用方在 pandas 侧做（`to_numeric(errors='coerce')`），那里原始值仍在、可追溯。** 默认读所有子表、第一行当表头（`no_header` 把首行当数据、列名取 `col1` / `col2` …）。
 
@@ -192,10 +194,10 @@ lark_sheets_table_get(url="<表URL>", sheet_name="销售")
 
 #### 输出 → DataFrame（用 `sheet_to_df` helper）
 
-输出形状对齐 pandas split：`columns` 是列名数组、`data` 是二维数据、`dtypes` 是 `{列名: pandas_dtype_str}` 映射。直接喂给 `pd.DataFrame(...).astype(...)` 就能一次性还原所有列类型（不必逐列 `to_datetime` / `to_numeric`）。本 skill 把这段 2 行 helper 打包成可 import 的脚本 `lark-sheets/scripts/sheets_df.py`（含 `df_to_sheet` 和 `sheet_to_df`，写入 / 读回成对）；在本地分析脚本里 `from sheets_df import sheet_to_df` 即可复用，等价逻辑如下：
+输出形状对齐 pandas split：`columns` 是列名数组、`data` 是二维数据、`dtypes` 是 `{列名: pandas_dtype_str}` 映射；`truncated` / `complete` / `truncation_warning` 说明覆盖度。未截断时可直接喂给 `pd.DataFrame(...).astype(...)` 一次性还原所有列类型（不必逐列 `to_datetime` / `to_numeric`）。本 skill 把这段 2 行 helper 打包成可 import 的脚本 `lark-sheets/scripts/lark_sheets_df.py`（含 `df_to_sheet` 和 `sheet_to_df`，写入 / 读回成对）；在本地分析脚本里 `from lark_sheets_df import sheet_to_df` 即可复用，等价逻辑如下：
 
 ```python
-from sheets_df import sheet_to_df
+from lark_sheets_df import sheet_to_df
 
 # 单 sheet（out 为 lark_sheets_table_get 工具返回的 envelope）
 df = sheet_to_df(out["data"]["sheets"][0])
@@ -209,7 +211,7 @@ df_sales = sheets["销售"]
 
 #### round-trip：读 → 改 → 写回（写读对偶）
 
-`sheet_to_df` 和 `df_to_sheet` 一对镜像 helper（脚本 `lark-sheets/scripts/sheets_df.py`）让 round-trip 三段读 / 改 / 写各一行。流程是：
+`sheet_to_df` 和 `df_to_sheet` 一对镜像 helper（脚本 `lark-sheets/scripts/lark_sheets_df.py`）让 round-trip 三段读 / 改 / 写各一行。流程是：
 
 ```
 # 1. 读：调用工具拿 typed 协议
@@ -227,7 +229,7 @@ lark_sheets_table_put(url="<表URL>", sheets=<payload>)
 
 `sheet_to_df(sheet)` 消费 `(columns, data, dtypes)`，`df_to_sheet(df, name, formats=...)` 重新生成同样三个字段——读 / 写完全对偶，只有 `formats` 需要手工透传一次。
 
-### Validate / DryRun / Execute 约束
+### Validate / Execute 约束
 
 - `Validate` 阶段只做 XOR 检查、Enum 合法性、防爆参数上限校验；**禁止**联网（如不能用 `sheet_name` 提前去查 `sheet_id`）。
 - `Execute` 阶段才进行 sheet-name → sheet-id 解析与 API 调用。

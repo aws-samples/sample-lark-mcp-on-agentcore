@@ -39,7 +39,7 @@ If the API ever omits the member echo, the tool falls back to surfacing the call
 
 - **`member_type` and `member_role` must match the original grant.** Revoking a non-existent `(member_id, type, role)` tuple is a no-op error from the API. If you do not know the current role, run `lark_wiki_member_list` first.
 - **Role switch is not a single update.** To move someone between `admin` and `member`, call `lark_wiki_member_remove` with the old role first, then `lark_wiki_member_add` with the new one.
-- **Bot + `my_library` is rejected upfront.** ⚠️ Bot identity operations are not available via the MCP server.
+- `space_id="my_library"` is a per-user alias. The MCP server always runs with user identity, so it resolves normally. (It is rejected only under bot identity, which this server does not use.)
 
 ## Required Scope
 

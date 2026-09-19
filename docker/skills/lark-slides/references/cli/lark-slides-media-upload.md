@@ -54,21 +54,16 @@ lark_slides_media_upload(file="./pic.png", presentation="https://xxx.feishu.cn/w
 1. **`<img>` 坐标避开现有元素** —— 先读现有元素 bbox 挑空白区；空间不够就先用 `block_replace` 挪动/缩小现有元素后再放图
 2. **`<img>` 的 `width:height` 对齐原图比例** —— 比例不一致会被裁剪，参见 `lark_get_skill(domain="slides", section="xml/xml-schema-quick-ref")` 的 `<img>` 说明
 
-## 工作原理
+## 上传约束
 
-内部调用 `POST /open-apis/drive/v1/medias/upload_all`（单次上传，最大 20 MB），固定使用：
-
-- `parent_type=slide_file`（slides 后端唯一接受的取值）
-- `parent_node=<xml_presentation_id>`
-
-**不要尝试用 `slides_image`、`slide_image` 等 parent_type**——后端会返回 1061001 / 1061002 错误。这是 slides 的特殊约定。
+`lark_slides_media_upload` 会处理 Slides 所需的媒体归属参数；调用者只需传入 `file` 和 `presentation`。单张图片最大 20 MB。
 
 ## 常见错误
 
 | 错误码 | 含义 | 解决方案 |
 |--------|------|----------|
-| 1061002 | params error / 不支持的 parent_type | 使用 `lark_slides_media_upload`，不要自己拼原生 API |
-| 1061004 | forbidden：当前身份对该演示文稿无编辑权限 | 确认当前身份对目标 PPT 有编辑权限 |
+| 1061002 | params error / 不支持的 parent_type | 使用 `lark_slides_media_upload`；它会采用 Slides 所需的 `parent_type` |
+| 1061004 | forbidden：当前用户对该演示文稿无编辑权限 | 确认当前用户对目标 PPT 有编辑权限 |
 | 1061044 | parent node not exist | `presentation` 给的 token 不对，或不是 slides 类型 |
 | 403 | 权限不足 | 检查 `docs:document.media:upload` scope；wiki URL 还需要 `wiki:node:read` |
 

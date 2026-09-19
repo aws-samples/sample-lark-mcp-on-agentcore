@@ -66,7 +66,7 @@ lark_wiki_member_list(space_id="<space_id>", format="table")
 
 ## Notes
 
-- **Bot + `my_library` is rejected upfront** — ⚠️ Bot identity operations are not available via the MCP server.
+- `space_id="my_library"` is a per-user alias. The MCP server always runs with user identity, so it resolves normally. (It is rejected only under bot identity, which this server does not use.)
 - Use `member_id` from the output as `member_id` for `lark_wiki_member_remove`; `member_type` and `member_role` must be passed exactly as listed to remove a grant.
 
 ## Required Scope

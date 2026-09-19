@@ -35,13 +35,17 @@ lark_wiki_node_create(space_id="<SPACE_ID>", obj_type="sheet", title="周报数�
 - `obj_type`：节点关联对象类型
 - `node_type`：节点类型
 - `title`：节点标题
+- ⚠️ 上游在 bot identity 下创建节点时会自动为当前用户授予 `full_access` 并返回 `permission_grant`；MCP server 始终使用 user identity，因此不会出现该字段。
+
+> [!IMPORTANT]
+> **不要擅自执行 owner 转移。** 如果用户需要把 owner 转给自己，必须单独确认。
 
 ## 参数
 
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `space_id` | 否 | 目标知识空间 ID；可传特殊值 `my_library` 表示个人知识库 |
-| `parent_node_token` | 否 | 父知识库节点 token；传入后会在该节点下创建新节点 |
+| `parent_node_token` | 否 | 父知识库节点 token 或文档 obj_token；在解析出的 Wiki 节点下创建新节点 |
 | `title` | 否 | 节点标题 |
 | `node_type` | 否 | 节点类型，默认 `origin`；可选值：`origin`、`shortcut` |
 | `obj_type` | 否 | 节点对应对象类型，默认 `docx`；可选值：`sheet`、`mindnote`、`bitable`、`file`、`docx`、`slides`。`file` 仅支持 `shortcut` 节点 |
@@ -51,7 +55,8 @@ lark_wiki_node_create(space_id="<SPACE_ID>", obj_type="sheet", title="周报数�
 
 - **优先级**：`space_id` > `parent_node_token` > `my_library`
 - **显式 space**：传了 `space_id` 时，shortcut 会直接使用该空间；如果该值是 `my_library`，会先调用 `GET /open-apis/wiki/v2/spaces/my_library` 解析成真实 `space_id`
-- **父节点推断**：未传 `space_id` 但传了 `parent_node_token` 时，会先调用 `GET /open-apis/wiki/v2/spaces/get_node` 获取父节点，再读取其 `space_id`
+- **父节点推断**：未传 `space_id` 但传了 `parent_node_token` 时，会先调用 `GET /open-apis/wiki/v2/spaces/node_by_token` 获取父节点，再读取其 `space_id`
+- **父节点类型**：`parent_node_token` 接受 Wiki `node_token` 或已挂载到 Wiki 的文档 `obj_token`，创建时使用查询返回的 `node_token`；显式传空间时也会查询并校验父节点空间。
 - **个人知识库回退**：如果 `space_id` 和 `parent_node_token` 都没传，会自动解析 `my_library`
 
 ## 节点类型与对象类型
