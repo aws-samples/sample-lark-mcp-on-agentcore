@@ -20,6 +20,7 @@ description: "妙搭（Spark/Miaoda）应用开发与托管：应用创建、本
 | HTML 应用 / 创意模式 — 写 HTML 页面/网站、静态页、PPT/deck、落地页、仪表盘、UI mockup、原型、线框图、视觉探索 | 加载 `lark_get_skill(domain="apps", section="creative-design/creative-design")`（含完整开发与发布流程） | `lark_get_skill(domain="apps", section="creative-design/creative-design")` |
 | 旧版存量 HTML 应用（无 Git 管理）继续上传已有静态产物 | `lark_apps_html_publish`（仅兼容旧链路；新建 html / 创意模式 / creative-design 产物不得使用） | `lark_get_skill(domain="apps", section="html-publish")` |
 | 开发已有应用 / 初始化本地仓库（开发方式已定为本地后；先解析 app_id，勿 `lark_apps_create` 新建） | `lark_apps_init`（或手动 `lark_apps_git_credential_init` + 原生 git）。**执行前必读** `lark_get_skill(domain="apps", section="local-dev")`，含端到端流程和领域规则 | `lark_get_skill(domain="apps", section="init")`、`lark_get_skill(domain="apps", section="git-credential")` |
+| 只要一份源码快照、不做本地开发；或要取**别人分享给你的**应用源码（你对其仓库无权限） | `lark_apps_export`（下载 zip；不配 git 凭证、不建工作区）。要继续开发用 `lark_apps_init` 而非本命令 | `lark_get_skill(domain="apps", section="export")` |
 | 本地开发时 `.env.local` 损坏/丢失，重新拉取启动期环境变量 | `lark_apps_env_pull` | `lark_get_skill(domain="apps", section="env-pull")` |
 | 管理应用环境变量（查看/设置/删除） | `lark_apps_env_list`、`lark_apps_env_set`、`lark_apps_env_delete` | `lark_get_skill(domain="apps", section="env")` |
 | 查线上日志、Trace、请求数、错误率、延迟、CPU、memory、PV/UV/访问量 | `lark_apps_log_list`、`lark_apps_log_get`、`lark_apps_trace_list`、`lark_apps_trace_get`、`lark_apps_metric_list`、`lark_apps_analytics_list` | `lark_get_skill(domain="apps", section="observability")` |

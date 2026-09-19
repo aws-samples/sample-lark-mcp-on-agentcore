@@ -40,10 +40,10 @@ lark_wiki_member_add(space_id="my_library", member_id="ou_xxx", member_type="ope
 
 ## Notes
 
-- **`my_library` + bot identity is rejected upfront** — `my_library` is a per-user alias with no meaning for a tenant token. ⚠️ Bot identity operations are not available via the MCP server.
-- **Bot + `opendepartmentid` is a known unsupported path on the backend.** ⚠️ This operation requires bot identity and is not available via the MCP server.
+- `space_id="my_library"` is a per-user alias. The MCP server always runs with user identity, so it resolves normally. (It is rejected only under bot identity, which this server does not use.)
+- **Department members work here.** The `opendepartmentid` restriction is a bot-identity limitation on the backend; user identity — the only identity this server uses — is the supported path for department adds.
 - **App member uses `member_type="appid"`.** The corresponding `member_id` is the app ID, commonly formatted as `cli_xxx`.
-- Resolve `member_id` **before** calling: `lark_contact_search_user` for users, `lark_im_chat_search` for groups, `lark_invoke(tool_name="lark_contact_departments_search", ...)` for departments. Do not call `lark_wiki_member_add` first and reverse-engineer the type from the error.
+- Resolve `member_id` **before** calling: `lark_contact_search_user` for users, `lark_im_chat_search` for groups. For departments there is **no** lookup tool in this surface (the 1.0.96 catalog exposes no department resource), so the `open_department_id` must be supplied by the caller. Do not call `lark_wiki_member_add` first and reverse-engineer the type from the error.
 - The role switch (`admin` <-> `member`) is not a single update — call `lark_wiki_member_remove` for the old role first, then `lark_wiki_member_add` with the new one.
 
 ## Required Scope

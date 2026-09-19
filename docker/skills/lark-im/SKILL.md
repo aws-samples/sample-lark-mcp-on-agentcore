@@ -51,9 +51,15 @@ The raw `sender_name` is not duplicated in output (its value is in `name`); the 
 
 The four message-pulling shortcuts (`lark_im_messages_mget`, `lark_im_chat_messages_list`, `lark_im_messages_search`, `lark_im_threads_messages_list`) automatically attach a `reactions` block and (for edited messages) `update_time` to each returned message — no separate `im.reactions.batch_query` call is needed. Pass `no_reactions=true` to opt out. For the full contract (output shape, the `im:message.reactions:read` scope requirement, and the "missing field ≠ fetch failure" data rules), call `lark_get_skill(domain="im", section="message-enrichment")`.
 
+### Compact message output (`concise`)
+
+`lark_im_chat_messages_list` and `lark_im_threads_messages_list` accept `concise=true` for compact Markdown output. Use it when the user asks for concise output or a smaller result/file. Only these two message-listing tools expose it — do not pass `concise` to any other tool. Do not combine it with an explicit `format`.
+
 ### Opt-in resource auto-download (`download_resources`)
 
 `lark_im_chat_messages_list`, `lark_im_messages_mget`, and `lark_im_threads_messages_list` accept `download_resources=true` to save eligible attachments into `./lark-im-resources/` and add a `resources` array to each message. It is off by default; stickers are not downloadable. A failed attachment is reported on that resource without aborting the message pull. Use `lark_im_messages_resources_download` for one attachment. See `lark_get_skill(domain="im", section="message-enrichment")` for the output contract.
+
+**Folder resources** are containers, not files — a folder `file_key` cannot be downloaded directly. Expand it first through `lark_invoke` with `tool_name="lark_im_files_folder"`, putting every argument inside `params` (a raw API only forwards `params` / `data`, so top-level keys are dropped): `lark_invoke(tool_name="lark_im_files_folder", args={params: {"file_key": "<folder_key>", "srctype": "message", "srcid": "<message_id>"}})` returns one level (the default); add `"recursive": true` to get the whole nested tree instead. Then download the files inside with `lark_im_messages_resources_download`.
 
 ### Card Messages (Interactive)
 
@@ -100,7 +106,7 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 
 | Shortcut | 说明 |
 |----------|------|
-| `lark_get_skill(domain="im", section="chat-create")` | Create a group chat or topic chat; user/bot; chat_mode group\|topic; private/public; invites users/bots; optionally sets bot manager |
+| `lark_get_skill(domain="im", section="chat-create")` | Create a group chat or topic chat as the authorized user (scope `im:chat:create_by_user`); chat_mode group\|topic; private/public; invites users/bots |
 | `lark_get_skill(domain="im", section="chat-list")` | List chats the current user/bot is a member of; defaults to groups; pass types=p2p,group to include p2p single chats (user-only); user/bot; supports sorting, auto-pagination, exclude_muted (user-only) |
 | `lark_get_skill(domain="im", section="chat-members-list")` | List members of a chat; returns separate users[] / bots[] buckets; callable as user or bot; member_types filters which kinds to return; page_all pagination; surfaces truncations[] when the server caps a bucket |
 | `lark_get_skill(domain="im", section="chat-messages-list")` | List messages in a chat or P2P conversation; user/bot; accepts chat_id or user_id, resolves P2P chat_id, supports time range, order asc/desc sorting, auto-pagination |
@@ -111,7 +117,7 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 | `lark_get_skill(domain="im", section="messages-mget")` | Batch get messages by IDs; user/bot; fetches up to 50 om_ message IDs, formats sender names, expands thread replies |
 | `lark_get_skill(domain="im", section="message-read-status")` | `lark_im_messages_read_status` — Batch query whether the current user read 1–50 messages; user-only; returns readable items and invalid message IDs |
 | `lark_get_skill(domain="im", section="messages-reply")` | Reply to a message (supports thread replies); user/bot; supports text/markdown/post/media replies, reply-in-thread, idempotency key |
-| `lark_get_skill(domain="im", section="messages-resources-download")` | Download an image or file attached to a message; user/bot |
+| `lark_get_skill(domain="im", section="messages-resources-download")` | Download an image/file from a message; folders are not directly downloadable — expand with `lark_invoke` / `lark_im_files_folder` (arguments go inside `params`) first, then download the files inside; user/bot |
 | `lark_get_skill(domain="im", section="messages-search")` | Search messages across chats (supports keyword, sender, time range filters) with user or bot identity; filters by chat/sender/attachment/time, supports auto-pagination via `page_all` / `page_limit`, enriches results via batched mget and chats batch_query |
 | `lark_get_skill(domain="im", section="messages-send")` | Send a message to a chat or direct message; user/bot; sends to chat_id or user_id with text/markdown/post/media, supports idempotency key |
 | `lark_get_skill(domain="im", section="threads-messages-list")` | List messages in a thread; user/bot; accepts om_/omt_ input, resolves message IDs to thread_id, supports order asc/desc sorting, auto-pagination |
@@ -136,7 +142,7 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 
 ### chats
 
-  - `create` — 创建群。Identity: `bot` only (`tenant_access_token`). ⚠️ This operation requires bot identity and is not available via the MCP server.
+  - `create` — 创建群。Identity: `bot` only (`tenant_access_token`)。⚠️ 该**原始 API** 需要 bot 身份，本服务不可用——创建群请改用 shortcut `lark_im_chat_create`，它以 user 身份创建（scope `im:chat:create_by_user`）。
   - `get` — 获取群信息。Identity: supports `user` and `bot`; the caller must be in the target chat to get full details, and must belong to the same tenant for internal chats.
   - `link` — 获取群分享链接。Identity: supports `user` and `bot`; the caller must be in the target chat, must be an owner or admin when chat sharing is restricted to owners/admins, and must belong to the same tenant for internal chats.
   - `update` — 更新群信息。Identity: supports `user` and `bot`.
@@ -224,7 +230,8 @@ lark_invoke(tool_name="lark_im_<resource>_<method>", args={...}) # 调用 API
 
 | 方法 | 所需 scope |
 |------|-----------|
-| `chats.create` | `im:chat:create` |
+| `chats.create`（原始 API） | `im:chat:create` — bot 专属，本部署无法授予；用 shortcut `lark_im_chat_create` 代替 |
+| `lark_im_chat_create`（shortcut） | `im:chat:create_by_user` |
 | `chats.get` | `im:chat:read` |
 | `chats.link` | `im:chat:read` |
 | `chats.update` | `im:chat:update` |

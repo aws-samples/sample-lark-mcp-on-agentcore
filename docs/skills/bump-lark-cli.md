@@ -481,13 +481,24 @@ Include all changed files:
   docker run --rm --entrypoint cat lark-mcp-bump:tmp /app/generated-tools.json \
     | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const gt=JSON.parse(s);let n=0;
       for(const t of gt.tools) for(const d of [t.description,...t.flags.map(f=>f.description)]){
-        if(/@file|--print-schema|reads stdin|lark-cli/.test(d.replace(/"[^"]*"/g,""))){n++;console.log(t.service,t.command,d.slice(0,90))}}
+        if(/(^|[^a-zA-Z0-9])@(file|path|relative[a-z-]*|[a-z-]*\.(json|xml|txt|csv|md))|--print-schema|reads stdin|for stdin|from stdin|lark-cli/.test(d.replace(/"[^"]*"/g,""))){n++;console.log(t.service,t.command,d.slice(0,90))}}
       console.log("leaks =",n)})'
   ```
 
   Expected: `leaks = 0`. A hit means a new CLI-speak shape — extend
   `translateFlagDescription` + its tests (quoted data literals like
   `(default "created by lark-cli")` are exempt; the scan already ignores them).
+
+  > The `@`-hint half of this pattern matches the file/stdin CHANNEL vocabulary
+  > (`@file`, `@path`, `@relative-file`, `` `@something.json` ``, and the stdin
+  > phrasings), not a bare `@<word>`. Both halves of that scoping are load-bearing.
+  > Too narrow and the hole reopens on a rename: `docs +script` carried
+  > `@relative-file` at 1.0.94 and `@file-path` at 1.0.96, so a literal-`@file`
+  > scan passed 1.0.94 while the CLI-only hint was already shipping. Too broad and
+  > it drowns in legitimate `@` DATA that must never be stripped — plugin keys
+  > (`@official-plugins/ai-text-generate`), IM mention prose (`@mentioned`, `@all`),
+  > palette versions (`brandColorSeries@v2`), and `<img src="@./local.png">`
+  > placeholders the agent literally writes into slide XML.
 - [ ] **Payload-schema extraction still working** — composite flags' JSON Schemas are
   extracted at build time via `--print-schema` (`extractPayloadSchemas` in
   `generate-tools.js`) and embedded as `payloadSchemas`; server.js validates payloads

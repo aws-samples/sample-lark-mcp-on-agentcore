@@ -6,10 +6,9 @@ description: "飞书知识库：管理知识空间、空间成员和文档节点
 # wiki (v2)
 
 > **成员管理硬限制：**
-> - 如果目标是"部门"，先判断身份，再决定是否继续。
-> - bot identity 对应 `tenant_access_token`。官方限制：这种身份下不能使用部门 ID (`opendepartmentid`) 添加知识空间成员。
-> - 遇到"部门 + bot identity"时，禁止先调用 `lark_wiki_member_add` 试错；直接说明该路径不可行。
-> - ⚠️ bot identity 相关操作不可通过 MCP server 执行（MCP server 始终使用 user identity）。
+> - MCP server 始终使用 user identity，因此**添加部门为成员是支持的**——上游记录的「不能用部门 ID (`opendepartmentid`) 添加空间成员」只适用于 bot identity（`tenant_access_token`），本服务不会走到那条路径。
+> - 真正的限制在别处：本服务**没有按部门名检索 `open_department_id` 的工具**（1.0.96 目录里不存在任何 department 资源）。所以要么由用户直接提供 `open_department_id`，要么告知用户需在别处取得该 ID，不要臆造检索调用。
+> - `my_library` 是 per-user 别名，user identity 下正常解析，可直接用作 `space_id`。
 
 ## 身份说明
 
@@ -33,7 +32,7 @@ description: "飞书知识库：管理知识空间、空间成员和文档节点
 - 用户要列出 Wiki 节点：先用 `lark_wiki_space_list` 拿数字 `space_id`，再用 `lark_wiki_node_list(space_id="<space_id>")`。不要把 wiki URL、node token、doc token、名称直接当 `space_id`。钻子节点时 `parent_node_token` 必须是 wiki node token；如果用户给的是 docx/sheet/base URL，先用 `lark_wiki_node_get(node_token="<url>")` 解析出 `node_token`。
 - `lark_wiki_node_list` 命中 `invalid_parameters`、`not_found`、`permission_denied` 时，不要重复调用同一参数；按 hint 修 `space_id` / `parent_node_token` / 权限。只有 `rate_limit` 才做退避重试。
 - 用户说"给知识库添加成员/管理员"：先把目标解析成"用户 / 群 / 部门 / 应用"四类之一，再决定 `member_type`，不要先调 `lark_wiki_member_add` 再根据报错反推类型。
-- 用户说"部门 + bot"：这是已知不支持路径。⚠️ This operation requires bot identity and is not available via the MCP server.
+- 用户说"添加部门为成员"：本服务是 user identity，该路径**受支持**，用 `member_type="opendepartmentid"` 执行 `lark_wiki_member_add`。前提是拿到 `open_department_id`——本服务没有按名称检索部门的工具，所以先向用户索要该 ID，或说明需在别处取得；不要先调 `lark_wiki_member_add` 试错反推。
 - 用户说"用户 / 群 / 应用 + 添加成员"：先解析对应 ID，再执行 `lark_wiki_member_add`。
 - 用户说"查看 / 列出空间成员"：用 `lark_wiki_member_list`；该 shortcut 默认只取一页，多成员场景显式加 `page_all=true`。
 - 用户说"移除 / 删除空间成员"：用 `lark_wiki_member_remove`，必须传齐原始授予时的 `member_type` 和 `member_role`（不知道就先 `lark_wiki_member_list` 查一下）。
@@ -42,7 +41,7 @@ description: "飞书知识库：管理知识空间、空间成员和文档节点
 
 Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用。
 
-获取或解析 Wiki 节点统一优先使用 `lark_wiki_node_get`，包括只为获取 `space_id`、`node_token`、`obj_token` 或 `obj_type` 的中间步骤。只有当该 shortcut 不可用，或任务明确需要它未输出的原始响应字段时，才回退到 `lark_invoke(tool_name="lark_wiki_spaces_get_node", ...)`；回退前先用 `lark_discover(query="wiki.spaces.get_node")` 确认参数。
+获取或解析 Wiki 节点统一使用 `lark_wiki_node_get`，包括只为获取 `space_id`、`node_token`、`obj_token` 或 `obj_type` 的中间步骤。
 
 | Shortcut | 说明 |
 |----------|------|
@@ -67,7 +66,7 @@ Shortcut 是对常用操作的高级封装。有 Shortcut 的操作优先使用�
 - 群组场景使用 `member_type="openchat"`：用 `lark_im_chat_search(query="<群名关键词>")` 获取 `chat_id`。
 - 应用场景使用 `member_type="appid"`：`member_id` 传应用 ID，格式通常为 `cli_xxx`。
 - `userid` / `unionid` 只在下游明确要求时才使用；先拿到 `open_id`，再调用 `lark_invoke(tool_name="lark_contact_users_get", args={params: {"user_id_type": "open_id"}})` 读取 `user_id` / `union_id`。
-- 部门场景使用 `member_type="opendepartmentid"`：调用 `lark_invoke(tool_name="lark_contact_departments_search", args={params: {"department_id_type": "open_department_id"}, data: {"query": "<部门名>"}})` 获取 `open_department_id`。
+- 部门场景使用 `member_type="opendepartmentid"`：本服务**没有**按部门名检索 `open_department_id` 的工具（1.0.96 目录里不存在任何 department 资源）。请向用户索取 `open_department_id`，或说明需在飞书管理后台 / 其他途径取得后再传入。
 - 只有在目标类型确认可行后，才调用 `lark_wiki_member_add`。
 
 ## 目标语义约束
@@ -88,7 +87,7 @@ lark_invoke(tool_name="lark_wiki_<resource>_<method>", args={...})  # 调用 API
 
 - `create` — 创建知识空间
 - `get` — 获取知识空间信息
-- `get_node` — 获取知识空间节点信息
+- `get_node` — 获取知识空间节点信息。优先用 `lark_wiki_node_get`；只在需要该 shortcut 未输出的原始响应字段时才直接调它
 - `list` — 获取知识空间列表
 
 ### members

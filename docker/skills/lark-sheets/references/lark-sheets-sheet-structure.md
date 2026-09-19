@@ -10,6 +10,10 @@
 
 不可逆的影响必须先在回复中告知用户，得到确认再执行。
 
+## 合并安全契约（按模块 / 分组展示）
+
+合并前先读目标列的完整连续区域；只有同值且连续、且非左上角单元格没有值 / 公式 / 批注 / 数据验证或需保留的独立样式时，才可合并。空值、值变化、上级模块变化或上述有效内容立即断组。先读取既有 merges，禁止与现有合并区交叠或跨组扩张；执行前记录每组 `range + 左上角原文`，从下往上或一次批量提交。完成后用 `lark_sheets_sheet_info(include="merges")` 核范围，并用 `lark_sheets_cells_get` 确认左上角文本未丢、组外边界未合并。
+
 ## 使用场景
 
 读写。管理子表结构与布局。本 reference 覆盖 9 个 shortcut（按用途分两类）：
@@ -155,43 +159,43 @@ _公共四件套_
 
 ```
 # 在第 10 行前插 3 行，继承上方样式
-lark_sheets_dim_insert(url="https://example.feishu.cn/sheets/shtXXX", sheet_id="$SID", position="10", count="3", inherit_style="before")
+lark_sheets_dim_insert(url="https://example.feishu.cn/sheets/shtXXX", sheet_id="<SID>", position="10", count="3", inherit_style="before")
 
 # 在 C 列前插 2 列
-lark_sheets_dim_insert(url="...", sheet_id="$SID", position="C", count="2")
+lark_sheets_dim_insert(url="...", sheet_id="<SID>", position="C", count="2")
 ```
 
 ### `lark_sheets_dim_delete`
 
 ```
 # 删除第 5-7 行
-lark_sheets_dim_delete(url="...", sheet_id="$SID", range="5:7")
+lark_sheets_dim_delete(url="...", sheet_id="<SID>", range="5:7")
 
 # 删除 D-F 列
-lark_sheets_dim_delete(url="...", sheet_id="$SID", range="D:F")
+lark_sheets_dim_delete(url="...", sheet_id="<SID>", range="D:F")
 
 # 删除多个散布区间（如按查重结果删行）：ranges 一次批量交付（fail-fast，失败后先回读再补发；逆序保索引）。
 # 自动按位置从大到小逆序执行——正序会因前面的行被删导致后续索引前移错位；
 # 无需自行排序，也不要为此拼 lark_sheets_batch_update 的子操作数组
-lark_sheets_dim_delete(url="...", sheet_id="$SID", ranges=["5:5","8:8","11:13"])
+lark_sheets_dim_delete(url="...", sheet_id="<SID>", ranges=["5:5","8:8","11:13"])
 ```
 
 ### `lark_sheets_dim_hide` / `lark_sheets_dim_unhide`
 
 ```
-lark_sheets_dim_hide(url="...", sheet_id="$SID", range="5:7")
-lark_sheets_dim_unhide(url="...", sheet_id="$SID", range="5:7")
-lark_sheets_dim_hide(url="...", sheet_id="$SID", range="C:F")
+lark_sheets_dim_hide(url="...", sheet_id="<SID>", range="5:7")
+lark_sheets_dim_unhide(url="...", sheet_id="<SID>", range="5:7")
+lark_sheets_dim_hide(url="...", sheet_id="<SID>", range="C:F")
 ```
 
 ### `lark_sheets_dim_move`
 
 ```
 # 把第 3-7 行移到第 12 行前
-lark_sheets_dim_move(url="...", sheet_id="$SID", source_range="3:7", target="12")
+lark_sheets_dim_move(url="...", sheet_id="<SID>", source_range="3:7", target="12")
 
 # 把 C-F 列移到 H 列前
-lark_sheets_dim_move(url="...", sheet_id="$SID", source_range="C:F", target="H")
+lark_sheets_dim_move(url="...", sheet_id="<SID>", source_range="C:F", target="H")
 ```
 
 ### `lark_sheets_rows_resize` / `lark_sheets_cols_resize`
@@ -206,21 +210,20 @@ lark_sheets_dim_move(url="...", sheet_id="$SID", source_range="C:F", target="H")
 
 ```
 # 冻结前 1 行 + 前 2 列（一次给全）
-lark_sheets_dim_freeze(url="...", sheet_id="$SID", rows=1, cols=2)
+lark_sheets_dim_freeze(url="...", sheet_id="<SID>", rows=1, cols=2)
 
 # 解除行冻结但保住列：把要保留的轴一并写出
-lark_sheets_dim_freeze(url="...", sheet_id="$SID", rows=0, cols=2)
+lark_sheets_dim_freeze(url="...", sheet_id="<SID>", rows=0, cols=2)
 
 # 两轴全部解冻
-lark_sheets_dim_freeze(url="...", sheet_id="$SID", rows=0, cols=0)
+lark_sheets_dim_freeze(url="...", sheet_id="<SID>", rows=0, cols=0)
 ```
 
 ### `lark_sheets_dim_group` / `lark_sheets_dim_ungroup`（大纲）
 
 > 仅当用户明确说"行分组 / 列分组 / 大纲 / outline"时触发；按字段做数据分组用 `lark_sheets_pivot_create`。
 
-### Validate / DryRun / Execute 约束
+### Validate / Execute 约束
 
-- `Validate`：XOR 公共四件套；`range` / `source_range` 必须是合法 A1 闭区间（行用数字、列用字母，不可混用）；`lark_sheets_dim_insert` 的 `count` > 0；`lark_sheets_dim_move` 的 `target` 必须与 `source_range` 同维度（行 vs 列）；`lark_sheets_dim_delete` 强制 `yes` 或 `dry_run`；`lark_sheets_rows_resize` / `lark_sheets_cols_resize` 的统一形态（`range` + `height`/`width` 或 `type`）与 map 形态（`heights`/`widths`）二选一、不可混用；详见 `lark-sheets-range-operations.md`。
-- `DryRun`：写操作输出"将要 PATCH 的目标范围 + 目标参数"。
-- `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_sheet_info(include="row_heights,col_widths,hidden_rows,hidden_cols,groups,frozen")` 查看受影响的范围。
+- `Validate`：XOR 公共四件套；`range` / `source_range` 必须是合法 A1 闭区间（行用数字、列用字母，不可混用）；`lark_sheets_dim_insert` 的 `count` > 0；`lark_sheets_dim_freeze` 至少给 `rows` / `cols` 之一；`lark_sheets_dim_move` 的 `target` 必须与 `source_range` 同维度（行 vs 列）；`lark_sheets_dim_delete` 是 high-risk-write，需 `_confirm=true`，且 `range` 与 `ranges` 二选一、`ranges` 各区间同维度且不可重叠（≤100 个）；`lark_sheets_rows_resize` / `lark_sheets_cols_resize` 的统一形态（`range` + `height`/`width` 或 `type`）与 map 形态（`heights`/`widths`）二选一、不可混用；详见 `lark_get_skill(domain="sheets", section="range-operations")`。
+- `Execute`：写后必须调用 `lark_sheets_sheet_info(include="row_heights,col_widths,hidden_rows,hidden_cols,groups,frozen,merges")`，按本次结构动作核对受影响范围。

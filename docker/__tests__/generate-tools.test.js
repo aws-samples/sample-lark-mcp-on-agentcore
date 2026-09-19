@@ -400,6 +400,64 @@ describe('translateFlagDescription', () => {
     expect(out).not.toContain('@file');
   });
 
+  // lark-cli writes this channel hint with a descriptive placeholder instead of
+  // the literal `@file`, and RENAMES the placeholder between releases
+  // (`@relative-file` at 1.0.94 → `@file-path` at 1.0.96). A spelling-specific
+  // rule silently stops matching on the rename, so both must strip.
+  it('strips the "use @<placeholder> or - for stdin" hint (docs +script --content)', () => {
+    const desc = 'local XML content for parse; use @file-path or - for stdin; mutually exclusive with --doc';
+    const out = translateFlagDescription(desc);
+    expect(out).not.toContain('@');
+    expect(out).not.toContain('stdin');
+    expect(out).toBe('local XML content for parse; mutually exclusive with doc');
+  });
+
+  it('strips the ", @<placeholder>, or - for stdin" mid-sentence variant', () => {
+    const desc = 'Presentation Decision JSON; accepts inline JSON (recommended for init-draft), @file-path, or - for stdin; direct inline input also recovers quotes';
+    const out = translateFlagDescription(desc);
+    expect(out).not.toContain('@');
+    expect(out).not.toContain('stdin');
+    expect(out).toBe('Presentation Decision JSON; accepts inline JSON (recommended for init-draft); direct inline input also recovers quotes');
+  });
+
+  it('strips the pre-1.0.96 "@relative-file" spelling of the same hint', () => {
+    const desc = 'local XML content for parse; use @relative-file or - for stdin; mutually exclusive with --doc';
+    const out = translateFlagDescription(desc);
+    expect(out).not.toContain('@');
+    expect(out).not.toContain('stdin');
+  });
+
+  // "or @file / - for stdin": the plain `or @file` rule consumed only the @file
+  // half and left a dangling "/ - for stdin" in the shipped catalog.
+  it('strips "or @file / - for stdin" whole, leaving no dangling fragment', () => {
+    const desc = 'comma-separated IDs to convert (1–100), or @file / - for stdin';
+    const out = translateFlagDescription(desc);
+    expect(out).toBe('comma-separated IDs to convert (1–100)');
+  });
+
+  it('strips the "or @path to read one from a file" relative clause', () => {
+    const desc = 'one complete <slide> XML document, or @path to read one from a file; repeat once per page';
+    const out = translateFlagDescription(desc);
+    expect(out).toBe('one complete <slide> XML document; repeat once per page');
+  });
+
+  it('drops the @file + stdin channels but keeps the inline one', () => {
+    const desc = 'Structured JSON object. Accepts inline JSON, `@reference-map.json` (relative path), or `-` to read from stdin.';
+    const out = translateFlagDescription(desc);
+    expect(out).toBe('Structured JSON object. Accepts inline JSON.');
+  });
+
+  // Guards against over-stripping: these `@` tokens are DATA, not channel hints.
+  it('leaves @-shaped data literals alone (plugin keys, @mentions, palette versions)', () => {
+    for (const desc of [
+      'plugin key (e.g. @official-plugins/ai-text-generate); omit to install all declared plugins',
+      'filter by @mentioned user open_ids, comma-separated (also matches messages that @all)',
+      'Preset chart-level color palette; mutually exclusive with colors (brandColorSeries@v2|ramp)',
+    ]) {
+      expect(translateFlagDescription(desc)).toBe(desc);
+    }
+  });
+
   it('rewrites `lark-cli skills read <domain> <path>` advice to lark_get_skill', () => {
     const desc = 'AI agents MUST read lark-cli skills read lark-doc references/lark-doc-xml.md before writing content.';
     const out = translateFlagDescription(desc);

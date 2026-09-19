@@ -1,6 +1,6 @@
 # 编辑已有 PPT：读-改-写闭环
 
-局部编辑走 **shortcut `lark_slides_replace_slide`**（块级替换 / 插入），配合 `lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", ...)` 读原页拿 `block_id`。整页重建走 **`lark_slides_update_slide`**（见 `lark_get_skill(domain="slides", section="cli/lark-slides-update-slide")`），多页就每页各跑一次 —— 它原地覆盖并保留 `slide_id` 和页序；只有写进 `content` 且带原 id 的元素才会保留元素 id，遗漏的元素会被删除。
+局部编辑走 **shortcut `lark_slides_replace_slide`**（块级替换 / 插入），配合 `lark_slides_xml_get(slide_id=...)` 读原页拿 `block_id`。整页重建走 **`lark_slides_update_slide`**（见 `lark_get_skill(domain="slides", section="cli/lark-slides-update-slide")`），多页就每页各跑一次 —— 它原地覆盖并保留 `slide_id` 和页序；只有写进 `content` 且带原 id 的元素才会保留元素 id，遗漏的元素会被删除。
 
 > 生成 XML 前**必读** `lark_get_skill(domain="slides", section="xml/xml-schema-quick-ref")`。
 
@@ -22,7 +22,7 @@ PRES_ID = "xml_presentation_id_here"
 SID = "slide_id_here"
 
 # 1. 读原页，从 XML 里挑出要改的块的 3 位 short id（如 bUn / bab）
-lark_invoke(tool_name="lark_slides_xml_presentation_slide_get", args={params: {"xml_presentation_id": PRES_ID, "slide_id": SID}})
+lark_slides_xml_get(presentation=PRES_ID, slide_id=SID, raw=true)
 
 # 2. 用 lark_slides_replace_slide 直接改那个块（不需要搬原 XML）
 lark_slides_replace_slide(presentation=PRES_ID, slide_id=SID, parts='[{"action":"block_replace","block_id":"bUn","replacement":"<shape type=\"text\" topLeftX=\"80\" topLeftY=\"80\" width=\"800\" height=\"120\"><content textType=\"title\"><p>新标题</p></content></shape>"}]')
@@ -37,6 +37,10 @@ lark_slides_replace_slide(presentation=PRES_ID, slide_id=SID, parts='[{"action":
 `revision_id` 默认 `-1`，表示基于当前最新版执行。传具体版本号时，服务端以该版本为 base 应用变更。
 
 注意：传不存在的版本号（超过当前 revision）会返回 3350002 not found；不确定时用 `-1` 即可。
+
+## `tid` 参数
+
+跨请求的并发事务 ID，多人协作长事务才用得上。单次调用留空即可。
 
 ## 两种 action 详解
 
@@ -72,14 +76,14 @@ lark_slides_replace_slide(presentation=PRES_ID, slide_id=SID, parts='[{"action":
 
 | 现象 | 原因 | 对策 |
 |------|------|------|
-| 3350001，hint 含 "block_id not found" | `parts[i].block_id` 在当前页不存在 | 重新 `slide.get` 拿最新 XML |
-| 3350002 not found | `revision_id` 传了不存在的版本号 | 用 `-1` 或实际存在的 `revision_id` |
+| 3350001，hint 含 "block_id not found" | `parts[i].block_id` 在当前页不存在 | 重新用 `lark_slides_xml_get(slide_id=...)` 拿最新 XML |
+| 3350002 not found | `revision_id` 传了不存在的版本号 | 用 `-1` 或 `lark_slides_xml_get(slide_id=...)` 返回的 `revision_id` |
 | `<img>` 不显示 / 显示破图 | `src` 写了外链 URL | 换成通过 `lark_slides_media_upload` 拿到的 `file_token` |
 
 ## 相关文档
 
 - `lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")` — `lark_slides_replace_slide` 参数详情
 - `lark_get_skill(domain="slides", section="cli/lark-slides-update-slide")` — `lark_slides_update_slide` 参数详情（整页覆盖）
-- `lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentation-slide-get")` — slide.get 参考
+- `lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentations-get")` — `lark_slides_xml_get` 参数与单页读取方法
 - `lark_get_skill(domain="slides", section="cli/lark-slides-media-upload")` — 上传图片拿 file_token
 - `lark_get_skill(domain="slides", section="xml/xml-schema-quick-ref")` — XML 元素和属性速查

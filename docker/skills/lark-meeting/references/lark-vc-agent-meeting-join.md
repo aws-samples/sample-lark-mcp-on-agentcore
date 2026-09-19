@@ -10,15 +10,9 @@
 
 > **不要把 9 位会议号等同于入会意图。** 用户给出 9 位会议号并询问"会议讲了什么 / 查会中事件"时，先用 `lark_vc_meeting_list_active` 查当前 active meetings 并按 `meeting_no` 匹配；只有用户明确要求"入会 / 让应用机器人旁听 / 代我参会"时才涉及本能力（而该能力在 MCP server 上不可用）。
 
-## 调用方式（应用身份，MCP server 不可用）
+## 可用性（应用身份，本服务无对应工具）
 
-```
-# 仅指定会议号（无密码）
-lark_vc_meeting_join(meeting_number="123456789")
-
-# 发起日程会议（仅应用身份）
-lark_vc_meeting_join(meeting_number="123456789", action="start")
-```
+上游已把机器人入会收窄为**仅应用身份**（`tenant_access_token`）。本 MCP server 始终使用用户身份，因此**没有对应工具**：`lark_discover` 查不到它，也不能通过 `lark_invoke` 调用。用户要求「让机器人入会 / 旁听 / 代我参会」时，直接说明该路径在本服务不可用，并转向下方「替代路径」。下面的参数说明仅用于理解上游能力边界，不构成可执行调用。
 
 ## 参数
 

@@ -4,10 +4,10 @@
 
 > **编写 `parts` 时只使用标准 action 和字段**：`block_replace` 使用 `block_id` + `replacement`，`block_insert` 使用 `insertion`（可选 `insert_before_block_id`）。不要根据其他 API 或自然语言猜 action、字段名；具体结构以本文表格为准。
 
-相比直接调原生 `xml_presentation.slide.replace`，这个工具的额外价值：
+此工具的四个关键能力：
 
 1. `presentation` 接受 `xml_presentation_id` / `/slides/` URL / `/wiki/` URL（wiki 自动解析）；
-2. `block_replace` 的 `replacement` 根元素 `id="<block_id>"` 自动注入；
+2. `block_replace` 的 `replacement` 根元素 `id` 会被自动注入为 `block_id`；3350001 时优先确认 `block_id` 来自最新的 `lark_slides_xml_get(slide_id=...)` 且存在于当前页；
 3. `<shape>` 元素缺少 `<content/>` 子元素时自动注入；
 4. 3350001 错误时提供上下文感知的 hint。
 
@@ -29,7 +29,7 @@ lark_slides_replace_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX",
 | 参数 | 必填 | 说明 |
 |------|------|------|
 | `presentation` | 是 | `xml_presentation_id`、`/slides/<token>` URL，或 `/wiki/<token>` URL |
-| `slide_id` | 是 | 页面 ID（`lark_invoke(tool_name="lark_slides_xml_presentation_slide_get")` / `lark_slides_xml_get` 都能拿到） |
+| `slide_id` | 是 | 页面 ID（通过 `lark_slides_xml_get` 获取） |
 | `parts` | 是 | JSON 数组（`[{...}, ...]`），单次最多 200 条。支持 `@<file>` 和 `-`（stdin）读取 |
 | `revision_id` | 否 | 基础版本号；默认 `-1` 表示基于最新版执行 |
 | `tid` | 否 | 并发事务 ID；单次单人调用留空 |
@@ -42,7 +42,7 @@ lark_slides_replace_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX",
 | 字段 | 必填 | 说明 |
 |------|------|------|
 | `action` | 是 | `"block_replace"` |
-| `block_id` | 是 | 目标块的 3 位 short element ID（从 `slide.get` 返回 XML 里读） |
+| `block_id` | 是 | 目标块的 3 位 short element ID（从 `lark_slides_xml_get(slide_id=...)` 返回 XML 里读） |
 | `replacement` | 是 | 新 XML 片段；**根元素 `id` 会自动注入为 `block_id`** |
 
 ### action = `block_insert`
@@ -86,8 +86,8 @@ lark_slides_replace_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX",
 
 | 现象 | 原因 | 对策 |
 |------|------|------|
-| 3350001 + hint "block_id not found" | `parts[i].block_id` 在当前页不存在 | 重新 `slide.get` 拿最新 XML |
-| 3350002 not found | `revision_id` 传了不存在的版本号 | 用 `-1` 或有效值 |
+| 3350001 + hint "block_id not found" | `parts[i].block_id` 在当前页不存在 | 重新用 `lark_slides_xml_get(slide_id=...)` 拿最新 XML |
+| 3350002 not found | `revision_id` 传了不存在的版本号 | 用 `-1` 或 `lark_slides_xml_get(slide_id=...)` 拿到的有效值 |
 | `parts invalid JSON` | JSON 本身不完整，或引号 / 转义被破坏 | 确认 `parts` 是一个完整合法的 JSON 数组字符串，内层 XML 的引号只转义一层 |
 | `parts[i] action "page_replace" / "slide_replace" means whole-page replacement` | 把整页更新意图传给了块级工具 | 改用 `lark_slides_update_slide` 整页原地写回 |
 | `parts[i] unknown field "xml"; did you mean "replacement"?` | XML 塞进了未支持的字段名（如 `xml` / `new_xml` / `data`） | 使用标准字段：`block_replace` 用 `replacement`，`block_insert` 用 `insertion` |
@@ -98,6 +98,6 @@ lark_slides_replace_slide(presentation="https://xxx.feishu.cn/wiki/wikcnXXXXXX",
 
 ## 参考
 
-- `lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentation-slide-get")` — 读原页拿 `block_id`
+- `lark_slides_xml_get`（`lark_get_skill(domain="slides", section="cli/lark-slides-xml-presentations-get")`） — 读原页拿 `block_id` / `revision_id`
 - `lark_get_skill(domain="slides", section="cli/lark-slides-media-upload")` — 上传图片拿 `file_token`
 - `lark_get_skill(domain="slides", section="workflow/slides-editing")` — 读-改-写闭环

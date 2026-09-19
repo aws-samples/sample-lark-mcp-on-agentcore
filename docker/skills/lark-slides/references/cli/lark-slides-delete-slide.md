@@ -2,7 +2,7 @@
 
 从演示文稿删除**一页**，按 `slide_id` 指定。只改一页里的局部内容用 `lark_slides_replace_slide`（`lark_get_skill(domain="slides", section="cli/lark-slides-replace-slide")`），不要删了重建。
 
-`presentation` 接受 token / `/slides/` URL / `/wiki/` URL，ID 是普通参数而不是 `params` JSON 串。
+`presentation` 接受 token / `/slides/` URL / `/wiki/` URL，页面 ID 通过 `slide_id` 传入。
 
 > `slide_id` 只接受单个 ID —— 不支持逗号分隔的列表（`lark_slides_screenshot` 的 `slide_id` 支持，这个不支持），也不支持按页号删。
 

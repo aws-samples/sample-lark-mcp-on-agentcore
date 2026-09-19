@@ -28,6 +28,8 @@
 - 调整行高列宽时，先读取相邻行列尺寸再决定像素值，不要随意猜测
 - `copy_to_range`（`lark_sheets_cells_set` 的参数）复制的是值/公式/样式，不含行高列宽。需要统一尺寸时另行调用 `lark_sheets_rows_resize` / `lark_sheets_cols_resize`
 
+**排序必须覆盖完整记录宽度**：`lark_sheets_range_sort` 的 `range` 是整行记录原子移动的边界，必须从记录第一列覆盖到最后一列；“按 B 列排序”只表示 `sort_keys` 选 B，不是把 `range` 写成 `B:B`。范围含表头时传 `has_header=true`。排序后回读前几行和末行，确认各列仍保持同行关系。
+
 ## 写入后列宽自适应（防内容遮挡）
 
 写入文本 / 数值后**必须**主动检查列宽是否适配，否则会出现"内容被截断 / 长数字显示为科学计数法 / 文本溢出被相邻列遮挡"等用户感知问题：
@@ -53,6 +55,7 @@
 4. **对合并区域设置样式**：只对完整 range 设置一次 `cell_styles`（写在左上角单元格），其余位置用 `{}` 占位。
 5. **新增合并时数据保护**：合并前确认目标区域只有左上角有数据，其余单元格为空，否则合并会导致非左上角的数据丢失。
 6. **批量取消合并一次调用即可**：当一个范围（整列 `A:A`、整行 `3:3`、矩形 `A1:D100`）内存在多个合并区域，直接调一次 `lark_sheets_cells_unmerge` 传入这个大范围，会一次性取消该范围内所有合并区域；**不要**为每个合并区域单独调用 unmerge，也不要用 `lark_sheets_batch_update` 拆成多次 unmerge。
+7. **合并 / 取消合并后必须验证**：`lark_sheets_sheet_info(include="merges")` 核目标范围，再 `lark_sheets_cells_get` 回读左上角值和非左上角清空状态。
 
 **⚠️ 多区域合并不要逐个调用**：对**多个**不同区域执行 `lark_sheets_cells_merge` 时，写成一份 `lark_sheets_styles_put` 的 `cell_merges` 一次交付（合并与样式 / 行高列宽 / 冻结同属一份声明式规格，见 `lark_get_skill(domain="sheets", section="styles-put")`）；只有当合并夹在**跨类型、有顺序依赖**的操作链里（如插列 → 合并 → 写表头）才用 `lark_sheets_batch_update`（fail-fast，失败处置与入参格式见 `lark_get_skill(domain="sheets", section="batch-update")`）。行高列宽同理**不需要** `lark_sheets_batch_update`：多行 / 多列不同尺寸直接用 `lark_sheets_rows_resize(heights=…)` / `lark_sheets_cols_resize(widths=…)` 的 map 形态，一次调用完成。
 
@@ -76,9 +79,9 @@
 
 1. sort 前先用 `lark_sheets_csv_get` 抽样目标列的前 3–5 行确认原始值形态，不要只看列名和用户问题就直接排。
 2. 若是纯数字或日期 → 直接 sort。
-3. 若是带符号 / 表达式 / 单位的文本 → **不要直接排**：
-   - 简单场景（货币、千分位、单位前缀）：新增辅助列，用公式提取数值（如 `=VALUE(SUBSTITUTE(SUBSTITUTE(A2,"¥",""),",",""))`），按辅助列排序，排完可按需清除辅助列。
-- 复杂场景（多段表达式、中文单位、混合格式）：分批 `lark_sheets_csv_get` 读到本地，按数值排序后用 `lark_sheets_csv_put` / `lark_sheets_cells_set` 分批回写。
+3. 若是带符号 / 表达式 / 单位的文本 → **不要直接排，也不要读值后用 `lark_sheets_csv_put` 覆盖原表来模拟排序**：
+   - 简单场景（货币、千分位、单位前缀）：新增辅助列，用公式提取数值（如 `=VALUE(SUBSTITUTE(SUBSTITUTE(A2,"¥",""),",",""))`），再用 `lark_sheets_range_sort` 按辅助列原子排序；排完可按需删除辅助列。
+   - 复杂场景（多段表达式、中文单位、混合格式）：先写辅助数值列，再用 `lark_sheets_range_sort`；无法可靠提取时保留原顺序并说明，禁止整块覆盖回写。
 
 ## Shortcuts
 
@@ -273,4 +276,4 @@ lark_sheets_range_sort(url="...", sheet_id="<SID>", range="A1:E100", has_header=
 ### Validate / Execute 约束
 
 - `Validate`：XOR 公共四件套；`lark_sheets_cells_clear` 为 high-risk-write，需 `_confirm=true` 确认；`lark_sheets_range_move` / `lark_sheets_range_copy` / `lark_sheets_range_fill` / `lark_sheets_range_sort` 校验源 / 目标 range 在同一 spreadsheet；`lark_sheets_range_sort` 的 `sort_keys` 必须合法 JSON 数组且 col 都在 `range` 内；`lark_sheets_rows_resize` / `lark_sheets_cols_resize` 两种形态二选一——统一形态必须给 `range` 且至少给 `height`/`width` 或 `type` 之一（`type="standard"`/`"auto"` 不能与像素参数同给，`type="pixel"` 共存 OK），map 形态（`heights`/`widths`）不能与 `range`/`height`/`width`/`type` 混用，map 键必须与命令维度一致（行数字 / 列字母）、不得重复，值为正整数像素或模式字符串；列宽 < 20px 拒绝（疑似 Excel 字符单位）；`lark_sheets_cols_resize` 不接受 `auto`（列宽不支持自适应）。map 形态在 `lark_sheets_batch_update` 子操作里不可用（它本身就是批量提交）。
-- `Execute`：写后不自动回读；如需确认，自行调用 `lark_sheets_cells_get(range="<影响范围>")` 抽样比对。
+- `Execute`：sort/move/copy/fill 后回读首、中、末记录；merge/unmerge 后 `lark_sheets_sheet_info(include="merges")` + `lark_sheets_cells_get` 核范围、左上角值与边界；clear 后确认目标 scope 已空；resize 结果用 `lark_sheets_sheet_info` 核尺寸，不能只读 cell 值。

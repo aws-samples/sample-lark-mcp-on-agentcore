@@ -7,8 +7,6 @@ Get a wiki node's details by `node_token`, `obj_token`, or a Lark URL. Use this 
 ```
 lark_wiki_node_get(node_token="<node_token | obj_token | Lark URL>")
 
-lark_wiki_node_get(node_token="<obj_token>", obj_type="docx")
-
 lark_wiki_node_get(node_token="<token>", space_id="<space_id>", format="pretty")
 ```
 
@@ -17,7 +15,6 @@ lark_wiki_node_get(node_token="<token>", space_id="<space_id>", format="pretty")
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `node_token` | string | **Yes** | — | `node_token`, cloud-doc `obj_token`, or a Lark URL embedding one (e.g. `https://feishu.cn/wiki/<token>` or `https://feishu.cn/docx/<token>`). |
-| `obj_type` | enum | No | — | Needed when `node_token` is a raw `obj_token`; auto-inferred from typed Lark URLs. If omitted for a raw token, the shortcut treats it as a wiki `node_token`. |
 | `space_id` | string | No | — | Optional cross-check: fail if the resolved node does not live in this space |
 | `format` | enum | No | `json` | `json` / `pretty` / `table` / `csv` / `ndjson` |
 
@@ -45,9 +42,10 @@ lark_wiki_node_get(node_token="<token>", space_id="<space_id>", format="pretty")
 
 ## Notes
 
-- The underlying API is `GET /open-apis/wiki/v2/spaces/get_node`. For a `node_token` no `obj_type` is sent; for an `obj_token` the `obj_type` (explicit or URL-inferred) is required.
+- The underlying API is `GET /open-apis/wiki/v2/spaces/node_by_token`. Only `token` is sent; the server detects whether it is a Wiki or document token and validates its length. A nonempty token is still required and URL syntax is still validated.
+- `obj_type` is deprecated and hidden upstream, so it is no longer exposed as a parameter of this tool. URL paths are used only to extract tokens, not to assert the returned object type. `space_id` remains a response cross-check.
 - `creator` falls back to `creator` when `node_creator` is absent. `updated_at` is `obj_edit_time` formatted as RFC3339.
-- No `url` is returned: `get_node` does not provide one and a synthesized `www.feishu.cn/wiki/<node_token>` link is non-canonical/misleading for a read command. Use `node_token` / `obj_token` as the identifiers.
+- The shortcut preserves its existing output fields and does not emit or synthesize a `url`. Use `node_token` / `obj_token` as the identifiers.
 
 ## Terminal business errors
 
@@ -55,10 +53,14 @@ These HTTP 200 responses carry a non-zero business code and are not retryable wi
 
 | Code | Meaning | Required action |
 |------|---------|-----------------|
+| `131005` | The Wiki node does not exist | Check the token or obtain a current Wiki link |
 | `131006` | The current identity lacks access to the Wiki node or space | This is resource access, not app scope authorization. Do not retry the same request or reauthorize as trial and error; ask the node owner or wiki administrator to grant read access, or use an accessible resource |
 | `131012` | The Wiki node has been deleted | Do not retry the same node token; rediscover the node or ask for a current Wiki link |
 | `131013` | The resource token is invalid | Do not reauthorize; correct the URL/token |
 | `131014` | The document is not mounted in Wiki | Stop Wiki resolution; use the corresponding docs/sheets/base/drive tool, or provide a Wiki URL/node_token |
+| `131016` | The token is too short | Provide the complete token or document URL; do not retry the same input |
+
+HTTP 200 alone does not mean success: non-zero business codes still produce a failure. `131001` (invalid request) and gateway errors may still return HTTP 4xx/5xx.
 
 ## Rate limiting
 

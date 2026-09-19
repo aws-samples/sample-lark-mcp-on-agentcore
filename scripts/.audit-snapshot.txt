@@ -43,6 +43,7 @@ apps|+env-delete|high-risk-write|1|spark:app:write
 apps|+env-list|read|0|spark:app:read
 apps|+env-pull|write|0|spark:app:read
 apps|+env-set|write|1|spark:app:write
+apps|+export|read|0|spark:app:read
 apps|+file-delete|high-risk-write|1|spark:app:write
 apps|+file-download|read|0|spark:app:read
 apps|+file-get|read|0|spark:app:read
@@ -270,7 +271,7 @@ drive|+member-list|read|0|docs:permission.member:retrieve
 drive|+member-remove|high-risk-write|1|docs:permission.member:delete
 drive|+move|write|0|space:document:move
 drive|+permission-get-setting|read|0|docs:permission.setting:read
-drive|+preview|read|0|drive:file:download,wiki:node:retrieve
+drive|+preview|read|0|drive:drive.metadata:readonly,drive:file:download,wiki:node:retrieve
 drive|+pull|write|1|drive:drive.metadata:readonly,drive:file:download
 drive|+push|write|1|drive:drive.metadata:readonly,drive:file:upload,space:folder:create
 drive|+react-reply|write|0|docs:document.comment:write_only,wiki:node:read
@@ -465,7 +466,7 @@ sheets|+sparkline-create|write|0|sheets:spreadsheet:write_only
 sheets|+sparkline-delete|high-risk-write|1|sheets:spreadsheet:write_only
 sheets|+sparkline-list|read|0|sheets:spreadsheet:read
 sheets|+sparkline-update|write|0|sheets:spreadsheet:write_only
-sheets|+styles-put|write|0|sheets:spreadsheet:write_only
+sheets|+styles-put|write|0|sheets:spreadsheet:read,sheets:spreadsheet:write_only
 sheets|+table-get|read|0|sheets:spreadsheet:read
 sheets|+table-put|write|0|sheets:spreadsheet:read,sheets:spreadsheet:write_only
 sheets|+workbook-create|write|0|sheets:spreadsheet:create,sheets:spreadsheet:write_only
@@ -505,8 +506,6 @@ task|+upload-attachment|write|0|task:attachment:write
 vc|+detail|read|0|vc:meeting.meetingevent:read,vc:record:readonly
 vc|+meeting-countdown|write|0|vc:meeting.interaction:write
 vc|+meeting-events|read|0|vc:meeting.meetingevent:read
-vc|+meeting-join|write|0|vc:meeting.bot.join:write
-vc|+meeting-leave|write|0|vc:meeting.bot.join:write
 vc|+meeting-list-active|read|0|vc:meeting.meetingevent:read
 vc|+meeting-message-send|write|0|vc:meeting.message:write
 vc|+recording|read|0|vc:record:readonly
@@ -521,7 +520,7 @@ wiki|+move-to-drive|write|0|space:document:move,wiki:space:read
 wiki|+move|write|0|wiki:node:move,wiki:node:read,wiki:space:read
 wiki|+node-copy|high-risk-write|1|wiki:node:copy
 wiki|+node-create|write|0|wiki:node:create,wiki:node:read,wiki:space:read
-wiki|+node-delete|high-risk-write|1|wiki:node:create
+wiki|+node-delete|high-risk-write|1|wiki:node:create,wiki:node:retrieve
 wiki|+node-get|read|0|wiki:node:retrieve
 wiki|+node-list|read|0|wiki:node:retrieve
 wiki|+space-create|write|0|wiki:space:write_only

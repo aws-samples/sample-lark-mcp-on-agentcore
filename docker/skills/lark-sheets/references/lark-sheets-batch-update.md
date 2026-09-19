@@ -5,11 +5,11 @@
 `lark_sheets_batch_update` 把多次写入打包成单次请求，但每个子操作仍应按编辑类任务的范围和回读建议处理：
 
 1. **目标 range 应落在用户授权范围内**：除用户明示要修改的区域外，子操作避免扩张到无关单元格 / 列 / Sheet。规划 range 时先确认每个子操作的边界。
-2. **批次完成后建议回读校验**：整个 `lark_sheets_batch_update` 执行成功后，用 `lark_sheets_csv_get` 或 `lark_sheets_cells_get` 抽样回读受影响区域，至少校验 3-5 个代表性单元格（首 / 中 / 末），与本地脚本预先计算的预期值对照。
+2. **批次完成后按子操作验证**：单元格写入/清除→`lark_sheets_cells_get` / `lark_sheets_csv_get`；对象 CRUD→对应 `lark_sheets_*_list`；sheet CRUD→`lark_sheets_workbook_info`；尺寸/隐藏/冻结/分组/合并→`lark_sheets_sheet_info`；网格线显隐这类没有回读接口的状态按子操作返回确认即可。至少覆盖首、中、末和用户点名项，不能只做统一 cells 抽样。
 3. **预期条数前置断言**：涉及"批量填充 N 行"或"对 M 个区域分别写入"时，建议先把 N、M 硬编码进代码，回读后比较实际与预期；不一致就优先再发一轮 `lark_sheets_batch_update` 补齐，补不齐则在交付说明里列出缺口。
 4. **三条工具硬约束**：`_confirm=true` 必带（high-risk-write，缺了首次调用会被 MCP server 拒绝）；单次 ≤100 条 operations，超出按批拆分；`lark_sheets_cells_batch_set_style` / `lark_sheets_cells_batch_clear` 等批量类工具不可嵌入 `operations`（它们本身就是批量原子操作，直接单独调用）。
 
-若本次 `lark_sheets_batch_update` 的任一子操作写入了公式、复制了公式模板、或导入了含公式的数据块，回读校验之外可继续执行 `lark_sheets_formula_verify` 做诊断。`lark_sheets_batch_update` 只保证"写入动作按序执行了"，不保证整批公式运行结果 zero-error。
+若本次 `lark_sheets_batch_update` 的任一子操作写入了公式、复制了公式模板、或导入了含公式的数据块，回读之外必须对本次公式范围逐段执行 `lark_sheets_formula_verify(exit_on_error=true)`；`partial` 拆分续扫，全部分段 `status='success'` 后才完成。`lark_sheets_batch_update` 只保证写入动作按序执行，不保证公式运行结果 zero-error。AI 公式改走 `lark_sheets_formula_verify(ai_only=true)`，按 `lark_get_skill(domain="sheets", section="formula-verify")` 的全区间一次异步状态检查规则交付（`failed` / `unsupported` 先修，只剩 pending 可交付并说明后台仍在计算）。
 
 ## 使用场景
 
@@ -19,7 +19,7 @@
 
 **不可放进 `operations` 的写 shortcut**（`shortcut` 枚举不含它们，强行写入会被校验拒）：`lark_sheets_cells_set_image`（需本地上传图片）、`lark_sheets_styles_put` / `lark_sheets_dropdown_update` / `lark_sheets_dropdown_delete` / `lark_sheets_cells_batch_clear`（自身已是批量入口，不可再嵌套）、`lark_sheets_dim_move`。这些操作需在 `lark_sheets_batch_update` 之外单独调用。
 
-**⚠️ 何时优先使用 `lark_sheets_batch_update`**：
+**⚠️ 优先使用 `lark_sheets_batch_update` 的场景**：
 - 需要先插入行列再写入数据时（`lark_sheets_dim_insert|delete|hide|unhide|freeze|group|ungroup` + `lark_sheets_cells_set`）
 - 需要对多个区域执行**不同类型**的写入操作时（如 `lark_sheets_cells_set` + `lark_sheets_cells_clear` 组合）。同一个写操作打多区域用该工具自身的复数形态、多区域 merge 用 `lark_sheets_styles_put` 的 `cell_merges`、大范围 unmerge 直接单次调用——均见上方分流，不进本工具
 
@@ -29,10 +29,10 @@
 
 **执行语义（fail-fast；失败后哪些已生效取决于批次构成）**：默认首个失败的子操作即中断剩余操作。此前的子操作**是否已落盘不统一**：纯单元格 / 行列结构类写入在提交前只累计在内存，失败时整体不落盘（等效回滚）；而图表 / 透视表等对象类子操作执行时会**先把此前累计的写入提交落盘再创建对象**——批次含这类子操作时，失败前完成的部分（含其之前的普通写入）已实际生效、无法回滚。因此失败后**不要假设"全部回滚"或"全部保留"**：先看返回 `results` 里各子操作的状态，再回读现状（行列数 / 目标格 / `lark_sheets_chart_list` 等对象清单）确认已生效集合，只补发未生效部分——盲目整批重发会重复应用已生效操作（如插行 / 建图），盲目只发失败尾可能写到未生效的旧结构上。传 `continue_on_error=true` 则遇失败仍继续执行剩余操作，已成功部分保留（返回 "N succeeded, M failed"）。
 
-**公式相关批处理的建议诊断**：
+**公式相关批处理的完成流程**：
 - 写前：先读 `lark_get_skill(domain="sheets", section="formula-translation")`，把公式改写成飞书可执行语义。
 - 写时：用 `lark_sheets_batch_update` 一次性完成插行/写公式/复制模板等成套动作。
-- 写后：抽样回读之外，可继续按 `lark_get_skill(domain="sheets", section="formula-verify")` 跑 `lark_sheets_formula_verify` 做一次诊断。
+- 写后：回读关键公式，并对本次公式范围逐段运行 `lark_sheets_formula_verify(exit_on_error=true)`，全部 success 后完成；AI 公式改用 `lark_sheets_formula_verify(ai_only=true)`，按 `lark_get_skill(domain="sheets", section="formula-verify")` 的全区间一次异步状态检查规则交付。
 
 **`lark_sheets_dropdown_update` 的选项模式（`options` / `source_range` 二选一）+ 配色规则**（更新会重写完整验证规则；需要保留已有配色时先回读并透传 `colors`）见 `lark_get_skill(domain="sheets", section="write-cells")` 的「Dropdown 选项 + 配色」节，本 skill 不重复。`lark_sheets_dropdown_delete` 不涉及这些参数。
 
@@ -212,7 +212,7 @@ lark_sheets_cells_batch_clear(url="...", ranges=["Sheet1!A2:Z1000","Sheet2!A2:Z1
 lark_sheets_cells_batch_clear(url="...", ranges=["Sheet1!A2:Z1000","Sheet2!A2:Z1000"], scope="all", _confirm=true)
 ```
 
-### Validate / DryRun / Execute 约束
+### Validate / Execute 约束
 
 - `Validate`：`lark_sheets_batch_update` 的 `operations` 必须合法 JSON，且为非空数组；逐个子操作 `shortcut` / `input` 字段必填校验，`input` 的键必须在该子操作的参数词汇表内（未知键报错并提示最近似键与完整键契约）；**校验错误聚合上报**——所有子操作的首错一次性返回，全部修完再重发一次即可；**禁止嵌套 `lark_sheets_batch_update`**。`lark_sheets_cells_batch_clear` 的 `ranges` 同样必须 JSON 数组、每项带 sheet 前缀，`high-risk-write` 需 `_confirm=true`（`scope` 默认 `content`）。
-- `Execute`：按声明顺序串行执行；默认 fail-fast——任一子操作失败即中断剩余操作。失败后哪些子操作已生效**见上方「执行语义」**（取决于批次构成，不做统一假设），按报错中的子操作状态回读确认后再补发。
+- `Execute`：按声明顺序串行执行；默认 fail-fast。失败时已成功子操作不回滚，先按子操作类型回读现状（见上方「执行语义」），只重发失败起的剩余子集；成功时也完成上述分流验证。
