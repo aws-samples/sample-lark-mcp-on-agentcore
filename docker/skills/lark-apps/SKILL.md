@@ -98,6 +98,9 @@ lark_apps_member_settings_set(app_id="<app_id>", external_access="disabled", com
 ## 发布态护栏
 
 - **发布意图判定**：用户要"可访问 / 线上 / 分享 / 新链接 / 上线" = 发布意图，先走发布链路、确认完成再给链接。
+- `lark_apps_release_create` 的发布理由按应用类型处理：创意模式 `html` 不需要发布理由，调用时不得传 `apply_reason`；`frontend` / `full_stack` 先调用 `lark_get_skill(domain="apps", section="release-create")`，生成理由并纳入现有发布确认，调用时传入已确认的同一理由。
+- `lark_apps_release_get` 尚未返回 `finished` / `failed`，且返回 `current_node_info.current_status=PENDING` 时（顶层可能是 `publishing` 或 `pending`）立即调用 `lark_get_skill(domain="apps", section="release-get")`，停止轮询并告知当前用户正在等待审批负责人处理；不得假定当前用户或 `submitted_by` 是审批人。终态优先于可能残留的 PENDING 节点。
+- `lark_apps_release_create` 或 `lark_apps_release_get` 仅当服务端错误明确说明客户端版本过旧或要求升级时，把该错误原样报告给用户——服务端 CLI 版本由 MCP 部署统一管理，调用方无法自行升级；不要硬编码或猜测最低版本，也不要用能力预检代替报告。
 - 完成 ≠ 发布：云端会话完成 / `lark_apps_list` 返回 `is_published=true` 都不代表最新内容已部署。
 - 开发态链接 `https://miaoda.feishu.cn/app/{app_id}`（full_stack / frontend 应用）：进应用编辑/开发态、管理与继续开发应用的入口，也是 frontend 升级为 full_stack 的入口（云端会话）。创意模式（html）应用开发态和发布态是同一个链接，无需额外提供开发态链接。
 - 发布态链接来源：`lark_apps_release_get` 轮询 `finished` 给 `online_url` / `failed` 给 `error_logs`（html / frontend / full_stack 统一走 `lark_apps_release_get`）。

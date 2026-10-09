@@ -75,6 +75,8 @@ lark_apps_db_env_create(app_id="app_xxx", environment="dev", sync_data=true, _co
 
 > 预览与发布同一端点，故 `lark_apps_db_env_diff` 也需 `spark:app:write` scope（不是纯只读权限）。
 
+**发布审批拦截**：若应用的发布配置了审批，`lark_apps_db_env_migrate` 会被服务端拒绝（`feature_not_available`）。这**不是**参数问题：换参数、重试都不会成功，也不要去调 `lark_apps_db_env_create`。改走应用发布：先向用户确认发布理由，再按 `lark_get_skill(domain="apps", section="release-create")` 调用 `lark_apps_release_create(app_id="<app_id>", apply_reason="<已向用户确认的发布理由>")`；也可以让用户在页面上发布。只有真发布被拦，`lark_apps_db_env_diff` 预览照常可用。
+
 ```
 lark_apps_db_env_diff(app_id="app_xxx")
 lark_apps_db_env_migrate(app_id="app_xxx", _confirm=true)

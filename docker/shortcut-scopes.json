@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "lark_cli_version": "1.0.96",
-    "extracted_at": "2026-09-19",
+    "lark_cli_version": "1.0.97",
+    "extracted_at": "2026-10-09",
     "source": "https://github.com/larksuite/cli",
     "bot_declared_scopes": [
       "base:app:copy",
