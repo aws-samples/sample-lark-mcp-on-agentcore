@@ -38,7 +38,7 @@ lark_vc_meeting_events(meeting_id="<meeting_id>", page_all=true, format="pretty"
 - 默认用 `format="pretty"` 理解时间线；需要精确结构化字段、文档上下文或转发到 IM 时使用 `format="json"`。
 - 不要用会中事件代替已结束会议的参会人快照或会后复盘。
 
-事件类型、分页、五分钟窗口和错误码见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-events")`。
+事件类型、分页、会后产物替代路径和错误码见 `lark_get_skill(domain="meeting", section="lark-vc-meeting-events")`。
 
 ## 读取共享内容和文档上下文
 

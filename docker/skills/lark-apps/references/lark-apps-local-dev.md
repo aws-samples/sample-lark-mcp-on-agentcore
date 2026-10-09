@@ -36,7 +36,7 @@ git push origin sprint/default
 ```
 
 ```
-lark_apps_release_create(app_id="app_xxx", branch="sprint/default")
+lark_apps_release_create(app_id="app_xxx", branch="sprint/default", apply_reason="发布审批系统功能更新")
 ```
 
 ### frontend
@@ -64,7 +64,7 @@ git push origin sprint/default
 ```
 
 ```
-lark_apps_release_create(app_id="app_xxx", branch="sprint/default")
+lark_apps_release_create(app_id="app_xxx", branch="sprint/default", apply_reason="发布 JSON 格式化功能更新")
 # 发布是异步的：用 lark_apps_release_get 轮询到 status=finished 才算部署完成、拿到 online_url
 lark_apps_release_get(app_id="app_xxx", release_id="<上一步返回的 release_id>")
 ```
@@ -92,6 +92,7 @@ git push origin sprint/default
 ```
 
 ```
+# 创意模式 html 不需要发布理由
 lark_apps_release_create(app_id="app_xxx")
 ```
 
@@ -123,8 +124,8 @@ lark_apps_release_create(app_id="app_xxx")
 
 1. `git status` 看本次改动；`git add <本次相关文件>` 暂存后 `git commit` 提交。只提交本次任务相关的改动即可，无关的零散文件不必强求清空——发布门禁是「**本次相关改动已提交并推送**」，不是「工作区绝对干净」。
 2. `git push origin sprint/default` 把工作分支推到云端（遇非 fast-forward：先 `git pull --rebase origin sprint/default` 解决冲突再推，绝不 force-push；遇 Git 认证失败 / 401 / 403 / credential helper 缺失 / token 过期：先用 `lark_apps_git_credential_init(app_id="<app_id>")` 刷新本地 Git 凭证，再重试原 git 命令；刷新凭证也失败时，停止并向用户报告错误，不要换路）。
-3. `lark_apps_release_create(app_id="<app_id>", branch="sprint/default")` 发起部署上线，记下返回的 `release_id`。
-4. `lark_apps_release_get(app_id="<app_id>", release_id="<release_id>")` 轮询：`publishing` 时每 20 秒继续轮询，整体最多约 5 分钟；超时仍未完成时停止本轮轮询、报告 `release_id` 和当前 status。`finished` 成功时，若返回 `online_url`，可直接使用；未返回时不要编造链接。交付线上访问链接给他人前，注意 `online_url` 默认仅创建者可见，需先告知当前仅本人可见、按需用 `lark_apps_access_scope_set` 放开可见范围。无需再调 `lark_apps_list`；`failed` 时若返回非空 `error_logs`，据此给出失败原因；否则只报告 `release_id` 和当前 status，不要编造原因（`lark_apps_list` 仅作独立查询入口）。
+3. 按应用类型发起部署并记下返回的 `release_id`：创意模式 `html` 调用 `lark_apps_release_create(app_id="<app_id>", branch="sprint/default")`，不传发布理由；`frontend` / `full_stack` 先调用 `lark_get_skill(domain="apps", section="release-create")`，生成并在现有发布确认中确认理由，再调用 `lark_apps_release_create(app_id="<app_id>", branch="sprint/default", apply_reason="发布本轮已提交并推送的功能更新")`。示例文本须替换为刚确认的实际理由且保持逐字相同。
+4. `lark_apps_release_get(app_id="<app_id>", release_id="<release_id>")` 先按顶层 status 识别终态：`finished` / `failed` 优先于可能残留的 PENDING 节点。尚未进入终态且 `current_node_info.current_status=PENDING` 时（顶层可能是 `publishing` 或 `pending`）立即停止本轮轮询，保留同一个 `release_id`，并按 `lark_get_skill(domain="apps", section="release-get")` 告知当前用户正在等待审批负责人处理；不得假定当前用户或 `submitted_by` 是审批人。当前用户明确确认审批负责人已处理后继续查询该 ID。在此之前不得自动审批或写回发布节点，也不得新建另一轮 release。非 PENDING 的 `publishing` 时每 20 秒继续轮询，整体最多约 5 分钟；超时仍未完成时停止本轮轮询、报告 `release_id` 和当前 status。`status=pending` 但没有明确 PENDING 节点时停止自动轮询并原样报告，不要补出审批人、审批链接或新建 release。`finished` 成功时，若返回 `online_url`，可直接使用；未返回时不要编造链接。`pending` 响应里即使提前出现 `online_url` 也不能视为本轮部署完成。交付线上访问链接给他人前，注意 `online_url` 默认仅创建者可见，需先告知当前仅本人可见、按需用 `lark_apps_access_scope_set` 放开可见范围。无需再调 `lark_apps_list`；`failed` 时若返回非空 `error_logs`，据此给出失败原因；否则只报告 `release_id` 和当前 status，不要编造原因。其他未知 status 立即停止自动轮询并原样报告，不要自行判定结果或创建新 release（`lark_apps_list` 仅作独立查询入口）。
 
 用户只要求启用已有 trigger 时，转到 `lark_get_skill(domain="apps", section="automation")` 的「仅启用已有 disabled trigger」路径；不得因 enable 反向修改 handler、commit/push 或 release。
 

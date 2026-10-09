@@ -227,12 +227,12 @@ lark_drive_task_result(scenario="import", ticket="<IMPORT_TICKET>")
 ### 配合 lark_drive_move 使用
 
 ```
-# 1. 移动文件夹（异步操作）
+# 1. 移动文件夹
 lark_drive_move(file_token="<FOLDER_TOKEN>", type="folder", folder_token="<TARGET_FOLDER_TOKEN>")
-# 若轮询窗口内完成：直接返回 ready=true
+# 已完成时返回 ready=true，无需继续查询
 # 若内置轮询结束仍未完成：返回 ready=false、task_id 和 next_command
 
-# 2. 轮询移动结果
+# 2. 仅在 ready=false 时继续查询
 lark_drive_task_result(scenario="task_check", task_id="<TASK_ID>")
 ```
 

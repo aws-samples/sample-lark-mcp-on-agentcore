@@ -2,7 +2,7 @@
 
 (authentication is handled automatically by the MCP server)
 
-查询一场正在进行的视频会议中的会中事件列表。该工具是**读操作**，必须沿用 `meeting_id` 的来源身份：用户身份发现的会议继续用用户身份读。对已结束会议，存在一个**结束后 5 分钟内的宽限窗口**。
+查询一场正在进行的视频会议中的会中事件列表。该工具是**读操作**，必须沿用 `meeting_id` 的来源身份：用户身份发现的会议继续用用户身份读。会议结束后不要再用此工具拉取事件，应改为查询会议产物。
 
 > ⚠️ 还存在一条**应用身份**读取路径（应用机器人入会或应用身份发现的会议继续用应用身份读），但应用身份依赖 MCP server 不支持的 bot 身份，**在 MCP server 上不可用**。通过 MCP server 时身份始终是用户身份，因此应使用用户身份发现的 `meeting_id`。
 
@@ -56,20 +56,19 @@ lark_vc_meeting_events(meeting_id="69xxxxxxxxxxxxx28", page_token="<last_page_to
 ### 2. 身份来源是读取事件的权限锚点
 
 - 用户身份路径（MCP server 可用）：先用 `lark_vc_meeting_list_active` 发现当前登录用户的会议，再用 `lark_vc_meeting_events` 读取该 `meeting_id`，全程用户身份。
-- ⚠️ 应用身份路径：应用机器人必须在会中或参会过，需用应用身份读取——该路径在 MCP server 上不可用。
+- ⚠️ 应用身份路径：应用机器人必须当前在会中，需用应用身份读取——该路径在 MCP server 上不可用。
 - 不要混用身份。身份不一致时，常见结果是空列表、`no permission` 或 `bot is not in meeting`。
 
-### 3. 读取身份的可见性窗口
+### 3. 读取身份的可见性条件
 
-若读取主体已离会、未入会、或会议已经无法再判断身份，后端通常会报：
+若读取主体已离会或未入会，后端通常会报：
 - `bot is not in meeting, no permission`
 
-更精确地说，后端当前的判断规则是：
+执行准则：
 
-- **会议进行中**：要求读取主体**当前仍在会中**
-- **会议已结束后的 5 分钟内**：只要读取主体**曾经在这场会中出现过**，仍可拉取事件
-- **会议结束超过 5 分钟**：按会议结束处理，通常不再返回事件流
-- **从未真实入会过**：即使会议仍在进行或刚结束，也会返回 `10005 bot is not in meeting`
+- **会议进行中**：要求读取主体**当前仍在会中**。
+- **从未真实入会过**：会中读取会返回 `10005 bot is not in meeting`。
+- **会议已经结束**：会返回会议结束错误；不要尝试继续拉取事件，改用会议详情、纪要、逐字稿或录制等会后产物。
 
 ### 4. 自动分页规则
 
@@ -287,9 +286,9 @@ lark_vc_meeting_events(meeting_id="<meeting_id>", page_all=true, format="json")
 |---------|---------|---------|
 | `meeting_id is required` | 未传入 `meeting_id` | 传入长数字 `meeting_id` |
 | `not a 9-digit meeting number` | 把 9 位会议号误传给 `meeting_id` | 如果只是查询会中内容，先用 `lark_vc_meeting_list_active` 按 `meeting_no` 匹配拿长数字 `meeting_id`；不要尝试入会（应用身份写操作，MCP 不可用） |
-| `10005 bot is not in meeting` | 用应用身份读取但应用机器人从未真实入会；或会议已结束但从未在会中出现过 | 如果本来是用户身份发现的 `meeting_id`，确认全程用用户身份读取。⚠️ 应用身份入会读取在 MCP server 上不可用。**如果只是想看参会人快照，改用 `lark_invoke(tool_name="lark_vc_meeting_get", args={params: {"meeting_id": "<meeting.id>", "with_participants": true}})`** |
+| `10005 bot is not in meeting` | 用应用身份读取但应用机器人当前不在会中 | 如果本来是用户身份发现的 `meeting_id`，确认全程用用户身份读取。⚠️ 应用身份入会读取在 MCP server 上不可用。**如果只是想看参会人快照，改用 `lark_invoke(tool_name="lark_vc_meeting_get", args={params: {"meeting_id": "<meeting.id>", "with_participants": true}})`** |
 | 用户身份无权限 / 不可见 | 当前用户不是该会议的可见参与者，或 `meeting_id` 不是从用户身份路径获得 | 先确认 `meeting_id` 来自用户身份的 `lark_vc_meeting_list_active`，且当前用户确实正在该会议中。⚠️ 若确实需要应用身份读取，该路径依赖 bot 身份，在 MCP server 上不可用 |
-| `20001 meeting_status_MEETING_END` | 会议已结束且已超出后端允许的 5 分钟宽限窗口 | 本接口不再适合继续拉取事件。先用 `lark_vc_detail(meeting_ids="<meeting.id>")` 获取会议产物信息，再根据 `note_display_type` / `note_id` / `minute_token` 和用户意图选择纪要正文、逐字稿或妙记；参会人请用 `lark_invoke(tool_name="lark_vc_meeting_get", args={params: {"meeting_id": "<meeting.id>", "with_participants": true}})` |
+| `20001 meeting_status_MEETING_END` | 会议已经结束 | 本接口不再适合继续拉取事件。先用 `lark_vc_detail(meeting_ids="<meeting.id>")` 获取会议产物信息，再根据 `note_display_type` / `note_id` / `minute_token` 和用户意图选择纪要正文、逐字稿或妙记；参会人请用 `lark_invoke(tool_name="lark_vc_meeting_get", args={params: {"meeting_id": "<meeting.id>", "with_participants": true}})` |
 | `20002 meeting not exist` | `meeting_id` 错误，或会议实例当前已不可获取（常见于把 9 位会议号当 meeting_id 传） | 确认传入的是长数字 `meeting_id`，不是 9 位会议号 |
 | 应用身份权限不足 | 应用权限、租户安装或权限可访问的数据范围未配置完整 | ⚠️ 应用身份操作在 MCP server 上不可用，以下仅供排查参考：请应用开发者开通 `vc:meeting.bot.join:write`；再检查应用发布/安装和权限可访问的数据范围；配置正确仍失败时，保留错误码和 `log_id`，按服务端权限异常排查 |
 | `HTTP 404` / `HTTP 500` | 服务端当前无法找到或处理该会议实例 | 换一个正在进行且可见的 meeting_id，或排查后端问题 |
@@ -300,7 +299,7 @@ lark_vc_meeting_events(meeting_id="<meeting_id>", page_all=true, format="json")
 - 如果会议已经结束，不要卡在 `lark_vc_meeting_events`：
   - 先用 `lark_vc_detail(meeting_ids="<meeting.id>")` 获取会议产物信息。
   - 再根据 `note_display_type`、`note_id`、`minute_token` 和用户意图，按 `lark_get_skill(domain="meeting")` 的产物决策读取纪要正文、逐字稿或妙记。
-- 事件列表是否完整，取决于读取主体何时入会、何时离会，以及后端当前可见的会中事件范围。对于已结束会议，通常只在**结束后 5 分钟内**、且**曾经在会中**时还能继续拉到事件。
+- 事件列表是否完整，取决于读取主体何时入会、何时离会，以及后端当前可见的会中事件范围。会议结束后改用会议产物，不要继续拉取事件。
 - 查询"谁参加过某会议"请用 `lark_invoke(tool_name="lark_vc_meeting_get", args={params: {"meeting_id": "<id>", "with_participants": true}})`——这是参会人**快照** API，不依赖 bot 是否参会，对已结束会议也可查；**不要** 用 `lark_vc_meeting_events` 做参会人查询。
 
 ## 相关场景
