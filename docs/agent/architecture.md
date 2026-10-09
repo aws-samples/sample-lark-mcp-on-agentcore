@@ -17,7 +17,8 @@ Client (remote-MCP: Kiro / Claude Code / Codex via DCR, or Amazon Quick)
       · verifies the MCP token (custom HMAC-SHA256 scheme, NOT JWT)
       · re-signs the upstream call with SigV4
       · injects `X-User-Access-Token` (+ `X-Incr-Auth-Token`) headers
-      · forwards `Mcp-Session-Id` (it forwards, never mints — MCP spec: server assigns)
+      · sets `Mcp-Session-Id` = `u-` + HMAC-SHA256(session key, userId) — one stable
+        id per authenticated user; any client-supplied `Mcp-Session-Id` is ignored
       · hard 25s timeout (AgentCore/API-GW budget is ~29s)
   → AgentCore Runtime container (`docker/server.js`)
       · extracts the Feishu token from the header into the child-process env
@@ -26,20 +27,38 @@ Client (remote-MCP: Kiro / Claude Code / Codex via DCR, or Amazon Quick)
 
 ## Session isolation & concurrency (NOT in any human doc)
 
-AgentCore gives **each MCP session its own dedicated microVM** (isolated
-compute/memory/filesystem; up to 8h lifetime; idle-timeout configurable). The
-`Mcp-Session-Id` header provides microVM stickiness. Therefore the
-`MAX_CONCURRENT=10` / `MAX_QUEUE_DEPTH=20` semaphore (`docker/server-lib.js`,
-function `createSemaphore`, wired up in `docker/server.js`) is
-**per-session**, not a shared global pool — each session's microVM runs its own
-`server.js` process with its own counter. User isolation is triple-layered:
+AgentCore gives **each runtime session its own dedicated microVM** (isolated
+compute/memory/filesystem; up to 8h lifetime; idle-timeout configurable). For an
+MCP-protocol Runtime the session key is the `Mcp-Session-Id` header — the
+`X-Amzn-Bedrock-AgentCore-Runtime-Session-Id` header alone is ignored, and a
+request with no `Mcp-Session-Id` gets a **brand-new session (a new microVM) every
+time**. The middleware therefore derives the id itself: one session per
+authenticated user, `u-` + HMAC of `userId` under a key derived from the app
+secret (`mcp-runtime-session-v1`). Consequences:
+
+- **Isolation:** the id is unguessable and cannot collide across users, and a
+  client can never choose which microVM it lands on (client `Mcp-Session-Id` is
+  ignored; it is only logged as `clientSession: true/false` on `mcp_request_ok`).
+- **Cost:** a client that never echoes the id no longer opens a microVM per request.
+- **Concurrency:** all of one user's clients share that user's microVM, so the
+  `MAX_CONCURRENT=10` / `MAX_QUEUE_DEPTH=20` semaphore (`docker/server-lib.js`,
+  function `createSemaphore`, wired up in `docker/server.js`) is
+  **per-user**, not a shared global pool — each microVM runs its own
+  `server.js` process with its own counter.
+- **Rotating the secret** changes every user's session id; old microVMs idle out.
+
+User isolation is triple-layered:
 microVM boundary → per-call child process → token passed via env, never shared.
 (Human-facing writeup with a diagram — Feishu Token vs MCP Token vs the shared
 identity-less MCP endpoint — is in `docs/security_en.md` → "User Isolation".)
 
 Container lifecycle (relevant when touching startup/shutdown or concurrency):
 `/ping` returns 503 until the app secret has loaded (`docker/server.js`, the
-`GET /ping` health-check handler); on shutdown the server drains in-flight calls
+`GET /ping` health-check handler). **`/ping` must return `{"status":"Healthy"}`
+with no `time_of_last_update`**: AgentCore reads that field as "when the status last
+changed", so a value that advances on every ping keeps the session looking busy,
+the idle timeout never fires, and every microVM lives until `maxLifetime` (8h).
+On shutdown the server drains in-flight calls
 ~5s, then `SIGTERM` then `SIGKILL`s any remaining lark-cli children
 (`docker/server.js`, function `shutdown`).
 

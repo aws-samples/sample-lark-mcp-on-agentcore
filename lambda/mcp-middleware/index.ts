@@ -21,6 +21,7 @@ const ssm = new SSMClient({});
 
 let tokenKey: Buffer | null = null;
 let incrKey: Buffer | null = null;
+let sessionKey: Buffer | null = null;
 let keyExpiry = 0;
 const KEY_CACHE_TTL = 5 * 60 * 1000; // 5 min
 
@@ -39,6 +40,7 @@ async function loadKeys(): Promise<void> {
   const raw = resp.Parameter!.Value!;
   tokenKey = createHmac('sha256', raw).update('mcp-token-v1').digest();
   incrKey = createHmac('sha256', raw).update('mcp-incr-auth-v1').digest();
+  sessionKey = createHmac('sha256', raw).update('mcp-runtime-session-v1').digest();
   keyExpiry = Date.now() + KEY_CACHE_TTL;
 }
 
@@ -162,8 +164,15 @@ async function handle(event: LambdaEvent) {
 
   const bodyBytes = Buffer.from(mcpPayload, 'utf8');
   const encodedArn = encodeURIComponent(RUNTIME_ARN);
-  // Forward client's MCP session ID (echoed from initialize response). MCP transport spec: server assigns the ID.
+  // Runtime session = one microVM. Derive a stable, per-user id server-side and ignore
+  // any client-supplied Mcp-Session-Id for routing:
+  //  - cost: clients that never echo the id (or run stateless) would otherwise open a new
+  //    microVM on EVERY request (AgentCore mints a fresh session when the header is absent);
+  //  - isolation: a client-chosen id could point at another user's microVM. The id is an
+  //    HMAC of the authenticated userId under a secret key, so it is unguessable and can
+  //    never collide across users. Tokens still travel per request (header -> child env).
   const clientSessionId = event.headers?.['mcp-session-id'] || event.headers?.['Mcp-Session-Id'] || '';
+  const runtimeSessionId = 'u-' + createHmac('sha256', sessionKey!).update(userId).digest('hex');
 
   const requestHeaders: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -171,8 +180,8 @@ async function handle(event: LambdaEvent) {
     'X-User-Access-Token': feishuToken,
     'X-Incr-Auth-Token': incrToken,
     'host': `bedrock-agentcore.${REGION}.amazonaws.com`,
+    'Mcp-Session-Id': runtimeSessionId,
   };
-  if (clientSessionId) requestHeaders['Mcp-Session-Id'] = clientSessionId;
 
   const request = new HttpRequest({
     method: 'POST',
@@ -206,7 +215,7 @@ async function handle(event: LambdaEvent) {
     log('WARN', 'agentcore_slow', { userIdHash: hashUserId(userId), durationMs, status: resp.status });
   }
   if (resp.status < 400) {
-    log('INFO', 'mcp_request_ok', { userIdHash: hashUserId(userId), durationMs, status: resp.status });
+    log('INFO', 'mcp_request_ok', { userIdHash: hashUserId(userId), durationMs, status: resp.status, clientSession: !!clientSessionId });
   }
 
   const responseBody = await resp.text();

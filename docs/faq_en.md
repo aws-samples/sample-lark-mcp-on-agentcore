@@ -212,6 +212,12 @@ Trade-off:
 
 Persisted in `.local/deploy-config` as `AGENTCORE_IDLE_TIMEOUT`; re-run `deploy.sh` to change. You can also override via env: `AGENTCORE_IDLE_TIMEOUT=300 ./scripts/deploy.sh`.
 
+The timeout only takes effect if the container's `/ping` response carries no `time_of_last_update` (it does not, in current versions). Older images sent a fresh timestamp on every ping, which made AgentCore treat each session as continuously active, so sessions were kept for the 8-hour maximum lifetime regardless of this setting. If you deployed such a version, redeploy; sessions already running keep the old behaviour for up to 8 hours.
+
+**Q: Does each MCP client get its own Runtime session?**
+
+A: No. The middleware gives each authenticated user one stable Runtime session (and so one microVM), regardless of which client or `Mcp-Session-Id` the client sends. Different users never share a session. Several clients of the same user share one microVM, whose concurrency limit is 10 running calls plus 20 queued.
+
 **Q: How to customize alarm thresholds?**
 
 A: During deploy, choose from three presets (Standard/Relaxed/Strict) using arrow keys. Or select "Custom" to pick which alarm to edit (arrow keys), with descriptions and suggested ranges shown. Custom values are saved to `.local/alarm-thresholds.json` (not committed), and subsequent deploys will not overwrite them.
