@@ -32,6 +32,12 @@ Also never hand-edit: `node_modules/`, `coverage/`, `.stryker-tmp/`.
   edit `scripts/deploy.sh` (boto3 `create/update_agent_runtime`), NOT CDK;
   `infra/lib/runtime-stack.ts` only builds the image + IAM role. See
   `docs/agent/architecture.md` (Provisioning split).
+- **Touch `/ping` in `docker/server.js` or the `Mcp-Session-Id` handling in
+  `lambda/mcp-middleware/index.ts`** ⇒ never add `time_of_last_update` to `/ping`
+  (it disables idle reclaim: every microVM lives 8h), and never route on a
+  client-supplied `Mcp-Session-Id` (cost + cross-user isolation). Check:
+  `docker/__tests__/mcp-contract.test.js`, `lambda/mcp-middleware/__tests__/`.
+  See `docs/agent/architecture.md` (Session isolation & concurrency).
 
 ## Code ↔ doc couplings
 

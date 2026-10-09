@@ -234,7 +234,7 @@ describe('mcp-middleware — proxy to AgentCore', () => {
     return { headers: { authorization: `Bearer ${tok}`, ...extraHeaders }, body };
   }
 
-  it('forwards Mcp-Session-Id from client to upstream and back to client', async () => {
+  it('routes to a stable per-user runtime session; client Mcp-Session-Id is ignored; upstream id echoed back', async () => {
     fetchResponse = {
       status: 200,
       body: '{}',
@@ -242,11 +242,22 @@ describe('mcp-middleware — proxy to AgentCore', () => {
     };
     const r = await call(authedEvent({ 'mcp-session-id': 'client-session' }));
     expect(r.statusCode).toBe(200);
-    // Upstream received the client's session id
     const sentHeaders = fetchCalls[0].init.headers;
-    expect(sentHeaders['Mcp-Session-Id']).toBe('client-session');
-    // Client gets the upstream's session id back
+    const expected = 'u-' + createHmac('sha256', createHmac('sha256', STATE_SECRET).update('mcp-runtime-session-v1').digest())
+      .update('ou_user').digest('hex');
+    expect(sentHeaders['Mcp-Session-Id']).toBe(expected);
+    expect(sentHeaders['Mcp-Session-Id']).not.toBe('client-session');
     expect(r.headers?.['Mcp-Session-Id']).toBe('upstream-session');
+  });
+
+  it('same user without any client session header still gets the same runtime session on every request', async () => {
+    fetchResponse = { status: 200, body: '{}', headers: { 'content-type': 'application/json' } };
+    await call(authedEvent());
+    await call(authedEvent());
+    const a = fetchCalls[0].init.headers['Mcp-Session-Id'];
+    const b = fetchCalls[1].init.headers['Mcp-Session-Id'];
+    expect(a).toMatch(/^u-[0-9a-f]{64}$/);
+    expect(a).toBe(b);
   });
 
   it('injects X-User-Access-Token and X-Incr-Auth-Token in upstream request', async () => {

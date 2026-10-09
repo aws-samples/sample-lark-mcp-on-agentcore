@@ -208,6 +208,12 @@ A: 部署时可选 5/10/15/30 分钟（默认 10 分钟）。该值决定 sessio
 
 配置保存在 `.local/deploy-config` 的 `AGENTCORE_IDLE_TIMEOUT`，重新运行 `deploy.sh` 可修改。也可以通过环境变量 `AGENTCORE_IDLE_TIMEOUT=300 ./scripts/deploy.sh` 覆盖。
 
+这个超时只有在容器的 `/ping` 响应不带 `time_of_last_update` 时才会生效（当前版本不带）。旧镜像每次 ping 都返回最新时间戳，AgentCore 会认为 session 一直在活动，无论这里配多少，session 都会保留到 8 小时的最长存活期。如果部署的是旧版本，请重新部署；已经在运行的 session 仍按旧行为保留，最长 8 小时。
+
+**Q: 每个 MCP 客户端都有自己的 Runtime session 吗？**
+
+A: 没有。中间件为每个已认证用户固定使用一个 Runtime session（即一个 microVM），与客户端类型和客户端传来的 `Mcp-Session-Id` 无关。不同用户永远不会共用 session。同一用户的多个客户端共用一个 microVM，其并发上限是 10 个执行中的调用加 20 个排队。
+
 **Q: 怎么自定义告警阈值？**
 
 A: 部署时提供三个预设（标准/宽松/严格），箭头选择即可应用。如需逐项调整，选"自定义"后箭头选择要修改的告警，会展示含义和建议范围。自定义值保存在 `.local/alarm-thresholds.json`（不进 git），后续 deploy 不会覆盖。

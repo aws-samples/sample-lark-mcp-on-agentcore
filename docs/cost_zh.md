@@ -111,6 +111,6 @@
 
 **注意：** AgentCore Runtime 是按实际处理时间计费的最大变量成本。具体金额取决于 AWS 定价（会随时间变化），建议查看 [AWS Bedrock AgentCore 定价页面](https://aws.amazon.com/bedrock/agentcore/pricing/) 获取最新数字。
 
-**关于 Runtime 空闲回收：** 部署时可选 5/10/15/30 分钟（默认 10 分钟，比 AWS 默认 15 分钟更省）。session 在 idle 期间仍按 vCPU-秒计费，timeout 越短越省钱、冷启动越频繁。10 分钟覆盖典型对话 burst，约比 AWS 默认节省 30% idle 成本。重新部署可调整。
+**关于 Runtime 空闲回收：** 部署时可选 5/10/15/30 分钟（默认 10 分钟，比 AWS 默认 15 分钟更省）。session 在 idle 期间仍按 vCPU-秒计费，timeout 越短越省钱、冷启动越频繁。10 分钟覆盖典型对话 burst，约比 AWS 默认节省 30% idle 成本。重新部署可调整。内存按 session 的整个存活期计费，所以必须保证 session 真的会空闲回收：容器的 `/ping` 不能返回 `time_of_last_update`，否则空闲超时永远不触发，每个 session 都会被保留到 8 小时的最长存活期（修复前就是这样）。中间件现在也改为每个用户固定使用一个 Runtime session，不再让不回传 `Mcp-Session-Id` 的客户端每次请求都新开一个 session。
 
 **关于多个飞书应用：** 成本是**按应用**计的。每个用 `--app <slug>` 部署的应用都有自己的固定组件（11 个告警、1 把 KMS CMK、独立 Dashboard、feishu-app secret、SSM 参数）以及各自的按用户用量。固定部分大致按应用数翻倍；WAF（若启用）在同区域的多个应用间共享。

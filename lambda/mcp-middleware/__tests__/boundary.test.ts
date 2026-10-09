@@ -195,12 +195,20 @@ describe('middleware boundary — adversarial tokens', () => {
     expect(r.statusCode).toBe(401);
   });
 
-  it('Mcp-Session-Id with newlines (header injection attempt) is forwarded as-is', async () => {
+  it('Mcp-Session-Id with newlines (header injection attempt) never reaches upstream', async () => {
     const r = await call(authedEvent({ 'mcp-session-id': 'valid\r\nX-Injected: evil' }));
     expect(r.statusCode).toBe(200);
-    // Verify the header value was forwarded (HttpRequest mock doesn't sanitize)
+    // Client-supplied id is ignored; upstream only ever sees the server-derived id.
     const sent = fetchCalls[0].init.headers;
-    expect(sent['Mcp-Session-Id']).toContain('valid');
+    expect(sent['Mcp-Session-Id']).toMatch(/^u-[0-9a-f]{64}$/);
+    expect(JSON.stringify(sent)).not.toContain('X-Injected');
+  });
+
+  it("a user cannot select another user's runtime session via Mcp-Session-Id", async () => {
+    await call(authedEvent());
+    const mine = fetchCalls[0].init.headers['Mcp-Session-Id'];
+    await call(authedEvent({ 'mcp-session-id': mine.replace(/^u-/, 'u-0') }));
+    expect(fetchCalls[1].init.headers['Mcp-Session-Id']).toBe(mine);
   });
 });
 

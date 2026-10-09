@@ -606,6 +606,9 @@ describe('MCP Protocol Contract Tests (spec 2024-11-05)', () => {
       expect(res.statusCode).toBe(200);
       const data = JSON.parse(res.body);
       expect(data.status).toBe('Healthy');
+      // A timestamp that advances on every ping defeats AgentCore's idle-session timeout
+      // (sessions then live until maxLifetime). The field must stay absent.
+      expect(data).not.toHaveProperty('time_of_last_update');
     });
   });
 

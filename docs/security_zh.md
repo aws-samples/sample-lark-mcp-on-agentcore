@@ -27,7 +27,7 @@
 - **userId 是签名的，不是用户提交的。** 它存在于 HMAC 签名的 MCP Token 内（`tokenKey`）；客户端无法在不破坏签名的情况下篡改它。篡改 → 签名不匹配 → 401。
 - **飞书 Token 按用户分别存储**于 `lark-mcp-on-agentcore/users/{userId}`，且只会按"从已验证 MCP Token 中取出的 `userId`"读取，**绝不**回传给客户端。
 - **切换用户（如在 Quick Desktop 中）只是换了一个 MCP Token。** 新用户完成 OAuth 后拿到自己的 MCP Token → 端点解析出新的 `userId` → 读取新用户的飞书 Token。未授权的用户会收到 403 + 重新授权链接，绝不会拿到他人的会话。
-- **运行时隔离为三层**（见 `docs/agent/architecture.md`）：每个 MCP 会话运行在**独占的 AgentCore microVM** 中，会话间无共享内存或磁盘，因此一个用户的会话无法观察到另一个会话的运行中状态；每次工具调用运行在独立子进程中；飞书 Token 仅通过环境变量传给该子进程，绝不在调用间共享或持久化。
+- **运行时隔离为三层**（见 `docs/agent/architecture.md`）：每个用户在**独占的 AgentCore microVM** 中运行（中间件用已认证 `userId` 的 HMAC 派生出每用户固定的 session id，客户端传来的 `Mcp-Session-Id` 会被忽略），用户之间无共享内存或磁盘，因此一个用户的会话无法观察到另一个用户的运行中状态；每次工具调用运行在独立子进程中；飞书 Token 仅通过环境变量传给该子进程，绝不在调用间共享或持久化。
 - **混淆代理（confused-deputy）防护：** 增量授权流程额外校验同意授权的飞书 `open_id` 确属会话所有者，因此用户 B 无法把自己的飞书授权嫁接到用户 A 的会话上（详见下文增量授权 Token 说明）。
 
 下面的时序图展示在一次 MCP 工具调用中，身份如何被解析、飞书 Token 如何保持隔离：

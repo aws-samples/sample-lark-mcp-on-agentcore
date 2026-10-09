@@ -679,7 +679,11 @@ const server = http.createServer((req, res) => {
       return;
     }
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-    res.end(JSON.stringify({ status: 'Healthy', time_of_last_update: Math.floor(Date.now() / 1000) }));
+    // Do NOT send time_of_last_update here. AgentCore reads it as "when the status last
+    // changed"; a value that advances on every ping looks like a continuous status
+    // change, so the idle-session timeout never fires and every microVM lives until
+    // maxLifetime (8h). Omitting it lets the platform track status changes itself.
+    res.end(JSON.stringify({ status: 'Healthy' }));
     return;
   }
 

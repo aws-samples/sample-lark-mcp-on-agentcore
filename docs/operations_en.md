@@ -374,7 +374,9 @@ fleet. Re-run `--rest` after fixing it.
 
 **In-flight sessions.** An upgrade repoints the Runtime endpoint to a new version;
 existing MCP sessions keep running on their microVM until they idle out, and new
-sessions pick up the new version. No active session is killed mid-call.
+sessions pick up the new version. No active session is killed mid-call. Each user has
+one stable session, so a user who keeps calling without a 10-minute pause stays on the
+old version until the session reaches its 8-hour maximum lifetime.
 
 **Rollback.** `--rollback <slug>` repins the endpoint to the previous runtime
 *version* (image only) and prompts for an explicit `yes`. If no previous version
