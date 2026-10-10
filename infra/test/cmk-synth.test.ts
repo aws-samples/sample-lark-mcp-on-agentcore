@@ -1,7 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import * as cdk from "aws-cdk-lib";
 import { Template, Match } from "aws-cdk-lib/assertions";
 import { OAuthStack } from "../lib/oauth-stack";
+
+// Full CDK synth (esbuild bundling + template validation) takes several
+// seconds on CI runners; the 5 s default is too tight for this file.
+vi.setConfig({ testTimeout: 30_000 });
 
 const TEST_ENV = { account: "123456789012", region: "us-west-2" };
 
