@@ -1,10 +1,14 @@
-import { describe, it } from "vitest";
+import { describe, it, vi } from "vitest";
 import * as cdk from "aws-cdk-lib";
 import { Aspects } from "aws-cdk-lib";
 import { AwsSolutionsChecks, NagSuppressions } from "cdk-nag";
 import { OAuthStack } from "../lib/oauth-stack";
 import { WafStack } from "../lib/waf-stack";
 import { RuntimeStack } from "../lib/runtime-stack";
+
+// Full CDK synth (esbuild bundling + template validation) takes several
+// seconds on CI runners; the 5 s default is too tight for this file.
+vi.setConfig({ testTimeout: 30_000 });
 
 /**
  * cdk-nag Compliance Tests
