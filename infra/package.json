@@ -22,7 +22,7 @@
     "esbuild": "^0.28.1",
     "ts-node": "^10.9.0",
     "typescript": "^5.7.0",
-    "vitest": "^3.2.6"
+    "vitest": "^5.0.3"
   },
   "comment:overrides": "Pin transitive dev-only deps to patched versions to clear advisories without a vitest major bump. CDK build/test-time only; never enters the production container. NOTE: deps bundled inside aws-cdk-lib (inBundle:true, e.g. brace-expansion via minimatch) CANNOT be overridden — they clear only by upgrading aws-cdk-lib.",
   "overrides": {
