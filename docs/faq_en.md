@@ -28,7 +28,7 @@ A: Next connection automatically triggers Feishu re-authorization.
 
 **Q: What AWS IAM permissions are needed to deploy?**
 
-A: The deploy script uses AWS CDK to create IAM Roles, Lambda, API Gateway, CloudFront, DynamoDB, Secrets Manager, SSM, ECR, CloudWatch, SNS, EventBridge, and more. It also uses boto3 to directly manage AgentCore Runtime. The deploying user should have **AdministratorAccess** (or equivalent).
+A: The deploy script uses AWS CDK to create IAM Roles, Lambda, API Gateway, CloudFront, DynamoDB, Secrets Manager, SSM, ECR, CloudWatch, SNS, EventBridge, and more. The AgentCore Runtime and its endpoint are CloudFormation resources in the Runtime stack too. The deploying user should have **AdministratorAccess** (or equivalent).
 
 If your organization cannot grant AdministratorAccess, the minimum permissions must cover:
 

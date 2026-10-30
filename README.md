@@ -42,7 +42,7 @@ Parameter formats, call order, and preconditions like "check free/busy before bo
 
 > **Deploy from an ARM64 machine** (Apple Silicon Mac, or an AWS Graviton instance such as t4g / c7g). **Amazon Linux 2023** or **Ubuntu 24.04 LTS** (arm64) recommended.
 >
-> **Broad AWS permissions required.** Deployment uses CDK to create and configure CloudFormation, IAM, Lambda, API Gateway, CloudFront, DynamoDB, Secrets Manager, SSM, ECR, CloudWatch, SNS, EventBridge, KMS, and WAF, and drives the AgentCore Runtime directly via boto3 — spanning a dozen-plus services and including role creation and policy grants. **Use `AdministratorAccess` for the deploying identity** (grant it temporarily; you can revoke it after deploy). Scoping down permission-by-permission is tedious and error-prone.
+> **Broad AWS permissions required.** Deployment uses CDK to create and configure CloudFormation, IAM, Lambda, API Gateway, CloudFront, DynamoDB, Secrets Manager, SSM, ECR, CloudWatch, SNS, EventBridge, KMS, WAF, and the AgentCore Runtime — spanning a dozen-plus services and including role creation and policy grants. **Use `AdministratorAccess` for the deploying identity** (grant it temporarily; you can revoke it after deploy). Scoping down permission-by-permission is tedious and error-prone.
 >
 > **Create the Feishu/Lark app first.** `deploy.sh` does not create the app — it only validates an existing App ID + App Secret. Before deploying, create a custom app in the Feishu ([open.feishu.cn/app](https://open.feishu.cn/app)) or Lark ([open.larksuite.com/app](https://open.larksuite.com/app)) Developer Console, copy its credentials, and enable the required scopes. Full walkthrough (including the redirect URL you configure after deploy): **[docs/app-setup_en.md](docs/app-setup_en.md)**.
 
@@ -91,6 +91,10 @@ Requests from a remote MCP client (Kiro / Claude Code / Codex, which self-regist
 | State | SM + DDB + SSM | Encrypted tokens + Auth codes + Signing keys |
 
 </details>
+
+## AWS China regions (aws-cn)
+
+The same code deploys to Ningxia `cn-northwest-1` and Beijing `cn-north-1`; partition, DNS suffix and console links are derived from the region. Differences in China: no CloudFront or WAF (CloudFront in China no longer accepts new customers), an API Gateway HTTP API (`$default` stage, origin root) is the public entry, and public access to API Gateway requires ICP filing. Details, deploy commands and limitations: [docs/china-region_en.md](docs/china-region_en.md).
 
 ## Why it's different
 
@@ -187,6 +191,7 @@ Spanning 22 business domains: Calendar, IM, Bitable, Mail, Docs, VC, Task, Wiki,
 | FAQ | [docs/faq_en.md](docs/faq_en.md) |
 | Cost | [docs/cost_en.md](docs/cost_en.md) |
 | Project Structure | [docs/structure_en.md](docs/structure_en.md) |
+| AWS China (aws-cn) deployment | [docs/china-region_en.md](docs/china-region_en.md) |
 
 ## Quick Commands
 
@@ -276,7 +281,7 @@ attributions.
 
 > **需在 ARM64 机器上部署**（Apple Silicon Mac，或 AWS Graviton 实例如 t4g / c7g）。推荐 **Amazon Linux 2023** 或 **Ubuntu 24.04 LTS**（arm64）。
 >
-> **需要较大的 AWS 权限。** 部署过程用 CDK 创建并配置 CloudFormation、IAM、Lambda、API Gateway、CloudFront、DynamoDB、Secrets Manager、SSM、ECR、CloudWatch、SNS、EventBridge、KMS、WAF 等资源，并通过 boto3 直接操作 AgentCore Runtime——横跨十几个服务且含建角色、发权限。**建议部署身份直接用 `AdministratorAccess`**（临时授予即可，部署完可回收），逐项收窄权限既繁琐又容易漏。
+> **需要较大的 AWS 权限。** 部署过程用 CDK 创建并配置 CloudFormation、IAM、Lambda、API Gateway、CloudFront、DynamoDB、Secrets Manager、SSM、ECR、CloudWatch、SNS、EventBridge、KMS、WAF 以及 AgentCore Runtime 等资源——横跨十几个服务且含建角色、发权限。**建议部署身份直接用 `AdministratorAccess`**（临时授予即可，部署完可回收），逐项收窄权限既繁琐又容易漏。
 >
 > **先创建飞书 / Lark 应用。** `deploy.sh` 不会替你建应用，只校验已有的 App ID + App Secret。部署前请先在开放平台（飞书 [open.feishu.cn/app](https://open.feishu.cn/app) 或 Lark [open.larksuite.com/app](https://open.larksuite.com/app)）创建企业自建应用、拿到凭证并开通所需权限。完整步骤（含部署后要配的重定向 URL）见 **[docs/app-setup_zh.md](docs/app-setup_zh.md)**。
 
@@ -325,6 +330,10 @@ bash <(curl -fsSL https://raw.githubusercontent.com/aws-samples/sample-lark-mcp-
 | 状态 | SM + DDB + SSM | Token 加密存储 + Auth Code + 签名密钥 |
 
 </details>
+
+## AWS 中国区（aws-cn）
+
+同一套代码可以部署到宁夏 `cn-northwest-1` 和北京 `cn-north-1`，分区、域名后缀和控制台链接都按 region 自动推导。中国区的差异：不建 CloudFront 和 WAF（中国区 CloudFront 已不再接受新用户）；公网入口是 API Gateway HTTP API（`$default` stage，挂在根路径）；中国区 API Gateway 要完成 ICP 备案才能从公网访问。部署命令、差异和限制详见 [docs/china-region_zh.md](docs/china-region_zh.md)。
 
 ## 为什么不一样
 
@@ -420,6 +429,7 @@ lark-cli 官方 20+ 个业务域 Skill 沉淀了多步操作的最佳实践—�
 | 常见问题 | [docs/faq_zh.md](docs/faq_zh.md) |
 | 成本估算 | [docs/cost_zh.md](docs/cost_zh.md) |
 | 项目结构 | [docs/structure_zh.md](docs/structure_zh.md) |
+| AWS 中国区（aws-cn）部署 | [docs/china-region_zh.md](docs/china-region_zh.md) |
 
 ## 快速命令
 

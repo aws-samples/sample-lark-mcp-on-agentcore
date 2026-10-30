@@ -37,7 +37,7 @@ scripts/
   install.sh          One-click install (Chinese/English)
   ops.sh              Operations toolkit (status/list-users/list-apps/rename/revoke/refresh-all/logs/rotate-secret/destroy; --app <slug>)
   teardown.sh         Full destroy of one app (Runtime + CDK stacks + WAF-if-last + optional user-token cleanup; --app <slug>)
-  upgrade.sh          Multi-app coordinated upgrade (--canary / --rest / --all / --rollback <slug>)
+  upgrade.sh          Multi-app coordinated upgrade (--canary / --rest / --all)
   lib/slug.sh         Per-app slug → resource-name resolver (sourced by deploy/ops/teardown/upgrade)
   lib/registry.sh     File-based app registry + atomic alias uniqueness (.local/apps.json)
   lib/__tests__/      Pure-shell unit tests for slug.sh + registry.sh

@@ -2,6 +2,8 @@ import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as nodejs from "aws-cdk-lib/aws-lambda-nodejs";
 import * as apigateway from "aws-cdk-lib/aws-apigateway";
+import * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
+import * as apigwv2i from "aws-cdk-lib/aws-apigatewayv2-integrations";
 import * as cloudfront from "aws-cdk-lib/aws-cloudfront";
 import * as origins from "aws-cdk-lib/aws-cloudfront-origins";
 import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
@@ -17,6 +19,7 @@ import * as sns from "aws-cdk-lib/aws-sns";
 import * as snsSubscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import { Construct } from "constructs";
 import * as path from "path";
+import { partitionOf, urlSuffixOf } from "./partition";
 import * as fs from "fs";
 import { resolveSlug } from "./slug-names";
 
@@ -101,6 +104,8 @@ export class OAuthStack extends cdk.Stack {
     // Per-app names. Empty slug = default sentinel = today's byte-identical
     // literals, so the default deployment synthesizes unchanged.
     const names = resolveSlug(props.slug ?? "");
+    // aws / aws-cn — keeps hard-coded ARNs valid in the China partition.
+    const partition = partitionOf(this);
 
     this.secretPrefix = names.secretUsersPrefix;
     this.appSecretId = names.feishuSecret;
@@ -120,7 +125,7 @@ export class OAuthStack extends cdk.Stack {
       fn.addToRolePolicy(new iam.PolicyStatement({
         effect: iam.Effect.DENY,
         actions: ["secretsmanager:*"],
-        resources: [`arn:aws:secretsmanager:${this.region}:${this.account}:secret:${this.secretPrefix}/*/*`],
+        resources: [`arn:${partition}:secretsmanager:${this.region}:${this.account}:secret:${this.secretPrefix}/*/*`],
       }));
     };
 
@@ -196,7 +201,7 @@ export class OAuthStack extends cdk.Stack {
     appSecret.grantRead(oauthFn);
     oauthFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ["ssm:GetParameter"],
-      resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter${stateSecretParam}`],
+      resources: [`arn:${partition}:ssm:${this.region}:${this.account}:parameter${stateSecretParam}`],
     }));
     // Per-user token secrets only. Scoped to .../users/* — NOT the whole project
     // prefix — so a compromised OAuth Lambda cannot overwrite the feishu-app
@@ -220,7 +225,7 @@ export class OAuthStack extends cdk.Stack {
         "secretsmanager:DescribeSecret",
         "secretsmanager:UpdateSecret",
       ],
-      resources: [`arn:aws:secretsmanager:${this.region}:${this.account}:secret:${this.secretPrefix}/*`],
+      resources: [`arn:${partition}:secretsmanager:${this.region}:${this.account}:secret:${this.secretPrefix}/*`],
     }));
     denyNestedUserSecrets(oauthFn);
     // oauthFn creates/updates secrets on the CMK, so it needs Encrypt as well as
@@ -280,12 +285,13 @@ export class OAuthStack extends cdk.Stack {
         STATE_SECRET_PARAM: stateSecretParam,
         AUTHORIZE_BASE: "SET_AFTER_DEPLOY",
         DEPLOY_REGION: this.region,
+        URL_SUFFIX: urlSuffixOf(this),
       },
       bundling: { externalModules: ["@aws-sdk/*"], minify: true, target: "node20" },
     });
     middlewareFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ["secretsmanager:GetSecretValue"],
-      resources: [`arn:aws:secretsmanager:${this.region}:${this.account}:secret:${this.secretPrefix}/*`],
+      resources: [`arn:${partition}:secretsmanager:${this.region}:${this.account}:secret:${this.secretPrefix}/*`],
     }));
     denyNestedUserSecrets(middlewareFn);
     // MCP HOT PATH: middlewareFn GetSecretValue-reads the user token on every
@@ -296,68 +302,137 @@ export class OAuthStack extends cdk.Stack {
     userSecretKey.grant(middlewareFn, "kms:Decrypt", "kms:DescribeKey");
     middlewareFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ["ssm:GetParameter"],
-      resources: [`arn:aws:ssm:${this.region}:${this.account}:parameter${stateSecretParam}`],
+      resources: [`arn:${partition}:ssm:${this.region}:${this.account}:parameter${stateSecretParam}`],
     }));
     middlewareFn.addToRolePolicy(new iam.PolicyStatement({
       actions: ["bedrock-agentcore:InvokeAgentRuntime"],
-      resources: [`arn:aws:bedrock-agentcore:${this.region}:${this.account}:runtime/*`],
+      resources: [`arn:${partition}:bedrock-agentcore:${this.region}:${this.account}:runtime/*`],
     }));
 
     // Single API Gateway: all routes (OAuth + MCP). Stage-level throttling is a
     // region-independent request-rate cap that applies even when the optional
     // CloudFront WAF is skipped (SKIP_WAF) or bypassed by hitting execute-api
     // directly — without it the OAuth/MCP endpoints would have no rate control.
-    const api = new apigateway.RestApi(this, "OAuthApi", {
-      restApiName: names.apiName,
-      deployOptions: {
-        throttlingRateLimit: parseInt(process.env.APIGW_RATE_LIMIT || "50", 10),
-        throttlingBurstLimit: parseInt(process.env.APIGW_BURST_LIMIT || "100", 10),
-      },
-    });
-    const oauthIntegration = new apigateway.LambdaIntegration(oauthFn);
-    const mcpIntegration = new apigateway.LambdaIntegration(middlewareFn);
-
-    api.root.addResource("authorize").addMethod("GET", oauthIntegration);
-    api.root.addResource("callback").addMethod("GET", oauthIntegration);
-    api.root.addResource("token").addMethod("POST", oauthIntegration);
-    api.root.addResource("register").addMethod("POST", oauthIntegration); // RFC 7591 DCR
-    const wellKnown = api.root.addResource(".well-known");
-    wellKnown.addResource("oauth-authorization-server").addMethod("GET", oauthIntegration);
-    wellKnown.addResource("oauth-protected-resource").addMethod("GET", oauthIntegration); // RFC 9728 PRM
-    // AWS Security Agent domain-ownership verification (HTTP route method).
-    // Inert unless DOMAIN_VERIFICATION is set on the OAuth Lambda (deploy.sh).
-    wellKnown
-      .addResource("aws")
-      .addResource("securityagent-domain-verification.json")
-      .addMethod("GET", oauthIntegration);
-
+    const apiRate = parseInt(process.env.APIGW_RATE_LIMIT || "50", 10);
+    const apiBurst = parseInt(process.env.APIGW_BURST_LIMIT || "100", 10);
     // /register is unauthenticated — throttle tighter than the global stage limit.
     const registerRate = parseInt(process.env.REGISTER_RATE_LIMIT || "5", 10);
     const registerBurst = parseInt(process.env.REGISTER_BURST_LIMIT || "10", 10);
-    (api.deploymentStage.node.defaultChild as apigateway.CfnStage).addPropertyOverride("MethodSettings", [
-      { HttpMethod: "*", ResourcePath: "/*", ThrottlingRateLimit: parseInt(process.env.APIGW_RATE_LIMIT || "50", 10), ThrottlingBurstLimit: parseInt(process.env.APIGW_BURST_LIMIT || "100", 10) },
-      { HttpMethod: "POST", ResourcePath: "/register", ThrottlingRateLimit: registerRate, ThrottlingBurstLimit: registerBurst },
-    ]);
 
-    const mcpResource = api.root.addResource("mcp");
-    mcpResource.addMethod("POST", mcpIntegration);
-    mcpResource.addMethod("GET", mcpIntegration);
-    mcpResource.addMethod("DELETE", mcpIntegration);
+    // AWS China (aws-cn): Amazon CloudFront in the China regions no longer
+    // accepts new customers and is being retired, so in cn-* regions CloudFront
+    // is never created and the API is exposed directly. (Public access to the
+    // API Gateway endpoint in China requires ICP filing, same as CloudFront did.) A REST API stage URL carries a
+    // "/prod" path prefix, which breaks MCP/OAuth discovery: clients derive
+    // /register and /.well-known/* from the origin root (RFC 8414 / RFC 9728),
+    // get API Gateway's own 403 "Forbidden", and dynamic client registration
+    // fails. REST APIs also remap the Lambda's WWW-Authenticate header to
+    // x-amzn-Remapped-WWW-Authenticate, so clients never see the 401 challenge.
+    // An HTTP API with the $default stage is served at the origin root and
+    // passes headers through unchanged, so cn-* regions use that instead.
+    const isChina = !cdk.Token.isUnresolved(this.region) && this.region.startsWith("cn-");
+    // Metric identity for the alarms/dashboard below (REST vs HTTP API differ).
+    let apiMetricDims: Record<string, string>;
+    let api4xxName: string;
+    let api5xxName: string;
+    if (isChina) {
+      const httpApi = new apigwv2.HttpApi(this, "OAuthHttpApi", {
+        apiName: names.apiName,
+        createDefaultStage: true,
+      });
+      // Payload v1.0 keeps the Lambda event shape identical to the REST proxy
+      // integration the handlers already parse.
+      const v1 = { payloadFormatVersion: apigwv2.PayloadFormatVersion.VERSION_1_0 };
+      const oauthHttpIntegration = new apigwv2i.HttpLambdaIntegration("OAuthHttpIntegration", oauthFn, v1);
+      const mcpHttpIntegration = new apigwv2i.HttpLambdaIntegration("McpHttpIntegration", middlewareFn, v1);
+      const oauthRoutes: Array<[string, apigwv2.HttpMethod]> = [
+        ["/authorize", apigwv2.HttpMethod.GET],
+        ["/callback", apigwv2.HttpMethod.GET],
+        ["/token", apigwv2.HttpMethod.POST],
+        ["/register", apigwv2.HttpMethod.POST], // RFC 7591 DCR
+        ["/.well-known/oauth-authorization-server", apigwv2.HttpMethod.GET],
+        ["/.well-known/oauth-protected-resource", apigwv2.HttpMethod.GET], // RFC 9728 PRM
+        ["/.well-known/oauth-protected-resource/mcp", apigwv2.HttpMethod.GET], // RFC 9728 path-suffixed PRM
+        // AWS Security Agent domain-ownership verification (inert unless DOMAIN_VERIFICATION is set).
+        ["/.well-known/aws/securityagent-domain-verification.json", apigwv2.HttpMethod.GET],
+      ];
+      const httpRoutes: apigwv2.HttpRoute[] = [];
+      for (const [p, m] of oauthRoutes) {
+        httpRoutes.push(...httpApi.addRoutes({ path: p, methods: [m], integration: oauthHttpIntegration }));
+      }
+      httpRoutes.push(...httpApi.addRoutes({
+        path: "/mcp",
+        methods: [apigwv2.HttpMethod.POST, apigwv2.HttpMethod.GET, apigwv2.HttpMethod.DELETE],
+        integration: mcpHttpIntegration,
+      }));
+      const cfnStage = httpApi.defaultStage!.node.defaultChild as apigwv2.CfnStage;
+      // RouteSettings references "POST /register" by key, so the stage must be
+      // created after the routes (CDK does not infer this ordering).
+      for (const r of httpRoutes) cfnStage.node.addDependency(r);
+      cfnStage.addPropertyOverride("DefaultRouteSettings", {
+        ThrottlingRateLimit: apiRate,
+        ThrottlingBurstLimit: apiBurst,
+      });
+      cfnStage.addPropertyOverride("RouteSettings", {
+        "POST /register": { ThrottlingRateLimit: registerRate, ThrottlingBurstLimit: registerBurst },
+      });
+      this.oauthEndpoint = `https://${httpApi.apiId}.execute-api.${this.region}.${urlSuffixOf(this)}`;
+      apiMetricDims = { ApiId: httpApi.apiId };
+      api4xxName = "4xx";
+      api5xxName = "5xx";
+    } else {
+      const api = new apigateway.RestApi(this, "OAuthApi", {
+        restApiName: names.apiName,
+        deployOptions: {
+          throttlingRateLimit: apiRate,
+          throttlingBurstLimit: apiBurst,
+        },
+      });
+      const oauthIntegration = new apigateway.LambdaIntegration(oauthFn);
+      const mcpIntegration = new apigateway.LambdaIntegration(middlewareFn);
 
-    // CloudFront (single domain for OAuth + MCP)
-    const distribution = new cloudfront.Distribution(this, "OAuthCF", {
-      defaultBehavior: {
-        origin: new origins.RestApiOrigin(api),
-        viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
-        allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-        cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-        originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-      },
-      priceClass: cloudfront.PriceClass.PRICE_CLASS_200,
-      webAclId: props.webAclArn,
-    });
+      api.root.addResource("authorize").addMethod("GET", oauthIntegration);
+      api.root.addResource("callback").addMethod("GET", oauthIntegration);
+      api.root.addResource("token").addMethod("POST", oauthIntegration);
+      api.root.addResource("register").addMethod("POST", oauthIntegration); // RFC 7591 DCR
+      const wellKnown = api.root.addResource(".well-known");
+      wellKnown.addResource("oauth-authorization-server").addMethod("GET", oauthIntegration);
+      wellKnown.addResource("oauth-protected-resource").addMethod("GET", oauthIntegration); // RFC 9728 PRM
+      // AWS Security Agent domain-ownership verification (HTTP route method).
+      // Inert unless DOMAIN_VERIFICATION is set on the OAuth Lambda (deploy.sh).
+      wellKnown
+        .addResource("aws")
+        .addResource("securityagent-domain-verification.json")
+        .addMethod("GET", oauthIntegration);
 
-    this.oauthEndpoint = `https://${distribution.distributionDomainName}`;
+      (api.deploymentStage.node.defaultChild as apigateway.CfnStage).addPropertyOverride("MethodSettings", [
+        { HttpMethod: "*", ResourcePath: "/*", ThrottlingRateLimit: apiRate, ThrottlingBurstLimit: apiBurst },
+        { HttpMethod: "POST", ResourcePath: "/register", ThrottlingRateLimit: registerRate, ThrottlingBurstLimit: registerBurst },
+      ]);
+
+      const mcpResource = api.root.addResource("mcp");
+      mcpResource.addMethod("POST", mcpIntegration);
+      mcpResource.addMethod("GET", mcpIntegration);
+      mcpResource.addMethod("DELETE", mcpIntegration);
+
+      // CloudFront (single domain for OAuth + MCP).
+      const distribution = new cloudfront.Distribution(this, "OAuthCF", {
+        defaultBehavior: {
+          origin: new origins.RestApiOrigin(api),
+          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+        },
+        priceClass: cloudfront.PriceClass.PRICE_CLASS_200,
+        webAclId: props.webAclArn,
+      });
+
+      this.oauthEndpoint = `https://${distribution.distributionDomainName}`;
+      apiMetricDims = { ApiName: names.apiName };
+      api4xxName = "4XXError";
+      api5xxName = "5XXError";
+    }
 
     // CALLBACK_URL is set post-deploy by deploy.sh (avoids circular dependency with CloudFront)
 
@@ -500,8 +575,8 @@ export class OAuthStack extends cdk.Stack {
     new cloudwatch.Alarm(this, "ApiGateway5xxAlarm", {
       alarmName: an.apigw_5xx,
       metric: new cloudwatch.Metric({
-        namespace: "AWS/ApiGateway", metricName: "5XXError",
-        dimensionsMap: { ApiName: names.apiName },
+        namespace: "AWS/ApiGateway", metricName: api5xxName,
+        dimensionsMap: apiMetricDims,
         statistic: "Sum", period: cdk.Duration.seconds(th("apigw_5xx").period),
       }),
       threshold: th("apigw_5xx").threshold,
@@ -651,8 +726,13 @@ export class OAuthStack extends cdk.Stack {
     const ns = metricNs;
     const m = (metricName: string, opts: Partial<cloudwatch.MetricProps> = {}) =>
       new cloudwatch.Metric({ namespace: ns, metricName, statistic: "Sum", period: cdk.Duration.minutes(5), label: opts.label || `${metricName}${opts.statistic && opts.statistic !== "Sum" ? ` (${opts.statistic})` : ""}`, ...opts });
+    // Dashboard names are unique per ACCOUNT (dashboards are global), unlike
+    // alarms/Lambdas/tables which are regional. Suffix the region so the same
+    // app can be deployed to several regions of one account without the second
+    // deploy failing with "Dashboard ... already exists".
+    const dashboardName = `${names.dashboardName}-${this.region}`;
     const dashboard = new cloudwatch.Dashboard(this, "ObservabilityDashboard", {
-      dashboardName: names.dashboardName,
+      dashboardName,
     });
 
     // Section: Alarm Overview (top of dashboard for at-a-glance status)
@@ -661,17 +741,17 @@ export class OAuthStack extends cdk.Stack {
       new cloudwatch.AlarmStatusWidget({
         title: dt.alarms,
         alarms: [
-          cloudwatch.Alarm.fromAlarmArn(this, "RefTokenLost", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.token_lost}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefRefreshFailed", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.refresh_failed}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefUpstream5xx", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.upstream_5xx}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefLatency", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.mcp_latency}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefNotAuth", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.feishu_not_auth}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefConcurrency", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.concurrency_pct}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefThrottle", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.throttles}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefApiGw5xx", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.apigw_5xx}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefOAuthErr", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.oauth_errors}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefMwErr", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.middleware_errors}`),
-          cloudwatch.Alarm.fromAlarmArn(this, "RefCmkStragglers", `arn:aws:cloudwatch:${this.region}:${this.account}:alarm:${an.cmk_stragglers}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefTokenLost", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.token_lost}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefRefreshFailed", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.refresh_failed}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefUpstream5xx", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.upstream_5xx}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefLatency", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.mcp_latency}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefNotAuth", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.feishu_not_auth}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefConcurrency", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.concurrency_pct}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefThrottle", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.throttles}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefApiGw5xx", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.apigw_5xx}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefOAuthErr", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.oauth_errors}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefMwErr", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.middleware_errors}`),
+          cloudwatch.Alarm.fromAlarmArn(this, "RefCmkStragglers", `arn:${partition}:cloudwatch:${this.region}:${this.account}:alarm:${an.cmk_stragglers}`),
         ],
         width: 24,
       }),
@@ -771,8 +851,8 @@ export class OAuthStack extends cdk.Stack {
       new cloudwatch.GraphWidget({
         title: dt.api_4xx_5xx,
         left: [
-          new cloudwatch.Metric({ namespace: "AWS/ApiGateway", metricName: "4XXError", dimensionsMap: { ApiName: names.apiName }, statistic: "Sum", period: cdk.Duration.minutes(5), label: "4xx" }),
-          new cloudwatch.Metric({ namespace: "AWS/ApiGateway", metricName: "5XXError", dimensionsMap: { ApiName: names.apiName }, statistic: "Sum", period: cdk.Duration.minutes(5), label: "5xx" }),
+          new cloudwatch.Metric({ namespace: "AWS/ApiGateway", metricName: api4xxName, dimensionsMap: apiMetricDims, statistic: "Sum", period: cdk.Duration.minutes(5), label: "4xx" }),
+          new cloudwatch.Metric({ namespace: "AWS/ApiGateway", metricName: api5xxName, dimensionsMap: apiMetricDims, statistic: "Sum", period: cdk.Duration.minutes(5), label: "5xx" }),
         ],
         width: 8,
       }),
@@ -794,7 +874,8 @@ export class OAuthStack extends cdk.Stack {
     );
 
 
-    const dashboardUrl = `https://${this.region}.console.aws.amazon.com/cloudwatch/home?region=${this.region}#dashboards/dashboard/lark-mcp-on-agentcore`;
+    const consoleHost = partition === "aws-cn" ? "console.amazonaws.cn" : `${this.region}.console.aws.amazon.com`;
+    const dashboardUrl = `https://${consoleHost}/cloudwatch/home?region=${this.region}#dashboards/dashboard/${dashboardName}`;
     new cdk.CfnOutput(this, "DashboardUrl", { value: dashboardUrl, description: "CloudWatch observability dashboard" });
     new cdk.CfnOutput(this, "AlarmTopicArn", { value: alarmTopic.topicArn });
     new cdk.CfnOutput(this, "OAuthFunctionName", { value: oauthFn.functionName });

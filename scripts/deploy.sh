@@ -568,6 +568,8 @@ if [ -z "$REGION_SELECTED" ]; then
     "eu-west-1        Ireland" \
     "eu-central-1     Frankfurt" \
     "me-central-1     UAE" \
+    "cn-north-1       Beijing (aws-cn)" \
+    "cn-northwest-1   Ningxia (aws-cn)" \
     "${L[manual_input]}"
   REGION=$(echo "$_REGION_PICK" | awk '{print $1}')
   if [ "$REGION" = "${L[manual_input]}" ]; then
@@ -576,6 +578,12 @@ if [ -z "$REGION_SELECTED" ]; then
 fi
 info "AWS Account: ${ACCOUNT_ID}"
 info "Region: ${REGION}"
+# AWS partition / DNS suffix derived from the region. China regions (cn-*) live
+# in the aws-cn partition: ARNs are arn:aws-cn:..., endpoints *.amazonaws.com.cn.
+case "$REGION" in
+  cn-*) AWS_PARTITION="aws-cn"; AWS_URL_SUFFIX="amazonaws.com.cn"; IS_CHINA=1 ;;
+  *)    AWS_PARTITION="aws";    AWS_URL_SUFFIX="amazonaws.com";    IS_CHINA=0 ;;
+esac
 
 # Brand / edition: feishu (China, *.feishu.cn) or lark (international, *.larksuite.com).
 # Selects BOTH the OAuth flow endpoints (token-refresh-shim) and lark-cli's API
@@ -817,7 +825,11 @@ print(json.dumps({'tokens': toks}, separators=(',', ':')))
 fi
 
 # WAF (default: off). Honor SKIP_WAF env override; on non-interactive default off.
-if [ -n "${SKIP_WAF+x}" ]; then
+# China (aws-cn) has no us-east-1 / CloudFront-scope WAF: always skip.
+if [ "$IS_CHINA" = "1" ]; then
+  [ "${SKIP_WAF:-1}" = "0" ] && warn "SKIP_WAF=0 ignored: CloudFront-scope WAF (us-east-1) is not available in aws-cn"
+  ENABLE_WAF=0
+elif [ -n "${SKIP_WAF+x}" ]; then
   # Explicit env override
   if [ "${SKIP_WAF}" = "0" ]; then ENABLE_WAF=1; else ENABLE_WAF=0; fi
 elif [ ! -t 0 ]; then
@@ -1185,7 +1197,7 @@ ensure_bootstrap() {
 ensure_bootstrap "$REGION"
 # Bootstrap us-east-1 only when WAF is being deployed (CloudFront-scope WAF
 # requires us-east-1).
-if [ "${SKIP_WAF:-0}" != "1" ] && [ "$REGION" != "us-east-1" ]; then
+if [ "${SKIP_WAF:-0}" != "1" ] && [ "$REGION" != "us-east-1" ] && [ "$IS_CHINA" != "1" ]; then
   ensure_bootstrap "us-east-1"
 fi
 
@@ -1205,8 +1217,10 @@ DEPLOY_STARTED=true
 # 清理残留资源
 info "${L[clean_residuals]}"
 # Dashboard physical name for THIS app (default app = bare name, slug = suffixed).
-# Mirrors slug-names.ts dashboardName so we can reap an orphaned dashboard below.
-DASHBOARD_NAME="lark-mcp-on-agentcore${SLUG:+-$SLUG}"
+# Mirrors oauth-stack.ts (slug-names dashboardName + "-<region>") so we can reap
+# an orphaned dashboard below. Dashboards are account-global, so the region
+# suffix is what keeps this from matching another region's live dashboard.
+DASHBOARD_NAME="lark-mcp-on-agentcore${SLUG:+-$SLUG}-${REGION}"
 for STACK_NAME in "$OAUTH_STACK" "$RUNTIME_STACK"; do
   STACK_STATUS=$(aws cloudformation describe-stacks --stack-name "$STACK_NAME" --region "$REGION" \
     --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "NOT_FOUND")
@@ -1242,8 +1256,12 @@ done
 
 # WAF lives in us-east-1 regardless of deploy region. It is SHARED across all
 # apps (WAF_STACK is never slug-suffixed).
+if [ "$IS_CHINA" = "1" ]; then
+  WAF_STATUS="NOT_FOUND"   # aws-cn: no us-east-1, WAF never deployed
+else
 WAF_STATUS=$(aws cloudformation describe-stacks --stack-name "$WAF_STACK" --region "us-east-1" \
   --query 'Stacks[0].StackStatus' --output text 2>/dev/null || echo "NOT_FOUND")
+fi
 # count_oauth_consumers: how many LarkMcpOnAgentCoreOAuth* stacks still exist
 # (across all slugs). The shared WAF's cross-region export is read by each OAuth
 # stack, so the WAF must NOT be destroyed while any consumer remains.
@@ -1394,7 +1412,10 @@ cd "${PROJECT_DIR}/infra"
 npm install --silent 2>/dev/null
 export EXTRA_ALLOWED_DOMAINS="${EXTRA_ALLOWED_DOMAINS:-}"
 export DOMAIN_VERIFICATION="${DOMAIN_VERIFICATION:-}"
-CDK_STACKS=("$RUNTIME_STACK" "$OAUTH_STACK")
+# Two-phase deploy: OAuth (+WAF) first, then the Runtime stack (step 2) once the
+# OAuth endpoint is known — the AgentCore Runtime is now a CloudFormation
+# resource whose AUTHORIZE_BASE env must carry that endpoint.
+CDK_STACKS=("$OAUTH_STACK")
 # Shared-WAF deploy-set exclusion (BLOCKER fix): the WAF stack is shared across
 # all apps and is NOT slug-suffixed. Re-synthing it on a 2nd+ app deploy would
 # drop the first app's still-strong-ref'd cross-region reader export and make the
@@ -1403,9 +1424,9 @@ CDK_STACKS=("$RUNTIME_STACK" "$OAUTH_STACK")
 # (WAF_STATUS == NOT_FOUND). Once it exists, every OAuth stack just imports it by
 # name; the producer is never re-synthed.
 if [ "${SKIP_WAF:-0}" != "1" ] && [ "$WAF_STATUS" = "NOT_FOUND" ]; then
-  CDK_STACKS=("$RUNTIME_STACK" "$WAF_STACK" "$OAUTH_STACK")
+  CDK_STACKS=("$WAF_STACK" "$OAUTH_STACK")
 fi
-if ! AWS_REGION="$REGION" npx cdk deploy ${CDK_VERBOSE_FLAG} "${CDK_STACKS[@]}" -c "slug=${SLUG}" --require-approval never 2>&1 | tee /tmp/cdk-deploy.log; then
+if ! AWS_REGION="$REGION" npx cdk deploy ${CDK_VERBOSE_FLAG} "${CDK_STACKS[@]}" -c "slug=${SLUG}" --exclusively --require-approval never 2>&1 | tee /tmp/cdk-deploy.log; then
   echo ""
   err "${L[cdk_failed]}"
   tail -20 /tmp/cdk-deploy.log
@@ -1413,20 +1434,15 @@ if ! AWS_REGION="$REGION" npx cdk deploy ${CDK_VERBOSE_FLAG} "${CDK_STACKS[@]}" 
 fi
 
 # 提取输出
-IMAGE_URI=$(aws cloudformation describe-stacks --stack-name "$RUNTIME_STACK" --region $REGION \
-  --query 'Stacks[0].Outputs[?OutputKey==`ImageUri`].OutputValue' --output text 2>/dev/null || echo "")
-ROLE_ARN=$(aws cloudformation describe-stacks --stack-name "$RUNTIME_STACK" --region $REGION \
-  --query 'Stacks[0].Outputs[?OutputKey==`RuntimeRoleArn`].OutputValue' --output text 2>/dev/null || echo "")
 OAUTH_ENDPOINT=$(aws cloudformation describe-stacks --stack-name "$OAUTH_STACK" --region $REGION \
   --query 'Stacks[0].Outputs[?OutputKey==`OAuthEndpoint`].OutputValue' --output text 2>/dev/null || echo "")
 REDIRECT_URL=$(aws cloudformation describe-stacks --stack-name "$OAUTH_STACK" --region $REGION \
   --query 'Stacks[0].Outputs[?OutputKey==`FeishuRedirectUrl`].OutputValue' --output text 2>/dev/null || echo "")
 
-if [ -z "$IMAGE_URI" ] || [ -z "$ROLE_ARN" ]; then
+if [ -z "$OAUTH_ENDPOINT" ]; then
   err "${L[cdk_check]}"
   exit 1
 fi
-info "Image: ${IMAGE_URI}"
 info "OAuth: ${OAUTH_ENDPOINT}"
 
 # 设置 OAuth Lambda
@@ -1568,104 +1584,103 @@ print(f'  Migrated {migrated}/{$OPENID_COUNT} entries')
   info "OpenID mapping migration complete ✓"
 fi
 
-# AgentCore Runtime
+# AgentCore Runtime (CloudFormation: AWS::BedrockAgentCore::Runtime in the
+# Runtime stack; traffic uses the service-managed DEFAULT endpoint).
 step step_2
-RUNTIME_ID=$(APP_ID="$APP_ID" REGION="$REGION" ROLE_ARN="$ROLE_ARN" \
-  IMAGE_URI="$IMAGE_URI" OAUTH_ENDPOINT="$OAUTH_ENDPOINT" \
-  AGENTCORE_IDLE_TIMEOUT="$AGENTCORE_IDLE_TIMEOUT" \
-  RUNTIME_NAME="$RUNTIME_NAME" APP_SECRET_ID_VAL="$FEISHU_SECRET" APP_TAG="${SLUG:-default}" \
-  LARK_BRAND="$LARK_BRAND" \
-  python3 << 'PYEOF'
-import os, boto3, sys
-region = os.environ['REGION']
-runtime_name = os.environ['RUNTIME_NAME']
-c = boto3.client('bedrock-agentcore-control', region_name=region)
-runtime_config = {
-    'roleArn': os.environ['ROLE_ARN'],
-    'agentRuntimeArtifact': {'containerConfiguration': {'containerUri': os.environ['IMAGE_URI']}},
-    'networkConfiguration': {'networkMode': 'PUBLIC'},
-    'protocolConfiguration': {'serverProtocol': 'MCP'},
-    'lifecycleConfiguration': {'idleRuntimeSessionTimeout': int(os.environ['AGENTCORE_IDLE_TIMEOUT'])},
-    'requestHeaderConfiguration': {'requestHeaderAllowlist': ['X-User-Access-Token', 'X-Runtime-User-Id', 'X-Incr-Auth-Token']},
-    'environmentVariables': {
-        'APP_ID': os.environ['APP_ID'],
-        'APP_SECRET_ID': os.environ['APP_SECRET_ID_VAL'],
-        'AWS_REGION': region,
-        'LARKSUITE_CLI_BRAND': os.environ.get('LARK_BRAND', 'feishu'),
-        'AUTHORIZE_BASE': os.environ['OAUTH_ENDPOINT'],
-    },
-}
-try:
-    resp = c.create_agent_runtime(
-        agentRuntimeName=runtime_name,
-        description='Lark MCP Server (lark-cli)',
-        tags={'project': 'lark-mcp-on-agentcore', 'app': os.environ['APP_TAG']},
-        **runtime_config,
-    )
-    print(resp['agentRuntimeId'])
-except Exception as e:
-    if 'Conflict' in str(e):
-        next_token = None
-        while True:
-            kwargs = {'nextToken': next_token} if next_token else {}
-            runtimes = c.list_agent_runtimes(**kwargs)
-            for r in runtimes.get('agentRuntimes', []):
-                if r.get('agentRuntimeName') == runtime_name:
-                    rid = r['agentRuntimeId']
-                    # update_agent_runtime does not accept tags; tags persist from create
-                    c.update_agent_runtime(agentRuntimeId=rid, **runtime_config)
-                    print(rid)
-                    sys.exit(0)
-            next_token = runtimes.get('nextToken')
-            if not next_token: break
-    print(f'ERROR:{e}', file=sys.stderr)
-    sys.exit(1)
-PYEOF
-)
 
-if [ -z "$RUNTIME_ID" ] || [[ "$RUNTIME_ID" == ERROR* ]]; then
+# One-time migration: deployments made before the Runtime moved into CDK have a
+# boto3-created runtime with the same name. CloudFormation cannot adopt it and
+# AgentCoreRuntimeName is unique, so delete it (and its "ep" endpoint) first.
+# Skipped when the Runtime stack already owns the runtime (RuntimeArn output).
+OWNED_RUNTIME_ARN=$(aws cloudformation describe-stacks --stack-name "$RUNTIME_STACK" --region $REGION \
+  --query 'Stacks[0].Outputs[?OutputKey==`RuntimeArn`].OutputValue' --output text 2>/dev/null || echo "")
+if [ -z "$OWNED_RUNTIME_ARN" ] || [ "$OWNED_RUNTIME_ARN" = "None" ]; then
+  REGION="$REGION" RUNTIME_NAME="$RUNTIME_NAME" python3 << 'PYEOF' || { err "${L[runtime_failed]}"; exit 1; }
+import os, boto3, sys, time
+c = boto3.client('bedrock-agentcore-control', region_name=os.environ['REGION'])
+target = os.environ['RUNTIME_NAME']
+rid = None; nt = None
+while True:
+    r = c.list_agent_runtimes(**({'nextToken': nt} if nt else {}))
+    for x in r.get('agentRuntimes', []):
+        if x.get('agentRuntimeName') == target:
+            rid = x['agentRuntimeId']
+    nt = r.get('nextToken')
+    if rid or not nt: break
+if not rid:
+    sys.exit(0)
+print(f'  Migrating legacy (non-CDK) runtime {rid} -> CloudFormation: deleting it first')
+try:
+    c.delete_agent_runtime_endpoint(agentRuntimeId=rid, endpointName='ep')
+    for _ in range(120):
+        try: c.get_agent_runtime_endpoint(agentRuntimeId=rid, endpointName='ep')
+        except c.exceptions.ResourceNotFoundException: break
+        time.sleep(5)
+except c.exceptions.ResourceNotFoundException:
+    pass
+c.delete_agent_runtime(agentRuntimeId=rid)
+for _ in range(120):
+    try: c.get_agent_runtime(agentRuntimeId=rid)
+    except c.exceptions.ResourceNotFoundException:
+        print('  Legacy runtime deleted ✓'); sys.exit(0)
+    time.sleep(5)
+print('  Timed out waiting for legacy runtime deletion', file=sys.stderr); sys.exit(1)
+PYEOF
+fi
+
+if ! APP_ID="$APP_ID" OAUTH_ENDPOINT="$OAUTH_ENDPOINT" AGENTCORE_IDLE_TIMEOUT="$AGENTCORE_IDLE_TIMEOUT" \
+  LARKSUITE_CLI_BRAND="$LARK_BRAND" AWS_REGION="$REGION" \
+  npx cdk deploy ${CDK_VERBOSE_FLAG} "$RUNTIME_STACK" -c "slug=${SLUG}" --exclusively --require-approval never 2>&1 | tee /tmp/cdk-deploy-runtime.log; then
+  echo ""
+  err "${L[runtime_failed]}"
+  tail -20 /tmp/cdk-deploy-runtime.log
+  exit 1
+fi
+
+rt_out() {
+  aws cloudformation describe-stacks --stack-name "$RUNTIME_STACK" --region $REGION \
+    --query "Stacks[0].Outputs[?OutputKey==\`$1\`].OutputValue" --output text 2>/dev/null || echo ""
+}
+IMAGE_URI=$(rt_out ImageUri)
+RUNTIME_ARN=$(rt_out RuntimeArn)
+RUNTIME_ID=$(rt_out RuntimeId)
+RUNTIME_VERSION=$(rt_out RuntimeVersion)
+if [ -z "$RUNTIME_ARN" ] || [ "$RUNTIME_ARN" = "None" ]; then
   err "${L[runtime_failed]}"
   exit 1
 fi
-info "Runtime: ${RUNTIME_ID}"
+info "Image: ${IMAGE_URI}"
+info "Runtime: ${RUNTIME_ID} (v${RUNTIME_VERSION})"
 
-info "${L[waiting_runtime]}"
-python3 -c "
-import boto3, time, sys
-c = boto3.client('bedrock-agentcore-control', region_name='${REGION}')
-for i in range(60):
-    r = c.get_agent_runtime(agentRuntimeId='${RUNTIME_ID}')
-    s = r['status']
-    if s == 'READY': print('  Ready ✓'); sys.exit(0)
-    if s in ('FAILED','CREATE_FAILED'): print(f'  Failed: {r.get(\"failureReason\",\"?\")}', file=sys.stderr); sys.exit(1)
-    time.sleep(5)
-print('  Timeout', file=sys.stderr); sys.exit(1)
-"
-
-# Runtime Endpoint
 step step_3
+# Traffic uses the service-managed DEFAULT endpoint (always the latest version).
+# Wait until it is READY on the version CloudFormation just produced, and remove
+# the custom "ep" endpoint left by earlier versions of this script/stack.
 python3 -c "
-import boto3, time, sys
+import boto3, sys, time
 c = boto3.client('bedrock-agentcore-control', region_name='${REGION}')
-# Get current runtime version (may be > 1 after updates)
-rt = c.get_agent_runtime(agentRuntimeId='${RUNTIME_ID}')
-version = str(rt.get('agentRuntimeVersion', '1'))
+rid, want = '${RUNTIME_ID}', '${RUNTIME_VERSION}'
 try:
-    c.create_agent_runtime_endpoint(agentRuntimeId='${RUNTIME_ID}', name='ep', agentRuntimeVersion=version)
+    c.delete_agent_runtime_endpoint(agentRuntimeId=rid, endpointName='ep')
+    print('  Removed legacy endpoint ep')
+except c.exceptions.ResourceNotFoundException:
+    pass
 except Exception as e:
-    if 'Conflict' in str(e):
-        c.update_agent_runtime_endpoint(agentRuntimeId='${RUNTIME_ID}', endpointName='ep', agentRuntimeVersion=version)
-    else:
-        print(f'  Warning: {e}', file=sys.stderr)
-for i in range(30):
-    r = c.get_agent_runtime_endpoint(agentRuntimeId='${RUNTIME_ID}', endpointName='ep')
-    if r['status'] == 'READY': print('  Endpoint ready ✓'); sys.exit(0)
-    if r['status'] == 'FAILED': print('  Endpoint creation failed', file=sys.stderr); sys.exit(1)
+    print(f'  Note: legacy endpoint ep not removed: {e}')
+# aws-cn endpoint provisioning can take several minutes, so wait up to 10 min.
+for i in range(120):
+    try:
+        r = c.get_agent_runtime_endpoint(agentRuntimeId=rid, endpointName='DEFAULT')
+        live = str(r.get('liveVersion', '?'))
+        if r['status'] == 'READY' and live == want:
+            print(f'  DEFAULT endpoint ready ✓ (live v{live})'); sys.exit(0)
+        if r['status'] in ('CREATE_FAILED', 'UPDATE_FAILED', 'FAILED'):
+            print(f'  DEFAULT endpoint {r[\"status\"]}: {r.get(\"failureReason\", \"?\")}', file=sys.stderr); sys.exit(1)
+    except c.exceptions.ResourceNotFoundException:
+        pass
     time.sleep(5)
-print('  Timeout', file=sys.stderr); sys.exit(1)
-"
-
-RUNTIME_ARN="arn:aws:bedrock-agentcore:${REGION}:${ACCOUNT_ID}:runtime/${RUNTIME_ID}"
+print(f'  Timeout: DEFAULT endpoint not READY on v{want}', file=sys.stderr); sys.exit(1)
+" || { err "${L[runtime_failed]}"; exit 1; }
 
 # 配置 Middleware
 step step_4
@@ -1675,7 +1690,7 @@ MIDDLEWARE_FN=$(aws cloudformation describe-stacks --stack-name "$OAUTH_STACK" -
 if [ -n "$MIDDLEWARE_FN" ]; then
   aws lambda update-function-configuration \
     --function-name "$MIDDLEWARE_FN" \
-    --environment "Variables={RUNTIME_ARN=${RUNTIME_ARN},SECRET_PREFIX=${SECRET_USERS_PREFIX},STATE_SECRET_PARAM=${STATE_PARAM},AUTHORIZE_BASE=${OAUTH_ENDPOINT},DEPLOY_REGION=${REGION}}" \
+    --environment "Variables={RUNTIME_ARN=${RUNTIME_ARN},SECRET_PREFIX=${SECRET_USERS_PREFIX},STATE_SECRET_PARAM=${STATE_PARAM},AUTHORIZE_BASE=${OAUTH_ENDPOINT},DEPLOY_REGION=${REGION},URL_SUFFIX=${AWS_URL_SUFFIX}}" \
     --region $REGION >/dev/null 2>&1
   info "Middleware configured ✓"
 else

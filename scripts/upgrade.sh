@@ -4,14 +4,13 @@
 # One source tree, N env-differentiated deployments. Re-running deploy.sh IS an
 # upgrade (it rebuilds the content-addressed image once, then each app's runtime
 # repoints to the shared ECR tag — build-once / repoint-N). This wrapper loops
-# deploy.sh over the app registry with a canary-first option and an image-version
-# rollback.
+# deploy.sh over the app registry with a canary-first option.
 #
 # Usage:
 #   ./scripts/upgrade.sh --canary        # upgrade ONLY the default app, then verify
 #   ./scripts/upgrade.sh --rest          # upgrade every NAMED app in the registry
 #   ./scripts/upgrade.sh --all           # canary (default) then --rest
-#   ./scripts/upgrade.sh --rollback <slug>   # repin <slug>'s endpoint to its previous runtime version
+#   ./scripts/upgrade.sh --rollback <slug>   # prints how to roll back (redeploy the previous commit)
 #   ./scripts/upgrade.sh --list          # show registered apps
 #
 # Design: .claude/specs/2026-06-07-multi-app-upgrade-observability.md
@@ -78,64 +77,17 @@ rest() {
 }
 
 rollback() {
-  local slug="$1"
+  # The runtime is a CloudFormation resource and traffic uses the service-managed
+  # DEFAULT endpoint, which always serves the latest version. Repinning an
+  # endpoint to an older version would not move traffic (and changing the
+  # runtime out of band would drift the stack), so rollback = redeploy the
+  # previous commit.
+  local slug="${1:-}"
   [ -z "$slug" ] && { err "--rollback requires a slug"; exit 2; }
-  # Resolve the runtime name for this slug.
-  # shellcheck source=lib/slug.sh
-  source "${SCRIPT_DIR}/lib/slug.sh"
-  resolve_slug "$slug" || exit 1
-  resolve_region   # per-app deploy-config is authoritative; don't trust a stray AWS_REGION
-  hdr "Rollback: repinning ${RUNTIME_NAME} endpoint to its previous version"
-  warn "Image-only rollback is SAFE ONLY if scopes did not change between versions."
-  warn "If the upgrade touched OAuth scopes, abort and instead run:"
-  warn "    git checkout <prev-commit> && ./scripts/deploy.sh --app ${slug} --yes"
-  read -rp "  Proceed with endpoint version rollback? (type 'yes'): " c
-  [ "$c" = "yes" ] || { echo "  Aborted."; exit 0; }
-
-  RUNTIME_NAME="$RUNTIME_NAME" REGION="$REGION" python3 - <<'PY'
-import boto3, os, sys
-region = os.environ['REGION']; target = os.environ['RUNTIME_NAME']
-c = boto3.client('bedrock-agentcore-control', region_name=region)
-
-# Find the runtime id by name.
-rid = None; nt = None
-while True:
-    kw = {'nextToken': nt} if nt else {}
-    r = c.list_agent_runtimes(**kw)
-    for x in r.get('agentRuntimes', []):
-        if x.get('agentRuntimeName') == target:
-            rid = x['agentRuntimeId']; break
-    if rid: break
-    nt = r.get('nextToken')
-    if not nt: break
-if not rid:
-    print(f"  runtime {target} not found", file=sys.stderr); sys.exit(1)
-
-# List versions; guard that a previous version still exists (old versions age out).
-try:
-    versions = []
-    nt = None
-    while True:
-        kw = {'agentRuntimeId': rid, 'nextToken': nt} if nt else {'agentRuntimeId': rid}
-        vr = c.list_agent_runtime_versions(**kw)
-        versions += [v.get('agentRuntimeVersion') for v in vr.get('agentRuntimeVersions', [])]
-        nt = vr.get('nextToken')
-        if not nt: break
-except Exception as e:
-    print(f"  cannot list runtime versions ({e}); ABORTING.", file=sys.stderr)
-    print("  Use the full-rebuild rollback: git checkout <prev> && deploy.sh --app <slug> --yes", file=sys.stderr)
-    sys.exit(1)
-
-nums = sorted({int(v) for v in versions if str(v).isdigit()})
-if len(nums) < 2:
-    print(f"  only versions {nums} exist — no previous version to roll back to.", file=sys.stderr)
-    print("  Use the full-rebuild rollback path instead.", file=sys.stderr)
-    sys.exit(1)
-prev = str(nums[-2])
-print(f"  repinning endpoint 'ep' to version {prev} (available: {nums})")
-c.update_agent_runtime_endpoint(agentRuntimeId=rid, endpointName='ep', agentRuntimeVersion=prev)
-print("  rolled back ✓")
-PY
+  err "Endpoint-version rollback is no longer supported (the runtime is managed by CloudFormation)."
+  info "Roll back by redeploying the previous commit:"
+  info "    git checkout <prev-commit> && ./scripts/deploy.sh --app ${slug} --yes"
+  exit 2
 }
 
 case "${1:-help}" in

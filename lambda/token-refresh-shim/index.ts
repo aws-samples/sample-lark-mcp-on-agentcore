@@ -125,7 +125,7 @@ function getCallbackUrl(event: LambdaEvent): string {
   if (CALLBACK_URL_ENV && CALLBACK_URL_ENV !== 'SET_AFTER_DEPLOY') return CALLBACK_URL_ENV;
   const host = event.headers?.host || event.headers?.Host || event.requestContext?.domainName || '';
   if (!host) return '';
-  if (/\.(cloudfront\.net|amazonaws\.com)$/.test(host)) return `https://${host}/callback`;
+  if (/\.(cloudfront\.net|cloudfront\.cn|amazonaws\.com|amazonaws\.com\.cn)$/.test(host)) return `https://${host}/callback`;
   return '';
 }
 

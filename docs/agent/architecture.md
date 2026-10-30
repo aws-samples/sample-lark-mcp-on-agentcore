@@ -66,24 +66,33 @@ On shutdown the server drains in-flight calls
 
 Infra is **not** all owned by CDK. The split:
 
-- **CDK** owns: the Docker image (`DockerImageAsset`) + the AgentCore IAM
-  `RuntimeRole` (`infra/lib/runtime-stack.ts` — that file does *only* these two
-  and emits CfnOutputs consumed by deploy.sh), plus the OAuth/middleware Lambdas,
-  alarms/dashboard, and optional WAF.
-- **`scripts/deploy.sh`** (boto3 `bedrock-agentcore-control`) owns the **AgentCore
-  Runtime itself and its endpoint** — `create_agent_runtime` / `update_agent_runtime`
-  at `scripts/deploy.sh:~1049-1096`, endpoint at `~1119-1127`. That call defines the
-  Runtime's `environmentVariables` (`APP_ID`, `AUTHORIZE_BASE`, `APP_SECRET_ID` that
-  `docker/server.js` reads — the `APP_ID` / `APP_SECRET_ID` / `AUTHORIZE_BASE`
-  env reads near the top of the file), `lifecycleConfiguration.idleRuntimeSessionTimeout`,
-  and `requestHeaderConfiguration.requestHeaderAllowlist`
+- **CDK** owns everything, including the AgentCore Runtime. `infra/lib/runtime-stack.ts`
+  defines the Docker image (`DockerImageAsset`), the IAM `RuntimeRole`, and the
+  `AWS::BedrockAgentCore::Runtime`. No custom endpoint is declared: the middleware
+  invokes the runtime ARN without a qualifier, i.e. the service-managed `DEFAULT`
+  endpoint, which always serves the latest version. (A `CfnRuntimeEndpoint` can
+  start creating before the runtime version is READY and fail with 409.) The
+  Runtime resource defines
+  the container's `environmentVariables` (`APP_ID`, `AUTHORIZE_BASE`, `APP_SECRET_ID`,
+  `AWS_REGION`, `LARKSUITE_CLI_BRAND` — read near the top of `docker/server.js`),
+  `lifecycleConfiguration.idleRuntimeSessionTimeout`, and
+  `requestHeaderConfiguration.requestHeaderAllowlist`
   (`['X-User-Access-Token','X-Runtime-User-Id','X-Incr-Auth-Token']`).
+  The OAuth/middleware Lambdas, alarms/dashboard, and optional WAF live in the
+  OAuth/WAF stacks.
+- **`scripts/deploy.sh`** deploys in two phases: the OAuth (+WAF) stacks first, then
+  the Runtime stack with `APP_ID` / `OAUTH_ENDPOINT` / `AGENTCORE_IDLE_TIMEOUT` /
+  `LARKSUITE_CLI_BRAND` passed as plain values (no cross-stack export). It then
+  writes the runtime ARN (stack output `RuntimeArn`) into the middleware Lambda env.
+  On the first run after upgrading from a version where deploy.sh created the
+  runtime via boto3, it deletes that legacy runtime so CloudFormation can recreate
+  it under the same name (a short MCP outage).
 
 **Implication:** to change the Runtime's env vars, idle timeout, or allowed request
-headers, edit `scripts/deploy.sh` and re-run it — editing `runtime-stack.ts` +
-`cdk deploy` will NOT change them. The middleware's `X-User-Access-Token` /
-`X-Incr-Auth-Token` headers only reach the container because of the deploy.sh
-allowlist.
+headers, edit `infra/lib/runtime-stack.ts` (or the values deploy.sh passes in) and
+re-run `scripts/deploy.sh`. Any change produces a new runtime version and the
+`DEFAULT` endpoint follows it. The middleware's `X-User-Access-Token` / `X-Incr-Auth-Token`
+headers only reach the container because of that allowlist.
 
 ## Tool dispatch & skills (the heart of server.js)
 

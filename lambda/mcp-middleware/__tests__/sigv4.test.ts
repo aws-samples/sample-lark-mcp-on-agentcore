@@ -107,3 +107,27 @@ describe('SigV4 signing inputs for the AgentCore proxy', () => {
     expect(signedRequest.hostname).toBe('bedrock-agentcore.us-west-2.amazonaws.com');
   });
 });
+
+describe('SigV4 target host in the aws-cn partition', () => {
+  const saved = { region: process.env.DEPLOY_REGION, suffix: process.env.URL_SUFFIX };
+  afterEach(() => {
+    process.env.DEPLOY_REGION = saved.region;
+    if (saved.suffix === undefined) delete process.env.URL_SUFFIX; else process.env.URL_SUFFIX = saved.suffix;
+  });
+
+  it('uses URL_SUFFIX (amazonaws.com.cn) for cn regions', async () => {
+    process.env.DEPLOY_REGION = 'cn-northwest-1';
+    process.env.URL_SUFFIX = 'amazonaws.com.cn';
+    await callProxy();
+    expect(httpRequestOpts.hostname).toBe('bedrock-agentcore.cn-northwest-1.amazonaws.com.cn');
+    expect(httpRequestOpts.headers.host).toBe('bedrock-agentcore.cn-northwest-1.amazonaws.com.cn');
+    expect(signerConfig.region).toBe('cn-northwest-1');
+  });
+
+  it('falls back to amazonaws.com.cn from the cn- region prefix when URL_SUFFIX is unset', async () => {
+    process.env.DEPLOY_REGION = 'cn-north-1';
+    delete process.env.URL_SUFFIX;
+    await callProxy();
+    expect(httpRequestOpts.hostname).toBe('bedrock-agentcore.cn-north-1.amazonaws.com.cn');
+  });
+});

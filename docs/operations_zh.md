@@ -50,15 +50,14 @@ deploy.sh 是一个交互式部署脚本，完成从环境检查到端到端验�
 - 创建/更新 Secrets Manager 中的飞书 App 凭证
 - 创建 SSM SecureString：state-secret（签名根密钥）和 oauth-client-secret
 - 安装依赖（root + docker + infra）
-- `cdk deploy` 部署 Runtime Stack + WAF Stack (可选) + OAuth Stack
+- `cdk deploy` 部署 WAF Stack（可选）+ OAuth Stack
 
 **第 2/5 步：AgentCore Runtime**
-- 使用 boto3 创建或更新 AgentCore Runtime（含容器镜像 URI、IAM Role、环境变量）
-- 轮询等待 Runtime 状态变为 READY（最多 5 分钟）
+- `cdk deploy` 部署 Runtime Stack：Docker 镜像、IAM Role、`AWS::BedrockAgentCore::Runtime`（镜像 URI、环境变量、空闲超时、请求头白名单），由 CloudFormation 等到 READY
+- 从旧版本（用 boto3 创建 runtime）升级后的第一次部署：会先删掉旧 runtime，再由 CloudFormation 用同名重建，期间 MCP 短暂不可用
 
 **第 3/5 步：Runtime Endpoint**
-- 创建或更新 Runtime Endpoint
-- 轮询等待 Endpoint 就绪
+- 等服务自动维护的 `DEFAULT` endpoint（实际承载流量）在 runtime 当前版本上 READY；顺带删掉旧版本留下的自定义 endpoint `ep`
 
 **第 4/5 步：配置 Middleware**
 - 更新 Middleware Lambda 环境变量（RUNTIME_ARN、AUTHORIZE_BASE 等）
@@ -348,7 +347,7 @@ CI）。`install.sh` 也会把 `--app`/`--alias` 透传给 `deploy.sh`。
 ./scripts/upgrade.sh --canary          # 仅升级 default 应用，然后验证
 ./scripts/upgrade.sh --rest            # 升级注册表中的每个命名 App
 ./scripts/upgrade.sh --all             # 先 canary（default）再 --rest
-./scripts/upgrade.sh --rollback <slug> # 把 <slug> 的端点重指向其上一个 Runtime 版本
+./scripts/upgrade.sh --rollback <slug> # 打印回滚方法（重新部署上一个 commit）
 ./scripts/upgrade.sh --list            # 显示已注册的 App
 ```
 
@@ -358,15 +357,13 @@ Runtime READY）。先观察 default 应用，再运行 `--rest`（或用 `--all
 遍历注册表且**失败继续**——某个应用升级失败会被记录并跳过，不会中断其余应用，因此单个坏
 应用无法卡住整个群。修复后重跑 `--rest` 即可。
 
-**运行中的会话。** 升级会把 Runtime 端点重指向新版本；已存在的 MCP 会话会在各自的
+**运行中的会话。** 升级会生成新的 Runtime 版本，由 `DEFAULT` 端点对外提供；已存在的 MCP 会话会在各自的
 microVM 上继续运行直到空闲回收，新会话则用新版本。不会有活跃会话在调用中途被杀。
 每个用户只有一个固定会话，连续调用、没有 10 分钟空档的用户会一直留在旧版本，直到会话达到 8 小时的最长存活期。
 
-**回滚。** `--rollback <slug>` 把端点重指向上一个 Runtime *版本*（仅镜像），并要求显式
-输入 `yes` 确认。若不存在上一个版本，它会提示改用整体重建路径。
-
-> 仅镜像的 `--rollback` **只有在两个版本间 OAuth scopes 未变更时**才安全。若升级改动了
-> scopes，请改用 `git checkout <prev>` 后 `./scripts/deploy.sh --app <slug> --yes`。
+**回滚。** Runtime 由 CloudFormation 管理，流量走始终指向最新版本的 `DEFAULT` 端点，所以不再支持「把端点切回旧版本」。
+回滚方式是重新部署上一个 commit：`git checkout <prev>` 后 `./scripts/deploy.sh --app <slug> --yes`。
+`--rollback <slug>` 现在只打印这条说明。
 
 ### 销毁单个 App
 
