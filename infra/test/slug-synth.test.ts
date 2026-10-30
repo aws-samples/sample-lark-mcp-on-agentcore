@@ -40,7 +40,7 @@ describe(`OAuthStack slugged synth (slug=${SLUG}) carries the slug on every phys
   });
 
   it("dashboard is slug-suffixed", () => {
-    t.hasResourceProperties("AWS::CloudWatch::Dashboard", { DashboardName: `lark-mcp-on-agentcore-${SLUG}` });
+    t.hasResourceProperties("AWS::CloudWatch::Dashboard", { DashboardName: `lark-mcp-on-agentcore-${SLUG}-${TEST_ENV.region}` });
   });
 
   it("ApiGateway alarms/dashboard watch THIS app's API, not the default's (no observability bleed)", () => {

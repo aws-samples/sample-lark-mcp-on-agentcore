@@ -28,7 +28,7 @@ A: 下次连接时会自动重新触发飞书授权。
 
 **Q: 部署需要哪些 AWS IAM 权限？**
 
-A: 部署脚本使用 AWS CDK 创建 IAM Role、Lambda、API Gateway、CloudFront、DynamoDB、Secrets Manager、SSM、ECR、CloudWatch、SNS、EventBridge 等十余种资源，并通过 boto3 直接操作 AgentCore Runtime。建议部署用户具备 **AdministratorAccess**（或等效权限）。
+A: 部署脚本使用 AWS CDK 创建 IAM Role、Lambda、API Gateway、CloudFront、DynamoDB、Secrets Manager、SSM、ECR、CloudWatch、SNS、EventBridge 等十余种资源，AgentCore Runtime 及其 Endpoint 也由 CloudFormation 管理（在 Runtime Stack 中）。建议部署用户具备 **AdministratorAccess**（或等效权限）。
 
 如果组织不允许使用 AdministratorAccess，最小权限需覆盖：
 

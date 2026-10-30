@@ -11,7 +11,7 @@ set -euo pipefail
 #
 # 或设置环境变量:
 #   RUNTIME_ARN=arn:aws:bedrock-agentcore:...
-#   OAUTH_ENDPOINT=https://xxx.cloudfront.net
+#   OAUTH_ENDPOINT=https://xxx.cloudfront.net   (aws-cn: https://<api>.execute-api.<region>.amazonaws.com.cn/prod)
 #   TEST_USER_ID=test-user
 # ==============================================================================
 
@@ -33,6 +33,9 @@ while [[ $# -gt 0 ]]; do
     *) shift ;;
   esac
 done
+
+# Partition DNS suffix: China regions (aws-cn) use *.amazonaws.com.cn.
+case "$REGION" in cn-*) URL_SUFFIX="amazonaws.com.cn" ;; *) URL_SUFFIX="amazonaws.com" ;; esac
 
 if [ -z "$OAUTH_ENDPOINT" ]; then
   OAUTH_ENDPOINT=$(aws cloudformation describe-stacks --stack-name LarkMcpOnAgentCoreOAuth --region $REGION \
@@ -142,7 +145,7 @@ from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 session = boto3.Session()
 creds = session.get_credentials().get_frozen_credentials()
-url = f'https://bedrock-agentcore.${REGION}.amazonaws.com/runtimes/{urllib.parse.quote(\"${RUNTIME_ARN}\", safe=\"\")}/invocations'
+url = f'https://bedrock-agentcore.${REGION}.${URL_SUFFIX}/runtimes/{urllib.parse.quote(\"${RUNTIME_ARN}\", safe=\"\")}/invocations'
 body = json.dumps({'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2024-11-05','capabilities':{},'clientInfo':{'name':'e2e-test','version':'1'}}})
 request = AWSRequest(method='POST', url=url, data=body, headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream'})
 SigV4Auth(creds, 'bedrock-agentcore', '${REGION}').add_auth(request)
@@ -163,7 +166,7 @@ from botocore.auth import SigV4Auth
 from botocore.awsrequest import AWSRequest
 session = boto3.Session()
 creds = session.get_credentials().get_frozen_credentials()
-url = f'https://bedrock-agentcore.${REGION}.amazonaws.com/runtimes/{urllib.parse.quote(\"${RUNTIME_ARN}\", safe=\"\")}/invocations'
+url = f'https://bedrock-agentcore.${REGION}.${URL_SUFFIX}/runtimes/{urllib.parse.quote(\"${RUNTIME_ARN}\", safe=\"\")}/invocations'
 body = json.dumps({'jsonrpc':'2.0','id':2,'method':'tools/list','params':{}})
 request = AWSRequest(method='POST', url=url, data=body, headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream'})
 SigV4Auth(creds, 'bedrock-agentcore', '${REGION}').add_auth(request)
@@ -191,7 +194,7 @@ except:
     exit(0)
 session = boto3.Session()
 creds = session.get_credentials().get_frozen_credentials()
-url = f'https://bedrock-agentcore.${REGION}.amazonaws.com/runtimes/{urllib.parse.quote(\"${RUNTIME_ARN}\", safe=\"\")}/invocations'
+url = f'https://bedrock-agentcore.${REGION}.${URL_SUFFIX}/runtimes/{urllib.parse.quote(\"${RUNTIME_ARN}\", safe=\"\")}/invocations'
 body = json.dumps({'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'lark_im_chat_list','arguments':{}}})
 request = AWSRequest(method='POST', url=url, data=body, headers={'Content-Type':'application/json','Accept':'application/json, text/event-stream','X-User-Access-Token':uat})
 SigV4Auth(creds, 'bedrock-agentcore', '${REGION}').add_auth(request)
@@ -234,9 +237,14 @@ if [ "$EB_STATE" = "ENABLED" ]; then pass "EventBridge 刷新规则: 已启用";
 # 汇总
 echo ""
 echo "── WAF ──"
+WAF_ARN=""
+if [[ "$REGION" != cn-* ]]; then
 WAF_ARN=$(aws cloudformation describe-stacks --stack-name LarkMcpOnAgentCoreWaf --region us-east-1 \
   --query 'Stacks[0].Outputs[?OutputKey==`WebAclArn`].OutputValue' --output text 2>/dev/null || echo "")
-if [ -n "$WAF_ARN" ] && [ "$WAF_ARN" != "None" ]; then
+fi
+if [[ "$REGION" == cn-* ]]; then
+  skip "WAF: aws-cn 无 us-east-1 CloudFront WAF（跳过）"
+elif [ -n "$WAF_ARN" ] && [ "$WAF_ARN" != "None" ]; then
   pass "WAF WebACL 存在 (us-east-1)"
 else
   skip "WAF WebACL 未找到"

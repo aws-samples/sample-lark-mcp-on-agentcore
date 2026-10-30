@@ -37,7 +37,7 @@ scripts/
   install.sh          一键安装 (中/英双语)
   ops.sh              运维工具 (status/list-users/list-apps/rename/revoke/refresh-all/logs/rotate-secret/destroy; --app <slug>)
   teardown.sh         销毁单个应用 (Runtime + CDK + WAF-若为最后一个 + 可选 user-token 清理; --app <slug>)
-  upgrade.sh          多应用协同升级 (--canary / --rest / --all / --rollback <slug>)
+  upgrade.sh          多应用协同升级 (--canary / --rest / --all)
   lib/slug.sh         应用 slug → 资源名解析器 (deploy/ops/teardown/upgrade 共享 source)
   lib/registry.sh     基于文件的应用注册表 + 别名原子唯一性 (.local/apps.json)
   lib/__tests__/      slug.sh + registry.sh 的纯 shell 单元测试

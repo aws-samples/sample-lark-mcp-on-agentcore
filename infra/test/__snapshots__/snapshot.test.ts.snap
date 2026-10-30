@@ -10,7 +10,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
     },
     "DashboardUrl": {
       "Description": "CloudWatch observability dashboard",
-      "Value": "https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#dashboards/dashboard/lark-mcp-on-agentcore",
+      "Value": "https://us-west-2.console.aws.amazon.com/cloudwatch/home?region=us-west-2#dashboards/dashboard/lark-mcp-on-agentcore-us-west-2",
     },
     "FeishuRedirectUrl": {
       "Description": "Add this to Feishu app redirect URLs",
@@ -496,7 +496,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
       "Properties": {
         "Code": {
           "S3Bucket": "cdk-hnb659fds-assets-123456789012-us-west-2",
-          "S3Key": "4f70e3a34ac3a6e45406cb45300717f43e807019d43df8cef2ac901bb4b20584.zip",
+          "S3Key": "5a23c1f1989ce836bef04d2a14750612dd8fe3d269fbae5ed7bf437cfe85deb7.zip",
         },
         "Environment": {
           "Variables": {
@@ -505,6 +505,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
             "RUNTIME_ARN": "arn:aws:bedrock-agentcore:us-west-2:123456789012:runtime/test-runtime",
             "SECRET_PREFIX": "lark-mcp-on-agentcore/users",
             "STATE_SECRET_PARAM": "/lark-mcp-on-agentcore/state-secret",
+            "URL_SUFFIX": "amazonaws.com",
           },
         },
         "FunctionName": "TestOAuthStack-middleware",
@@ -2108,7 +2109,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
       "Properties": {
         "Code": {
           "S3Bucket": "cdk-hnb659fds-assets-123456789012-us-west-2",
-          "S3Key": "a40ec199abb6b4a99998a4ba7d62095e0fdd99f91ee9fe18f730c6469b827121.zip",
+          "S3Key": "165154151b0b50da68e104bac41e5bfd8664e68fbb2d18f8428007ceeb5e9919.zip",
         },
         "Environment": {
           "Variables": {
@@ -2490,7 +2491,7 @@ exports[`CDK Snapshot Tests > OAuthStack matches snapshot 1`] = `
             ],
           ],
         },
-        "DashboardName": "lark-mcp-on-agentcore",
+        "DashboardName": "lark-mcp-on-agentcore-us-west-2",
         "Tags": [
           {
             "Key": "project",
@@ -2769,11 +2770,35 @@ exports[`CDK Snapshot Tests > RuntimeStack matches snapshot 1`] = `
         "Fn::Sub": "123456789012.dkr.ecr.us-west-2.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-ACCOUNT-REGION:ASSET_HASH",
       },
     },
+    "RuntimeArn": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AgentRuntime",
+          "AgentRuntimeArn",
+        ],
+      },
+    },
+    "RuntimeId": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AgentRuntime",
+          "AgentRuntimeId",
+        ],
+      },
+    },
     "RuntimeRoleArn": {
       "Value": {
         "Fn::GetAtt": [
           "RuntimeRoleFD8790A4",
           "Arn",
+        ],
+      },
+    },
+    "RuntimeVersion": {
+      "Value": {
+        "Fn::GetAtt": [
+          "AgentRuntime",
+          "AgentRuntimeVersion",
         ],
       },
     },
@@ -2786,6 +2811,55 @@ exports[`CDK Snapshot Tests > RuntimeStack matches snapshot 1`] = `
     },
   },
   "Resources": {
+    "AgentRuntime": {
+      "DependsOn": [
+        "RuntimeRoleDefaultPolicy31263C89",
+        "RuntimeRoleFD8790A4",
+      ],
+      "Properties": {
+        "AgentRuntimeArtifact": {
+          "ContainerConfiguration": {
+            "ContainerUri": {
+              "Fn::Sub": "123456789012.dkr.ecr.us-west-2.\${AWS::URLSuffix}/cdk-hnb659fds-container-assets-ACCOUNT-REGION:ASSET_HASH",
+            },
+          },
+        },
+        "AgentRuntimeName": "lark_mcp_on_agentcore",
+        "Description": "Lark MCP Server (lark-cli)",
+        "EnvironmentVariables": {
+          "APP_ID": "",
+          "APP_SECRET_ID": "lark-mcp-on-agentcore/feishu-app",
+          "AUTHORIZE_BASE": "",
+          "AWS_REGION": "us-west-2",
+          "LARKSUITE_CLI_BRAND": "feishu",
+        },
+        "LifecycleConfiguration": {
+          "IdleRuntimeSessionTimeout": 600,
+        },
+        "NetworkConfiguration": {
+          "NetworkMode": "PUBLIC",
+        },
+        "ProtocolConfiguration": "MCP",
+        "RequestHeaderConfiguration": {
+          "RequestHeaderAllowlist": [
+            "X-User-Access-Token",
+            "X-Runtime-User-Id",
+            "X-Incr-Auth-Token",
+          ],
+        },
+        "RoleArn": {
+          "Fn::GetAtt": [
+            "RuntimeRoleFD8790A4",
+            "Arn",
+          ],
+        },
+        "Tags": {
+          "app": "default",
+          "project": "lark-mcp-on-agentcore",
+        },
+      },
+      "Type": "AWS::BedrockAgentCore::Runtime",
+    },
     "RuntimeRoleDefaultPolicy31263C89": {
       "Properties": {
         "PolicyDocument": {

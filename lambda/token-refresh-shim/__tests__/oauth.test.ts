@@ -823,6 +823,32 @@ describe('getCallbackUrl — dynamic host derivation', () => {
     process.env.CALLBACK_URL = origCb;
   });
 
+  it('derives callback from an aws-cn execute-api host (amazonaws.com.cn)', async () => {
+    const origCb = process.env.CALLBACK_URL;
+    process.env.CALLBACK_URL = '';
+    const r = await call({
+      path: '/authorize', httpMethod: 'GET',
+      headers: {},
+      requestContext: { domainName: 'abc.execute-api.cn-northwest-1.amazonaws.com.cn' },
+      queryStringParameters: { redirect_uri: 'https://quicksight.aws.amazon.com/cb', code_challenge: 'c', code_challenge_method: 'S256' },
+    });
+    expect(r.statusCode).toBe(302);
+    expect(r.headers?.Location || r.headers?.location || '').toContain(encodeURIComponent('https://abc.execute-api.cn-northwest-1.amazonaws.com.cn/callback'));
+    process.env.CALLBACK_URL = origCb;
+  });
+
+  it('derives callback from a cloudfront.cn host header', async () => {
+    const origCb = process.env.CALLBACK_URL;
+    process.env.CALLBACK_URL = '';
+    const r = await call({
+      path: '/authorize', httpMethod: 'GET',
+      headers: { host: 'd111.cloudfront.cn' },
+      queryStringParameters: { redirect_uri: 'https://quicksight.aws.amazon.com/cb', code_challenge: 'c', code_challenge_method: 'S256' },
+    });
+    expect(r.statusCode).toBe(302);
+    process.env.CALLBACK_URL = origCb;
+  });
+
   // ALLOWED_DOMAINS allowlists an OAuth *client's* redirect_uri host — it must
   // never be used to derive the redirect_uri we hand to Feishu. The service has
   // no CloudFront alternate domain name, so a request on such a host cannot be

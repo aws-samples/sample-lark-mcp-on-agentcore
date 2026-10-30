@@ -125,6 +125,13 @@ print(json.dumps({"Variables": env}))
     ;;
   destroy)
     echo "Destroying AgentCore Runtime (app: ${SLUG:-default})..."
+    CDK_RUNTIME_ARN=$(aws cloudformation describe-stacks --stack-name "$RUNTIME_STACK" --region "$REGION" \
+      --query 'Stacks[0].Outputs[?OutputKey==`RuntimeArn`].OutputValue' --output text 2>/dev/null || echo "")
+    if [ -n "$CDK_RUNTIME_ARN" ] && [ "$CDK_RUNTIME_ARN" != "None" ]; then
+      echo "  The runtime is managed by CloudFormation stack ${RUNTIME_STACK}."
+      echo "  Deleting it here would drift the stack. Use ./scripts/teardown.sh instead."
+      exit 1
+    fi
     RUNTIME_ID=$(RUNTIME_NAME="$RUNTIME_NAME" REGION="$REGION" python3 -c "
 import boto3, os
 c = boto3.client('bedrock-agentcore-control', region_name=os.environ['REGION'])

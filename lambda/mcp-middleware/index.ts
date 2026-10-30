@@ -14,6 +14,11 @@ const RUNTIME_ARN = process.env.RUNTIME_ARN!;
 const AUTHORIZE_BASE_RAW = process.env.AUTHORIZE_BASE || '';
 const AUTHORIZE_BASE = (AUTHORIZE_BASE_RAW && AUTHORIZE_BASE_RAW !== 'SET_AFTER_DEPLOY') ? AUTHORIZE_BASE_RAW : '';
 const REGION = process.env.DEPLOY_REGION || process.env.AWS_REGION || 'us-west-2';
+// DNS suffix of the partition (amazonaws.com / amazonaws.com.cn). CDK injects
+// cdk.Aws.URL_SUFFIX; fall back on the region prefix so a deploy.sh env rewrite
+// that omits it still targets the right partition.
+const URL_SUFFIX = process.env.URL_SUFFIX || (REGION.startsWith('cn-') ? 'amazonaws.com.cn' : 'amazonaws.com');
+const AGENTCORE_HOST = `bedrock-agentcore.${REGION}.${URL_SUFFIX}`;
 const TOKEN_BUFFER_SECONDS = 120;
 
 const sm = new SecretsManagerClient({});
@@ -179,13 +184,13 @@ async function handle(event: LambdaEvent) {
     'Accept': 'application/json, text/event-stream',
     'X-User-Access-Token': feishuToken,
     'X-Incr-Auth-Token': incrToken,
-    'host': `bedrock-agentcore.${REGION}.amazonaws.com`,
+    'host': AGENTCORE_HOST,
     'Mcp-Session-Id': runtimeSessionId,
   };
 
   const request = new HttpRequest({
     method: 'POST',
-    hostname: `bedrock-agentcore.${REGION}.amazonaws.com`,
+    hostname: AGENTCORE_HOST,
     path: `/runtimes/${encodedArn}/invocations`,
     headers: requestHeaders,
     body: bodyBytes,

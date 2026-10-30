@@ -11,9 +11,9 @@ remote-MCP clients can call Feishu's 2500+ APIs via 450+ tools. Identity is
 **user-only** (each user calls as themselves; no bot identity, no event stream).
 Languages: TypeScript (`lambda/`, `infra/`), JavaScript (`docker/`, no build
 step), Bash (`scripts/`). Node 20, ARM64-only container. AWS CDK builds the image,
-IAM, Lambdas, and alarms; the AgentCore **Runtime itself** (its env vars, idle
-timeout, request-header allowlist) is provisioned by `scripts/deploy.sh` via boto3,
-not CDK — see `docs/agent/architecture.md`.
+IAM, Lambdas, alarms, and the AgentCore **Runtime** itself
+(`AWS::BedrockAgentCore::Runtime` in `infra/lib/runtime-stack.ts`: env vars, idle
+timeout, request-header allowlist; traffic uses the service-managed `DEFAULT` endpoint) — see `docs/agent/architecture.md`.
 
 Each MCP session runs in its own AgentCore microVM — see
 `docs/agent/architecture.md` for the request lifecycle and concurrency model.

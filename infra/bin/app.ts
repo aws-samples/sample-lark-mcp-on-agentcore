@@ -29,7 +29,10 @@ const larkBrand = process.env.LARKSUITE_CLI_BRAND === "lark" ? "lark" : "feishu"
 // Set SKIP_WAF=1 to omit the WAF stack (e.g., for region-locked tenants).
 // The WAF is SHARED across all apps and is NOT slug-suffixed; deploy.sh deploys
 // it only on first creation and excludes it from the per-slug deploy set.
-const skipWaf = process.env.SKIP_WAF === "1";
+// AWS China (cn-*): no us-east-1 / CloudFront-scope WAF in the aws-cn
+// partition, so the WAF stack is always skipped there.
+const isChinaRegion = region.startsWith("cn-");
+const skipWaf = process.env.SKIP_WAF === "1" || isChinaRegion;
 const waf = skipWaf ? undefined : new WafStack(app, names.wafStack, {
   env: { account, region: "us-east-1" },
   crossRegionReferences: true,
@@ -47,7 +50,17 @@ const oauth = new OAuthStack(app, names.oauthStack, {
 });
 if (waf) oauth.addDependency(waf);
 
-const runtime = new RuntimeStack(app, names.runtimeStack, { env, slug });
+// Runtime container config. deploy.sh deploys the OAuth stack first, then this
+// stack with APP_ID / OAUTH_ENDPOINT set (plain values, no cross-stack export).
+const idle = parseInt(process.env.AGENTCORE_IDLE_TIMEOUT || "600", 10);
+const runtime = new RuntimeStack(app, names.runtimeStack, {
+  env,
+  slug,
+  appId: process.env.APP_ID || "",
+  authorizeBase: process.env.OAUTH_ENDPOINT || "",
+  idleTimeoutSeconds: Number.isInteger(idle) && idle > 0 ? idle : 600,
+  larkBrand,
+});
 runtime.addDependency(oauth);
 
 // Optional read-only cross-app roll-up dashboard (hybrid observability). Opt-in
