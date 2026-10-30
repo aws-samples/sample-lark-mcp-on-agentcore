@@ -578,11 +578,11 @@ if [ -z "$REGION_SELECTED" ]; then
 fi
 info "AWS Account: ${ACCOUNT_ID}"
 info "Region: ${REGION}"
-# AWS partition / DNS suffix derived from the region. China regions (cn-*) live
-# in the aws-cn partition: ARNs are arn:aws-cn:..., endpoints *.amazonaws.com.cn.
+# DNS suffix derived from the region. China regions (cn-*) live in the aws-cn
+# partition: endpoints are *.amazonaws.com.cn.
 case "$REGION" in
-  cn-*) AWS_PARTITION="aws-cn"; AWS_URL_SUFFIX="amazonaws.com.cn"; IS_CHINA=1 ;;
-  *)    AWS_PARTITION="aws";    AWS_URL_SUFFIX="amazonaws.com";    IS_CHINA=0 ;;
+  cn-*) AWS_URL_SUFFIX="amazonaws.com.cn"; IS_CHINA=1 ;;
+  *)    AWS_URL_SUFFIX="amazonaws.com";    IS_CHINA=0 ;;
 esac
 
 # Brand / edition: feishu (China, *.feishu.cn) or lark (international, *.larksuite.com).

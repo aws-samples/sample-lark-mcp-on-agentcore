@@ -19,12 +19,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 LOCAL_DIR="${PROJECT_DIR}/.local"
-# Initial fallback only. canary/rest delegate to deploy.sh (which resolves its
-# own region from deploy-config); --rollback overrides this via resolve_region
-# after resolve_slug so it targets the app's actual deploy region, not a stray
-# AWS_REGION in the shell.
-REGION="${AWS_REGION:-us-west-2}"
-
 APPS_REGISTRY="${LOCAL_DIR}/apps.json"
 export APPS_REGISTRY
 # shellcheck source=lib/registry.sh
