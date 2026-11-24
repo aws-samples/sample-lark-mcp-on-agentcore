@@ -47,7 +47,7 @@ lark_minutes_detail(minute_tokens="<minute_token>", summary=true, todo=true, cha
 - 用户只要现成总结、待办或章节时，返回对应 AI 产物。
 - 用户要求提炼、重新总结、分析或复盘时，只读取 Transcript 并基于原始发言独立分析；禁止照搬 `summary`。
 
-产物参数、返回字段和本地输出见 `lark_get_skill(domain="meeting", section="lark-minutes-detail")`。
+逐字稿正文在 `artifacts.transcript_content` 里直接返回。产物参数和返回字段见 `lark_get_skill(domain="meeting", section="lark-minutes-detail")`。
 
 ## 下载原始音视频
 

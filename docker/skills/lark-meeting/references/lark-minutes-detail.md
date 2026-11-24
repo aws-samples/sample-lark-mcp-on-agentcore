@@ -16,8 +16,8 @@ lark_minutes_detail(minute_tokens="obcxxx,obcyyy", summary=true, todo=true)
 # 全产物
 lark_minutes_detail(minute_tokens="obcxxx", summary=true, todo=true, chapter=true, keyword=true, transcript=true)
 
-# 仅逐字稿，覆盖已有文件，指定输出目录
-lark_minutes_detail(minute_tokens="obcxxx", transcript=true, overwrite=true, output_dir="./out")
+# 仅逐字稿
+lark_minutes_detail(minute_tokens="obcxxx", transcript=true)
 ```
 
 ## 输出
@@ -30,9 +30,11 @@ lark_minutes_detail(minute_tokens="obcxxx", transcript=true, overwrite=true, out
 | `artifacts.todos` | array | 待办事项列表。 |
 | `artifacts.chapters` | array | 章节列表。 |
 | `artifacts.keywords` | array | 关键词列表。 |
-| `artifacts.transcript_file` | string | 逐字稿本地文件路径。 |
+| `artifacts.transcript_content` | string | 逐字稿正文。 |
+| `artifacts.transcript_bytes` | number | 逐字稿完整大小（字节）。 |
+| `artifacts.transcript_truncated` | boolean | 为 `true` 时正文因单次返回上限被截断。 |
 
-逐字稿默认落地 `./minutes/{minute_token}/transcript.txt`，与 `lark_minutes_download` 同目录便于聚合。指定 `output_dir="<dir>"` 时改写到 `<dir>/artifact-{title}-{minute_token}/transcript.txt`。
+逐字稿正文由 MCP server 直接放在返回结果里，不产生可供后续读取的文件；`output_dir`、`overwrite` 会被忽略。多个妙记共用一次返回的大小上限；被截断时结果顶层另有 `transcript_notice`，剩余部分无法通过本工具获取，应提示用户到妙记页面查看全文。
 
 ## minute_token 来源
 

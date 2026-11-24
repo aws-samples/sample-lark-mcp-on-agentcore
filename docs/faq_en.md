@@ -106,6 +106,8 @@ A: This is a Feishu app permission issue, not a client issue. Fix:
 | List chats | `im:chat:read` |
 | Search docs | `search:docs:read`, `space:document:retrieve` |
 | Read/write Base (Bitable) | `base:record:read`, `base:record:create`, `base:record:update` |
+| Read mail (subject/addresses/body) | `mail:user_mailbox.message:readonly`, `mail:user_mailbox.message.address:read`, `mail:user_mailbox.message.subject:read`, `mail:user_mailbox.message.body:read` (the last three are field-level permissions: when missing, the API does not error, it just omits the field, so incremental auth never triggers) |
+| Query meetings and smart notes / Minutes | `vc:meeting.search:read`, `vc:meeting.meetingevent:read`, `vc:record:readonly`, `vc:note:read`, `minutes:minutes.basic:read`, `minutes:minutes.artifacts:read` |
 
 > If the admin adds new API permissions on the Open Platform and publishes a new version, **previously connected users** will not automatically gain the new permissions. Re-connection required: Quick Desktop → Settings → Capabilities → Browse Connections (bottom) → search for Feishu Remote MCP → click the card → click Test action APIs → click Re-Connect on the right side → complete Feishu authorization in the popup.
 

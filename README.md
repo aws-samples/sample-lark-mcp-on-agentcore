@@ -212,6 +212,7 @@ This service is designed for **per-user identity isolation**. The following are 
 - **Per-call time limit.** Calls run synchronously — suited to instant queries and actions, not long-running or batch blocking tasks.
 - **File transfer limitations.** Under the remote MCP architecture, the Agent is isolated from the container filesystem:
   - *Download*: Small files (< a few MB) can be returned as base64 via stdout; large files exceed the buffer limit and cannot be returned directly. Agents can use the raw API to obtain a temporary download URL for the user.
+  - *Transcripts*: `lark_minutes_detail(transcript=true)` and `lark_note_transcript` return the transcript text in the result (`transcript_content`) instead of a container file path, up to 200 KB per call (`TRANSCRIPT_INLINE_MAX_BYTES`); longer transcripts are cut and flagged `transcript_truncated`.
   - *Upload*: Commands requiring a local file path (`drive +upload`, `slides +media-upload`, etc.) are not available — the Agent cannot place files into the container. Commands with a `--content` parameter (e.g. `markdown +create`) work normally.
 
 ## Security Design
@@ -450,6 +451,7 @@ lark-cli 官方 20+ 个业务域 Skill 沉淀了多步操作的最佳实践—�
 - **单次调用有时长上限。** 同步执行，适合即时查询与操作，不适合长耗时或批量阻塞任务。
 - **文件传输受限。** 远程 MCP 架构下，Agent 与容器文件系统隔离：
   - *下载*：小文件（< 几 MB）可通过 stdout base64 回传；大文件超出 buffer 限制无法直接返回。可通过原始 API 获取临时下载 URL 供用户自行下载。
+  - *逐字稿*：`lark_minutes_detail(transcript=true)` 和 `lark_note_transcript` 把逐字稿正文直接放进返回结果（`transcript_content`），不再只给容器内的文件路径；单次最多 200 KB（`TRANSCRIPT_INLINE_MAX_BYTES`），超出部分截断并标记 `transcript_truncated`。
   - *上传*：`drive +upload`、`slides +media-upload` 等需要本地文件路径的命令不可用（Agent 无法将文件放入容器）。`markdown +create` 等支持 `--content` 参数的命令不受影响。
 
 ## 安全设计

@@ -88,7 +88,7 @@ lark_invoke(tool_name="lark_drive_metas_batch_query", args={
 
 逐字稿入口由 `lark_note_detail` 返回的 `note_display_type` 决定，不要只根据 `verbatim_doc_token` 是否为空判断：
 
-normal Note 逐字稿是 Doc 读取结果，unified Note 可由 `lark_note_transcript` 保存为 Markdown 或 plain text，Minutes Transcript 则是妙记产物文本。它们都可作为原始发言记录，但序列化格式不是统一契约；应以实际返回内容为准，不要硬编码“发言人 + 相对时间戳”等固定行格式。
+normal Note 逐字稿是 Doc 读取结果，unified Note 由 `lark_note_transcript` 以 Markdown 或 plain text 直接返回，Minutes Transcript 则是妙记产物文本。它们都可作为原始发言记录，但序列化格式不是统一契约；应以实际返回内容为准，不要硬编码“发言人 + 相对时间戳”等固定行格式。
 
 ### note_display_type = normal 且 有 verbatim_doc_token
 
@@ -112,7 +112,7 @@ lark_docs_fetch(doc="<verbatim_doc_token>", doc_format="markdown")
 lark_note_transcript(note_id="<note_id>")
 ```
 
-`lark_note_transcript` 会自动获取完整分页并保存文件；目标文件已存在时，只有用户明确要求覆盖才加 `overwrite=true`。参数与本地输出见 `lark_get_skill(domain="meeting", section="lark-note-transcript")`。
+`lark_note_transcript` 会自动获取完整分页，正文在返回结果的 `transcript_content` 字段里；`transcript_truncated=true` 表示超出单次返回上限被截断。参数与返回字段见 `lark_get_skill(domain="meeting", section="lark-note-transcript")`。
 
 ## 查询会中共享文档
 

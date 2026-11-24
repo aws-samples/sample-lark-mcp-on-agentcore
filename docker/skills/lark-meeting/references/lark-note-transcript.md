@@ -13,9 +13,9 @@ lark_note_transcript(note_id="<note_id>")
 ## 行为契约
 
 - 工具会先校验该 Note 是否为 `unified`；不是 unified 时不拉取 transcript。
-- 工具内部自动翻页并拼接完整内容；任一页失败时整体报错，不保存半截 transcript。
-- 默认保存到 `./notes/{note_id}/unified_transcript.md`；`transcript_format="plain_text"` 时保存为 `.txt`。
-- 目标文件已存在时会失败；用户明确要覆盖时才加 `overwrite=true`。
+- 工具内部自动翻页并拼接完整内容；任一页失败时整体报错，不返回半截 transcript。
+- 逐字稿正文由 MCP server 直接放在返回结果的 `transcript_content` 字段里（`transcript_format` 默认 Markdown，`"plain_text"` 时为纯文本），不产生可供后续读取的文件；`output`、`overwrite` 会被忽略，重复拉取同一 Note 不会失败。
+- `transcript_bytes` 是完整大小；`transcript_truncated=true` 时正文因单次返回上限被截断，结果顶层另有 `transcript_notice`，剩余部分无法通过本工具获取，应提示用户到纪要页面查看全文。
 
 ## 相关场景
 

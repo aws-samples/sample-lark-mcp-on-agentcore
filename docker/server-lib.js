@@ -11,6 +11,10 @@
 // the OAuth authorize base) take that state as parameters rather than closing
 // over module globals, so they stay pure and testable.
 
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
 const PERMISSION_ERROR_CODE = 99991679;   // user did not grant the required scope
 // "token lacks the required scope" — the token was minted without it. Same remedy
 // as 99991679 (grant it via incremental auth), and unlike the app-scope class this
@@ -693,6 +697,133 @@ async function runBaseCreateTransaction(run, cliArgs) {
   }
 }
 
+// `minutes +detail --transcript` and `note +transcript` save the transcript to a
+// file under the CLI's cwd and print only its path. A remote MCP agent cannot
+// read the container filesystem, so that path is a dead end: the agent either
+// gives up or summarizes text it never saw. The files also pile up in /tmp
+// (tmpfs, i.e. microVM memory), and re-fetching the same transcript fails
+// because the default output path already exists.
+//
+// So each such call runs in a fresh directory. Agent-supplied output locations
+// are dropped, so the CLI can only write inside it. Afterwards every regular
+// file it wrote is read back (bounded by maxBytes across the whole call), put
+// into the JSON result in place of its path, and the directory is removed. This
+// touches the filesystem, unlike the rest of this module, but only the directory
+// it creates under tmpRoot.
+const TRANSCRIPT_DEFAULT_MAX_BYTES = 200 * 1024;
+
+function needsTranscriptInline(cliArgs) {
+  if (cliArgs.includes('--dry-run')) return false;
+  if (cliArgs[0] === 'note' && cliArgs[1] === '+transcript') return true;
+  return cliArgs[0] === 'minutes' && cliArgs[1] === '+detail' && cliArgs.includes('--transcript');
+}
+
+// JSON is forced so the result can be parsed and rewritten.
+function transcriptCliArgs(cliArgs) {
+  const args = withoutCliFlags(
+    cliArgs,
+    new Set(['--output', '--output-dir', '--format', '--jq']),
+    new Set(['--overwrite', '--json']),
+  );
+  args.push('--format', 'json');
+  return args;
+}
+
+// Dirent types come from lstat, so a symlink is neither a file nor a directory
+// and is never followed.
+function listRegularFiles(dir) {
+  const files = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, entry.name);
+    if (entry.isDirectory()) files.push(...listRegularFiles(full));
+    else if (entry.isFile()) files.push(full);
+  }
+  return files.sort();
+}
+
+function readBounded(file, limit) {
+  const bytes = fs.statSync(file).size;
+  const buf = Buffer.alloc(Math.min(bytes, Math.max(0, limit)));
+  const fd = fs.openSync(file, 'r');
+  let read = 0;
+  try {
+    while (read < buf.length) {
+      const n = fs.readSync(fd, buf, read, buf.length - read, read);
+      if (n === 0) break;
+      read += n;
+    }
+  } finally {
+    fs.closeSync(fd);
+  }
+  const truncated = read < bytes;
+  let content = buf.subarray(0, read).toString('utf8');
+  // A cut mid-character decodes to trailing U+FFFD; drop it.
+  if (truncated) content = content.replace(/�+$/, '');
+  return { content, bytes, truncated };
+}
+
+function inlineTranscriptFiles(stdout, dir, maxBytes) {
+  const pending = new Set(listRegularFiles(dir));
+  if (pending.size === 0) return stdout;
+
+  let budget = maxBytes;
+  let anyTruncated = false;
+  const take = (file) => {
+    pending.delete(file);
+    const result = readBounded(file, budget);
+    budget -= Buffer.byteLength(result.content);
+    if (result.truncated) anyTruncated = true;
+    return result;
+  };
+
+  let envelope;
+  try { envelope = JSON.parse(stdout.trim()); } catch { envelope = null; }
+
+  // Replace any string that names a file this call wrote. Matching against the
+  // listed files (not the filesystem) keeps reads confined to dir.
+  const visit = (node) => {
+    if (Array.isArray(node)) { node.forEach(visit); return; }
+    if (!node || typeof node !== 'object') return;
+    for (const key of Object.keys(node)) {
+      const value = node[key];
+      const file = typeof value === 'string' ? path.resolve(dir, value) : null;
+      if (!file || !pending.has(file) || 'transcript_content' in node) { visit(value); continue; }
+      const { content, bytes, truncated } = take(file);
+      delete node[key];
+      node.transcript_content = content;
+      node.transcript_bytes = bytes;
+      node.transcript_truncated = truncated;
+    }
+  };
+  if (envelope && typeof envelope === 'object') visit(envelope);
+  else envelope = { ok: true, output: stdout.trim() };
+
+  // Files the output never named still reach the agent, keyed by relative path.
+  if (pending.size > 0) {
+    envelope.transcripts = [...pending].map((file) => {
+      const { content, bytes, truncated } = take(file);
+      return { file: path.relative(dir, file), transcript_content: content, transcript_bytes: bytes, transcript_truncated: truncated };
+    });
+  }
+  if (anyTruncated) {
+    envelope.transcript_notice = `Transcript text was cut to fit the ${maxBytes}-byte response limit (transcript_bytes is the full size). The rest cannot be fetched through this tool; point the user to the meeting notes or Minutes page for the full text.`;
+  }
+  return JSON.stringify(envelope);
+}
+
+async function runTranscriptInline(run, cliArgs, { tmpRoot = os.tmpdir(), maxBytes = TRANSCRIPT_DEFAULT_MAX_BYTES } = {}) {
+  if (!needsTranscriptInline(cliArgs)) return run(cliArgs);
+  // realpath: the CLI reports paths from its own getcwd, which resolves symlinks
+  // (e.g. macOS /var -> /private/var).
+  const dir = fs.realpathSync(fs.mkdtempSync(path.join(tmpRoot, 'transcript-')));
+  try {
+    const result = await run(transcriptCliArgs(cliArgs), dir);
+    return { ...result, stdout: inlineTranscriptFiles(String(result.stdout || ''), dir, maxBytes) };
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
 // Skill-domain lookup with service-name aliases. The tool namespace says
 // `lark_docs_*` (service "docs") but the skill domain is `doc` — an agent
 // deriving the domain from a tool name naturally guesses "docs" and got
@@ -728,4 +859,7 @@ module.exports = {
   createSemaphore,
   needsBaseCreateTransaction,
   runBaseCreateTransaction,
+  TRANSCRIPT_DEFAULT_MAX_BYTES,
+  needsTranscriptInline,
+  runTranscriptInline,
 };
