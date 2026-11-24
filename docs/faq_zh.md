@@ -106,6 +106,8 @@ A: 这是飞书应用的权限配置问题，不是客户端问题。解决方�
 | 读取群聊列表 | `im:chat:read` |
 | 搜索文档 | `search:docs:read`、`space:document:retrieve` |
 | 读写多维表格（Base） | `base:record:read`、`base:record:create`、`base:record:update` |
+| 读取邮件（主题/收发件人/正文） | `mail:user_mailbox.message:readonly`、`mail:user_mailbox.message.address:read`、`mail:user_mailbox.message.subject:read`、`mail:user_mailbox.message.body:read`（后三项是字段权限：缺失时接口不报错，只是不返回对应字段，因此不会触发增量授权） |
+| 查询会议与智能纪要 / 妙记 | `vc:meeting.search:read`、`vc:meeting.meetingevent:read`、`vc:record:readonly`、`vc:note:read`、`minutes:minutes.basic:read`、`minutes:minutes.artifacts:read` |
 
 > 如果管理员在开放平台新增了 API 权限并发版，**之前已连接过的用户**不会自动获得新权限。需要重连，步骤：Quick Desktop → Settings → Capabilities → 最下方 Browse Connections → 搜索找到 Feishu Remote MCP → 点击卡片 → 点击 Test action APIs → 弹出页面右侧点击 Re-Connect → 弹出飞书授权页完成授权。
 

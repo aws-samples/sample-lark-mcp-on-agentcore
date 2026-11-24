@@ -48,7 +48,17 @@
   "mail:user_mailbox:readonly",
   "mail:user_mailbox.message:modify",
   "mail:user_mailbox.message:send",
+  "mail:user_mailbox.message:readonly",
+  "mail:user_mailbox.message.address:read",
+  "mail:user_mailbox.message.subject:read",
+  "mail:user_mailbox.message.body:read",
   "wiki:wiki:readonly",
   "wiki:node:read",
-  "wiki:node:retrieve"
+  "wiki:node:retrieve",
+  "vc:meeting.search:read",
+  "vc:meeting.meetingevent:read",
+  "vc:record:readonly",
+  "vc:note:read",
+  "minutes:minutes.basic:read",
+  "minutes:minutes.artifacts:read"
 ]
