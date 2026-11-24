@@ -19,6 +19,7 @@ local files) into a format suitable for downstream agents calling our Remote MCP
 | 5 | Parameter tables: `--kebab` → `snake_case`, remove `--as`/`--yes` rows |
 | 6 | CLI terminology → tool terminology; delete pipelines |
 | 6b | Bot-only ops → add ⚠️ warning |
+| 6c | Transcript tools return text in `transcript_content`, not a saved file |
 | 7 | Preserve orchestration logic, CRITICAL markers, language |
 | 8 | Text assets (`.html`/`.txt`/`.csv`): copy verbatim; `cat local-file` → `lark_get_skill(section="assets/...")` |
 | 9 | Scripts (`scripts/`): copy `.py` verbatim; rewrite `python3 ...` → `lark_exec_script(...)` in `.md` |
@@ -228,6 +229,24 @@ The MCP server always uses **user identity** (user_access_token). If a tool/oper
 documented as bot-only (`tenant_access_token` required, no user auth support), add a note:
 
 > ⚠️ This operation requires bot identity and is not available via the MCP server.
+
+### 6c. Transcript tools return text, not files
+
+`server.js` routes `minutes +detail --transcript` and `note +transcript` through
+`runTranscriptInline` (`docker/server-lib.js`): the CLI writes into a throwaway per-call
+directory, and the server reads each transcript file back into the result and deletes it. The
+agent therefore gets the text in `transcript_content` (plus `transcript_bytes` and
+`transcript_truncated`; a top-level `transcript_notice` when the response limit cut it), never a
+usable path, and `output` / `output_dir` / `overwrite` are ignored. When adapting `lark-meeting`
+and `lark-workflow-meeting-summary`:
+
+- Replace "保存/落盘/落地到 `./minutes/...`、`./notes/...`" and `artifacts.transcript_file` with
+  "正文在 `transcript_content` 里直接返回".
+- Drop `output_dir=` / `output=` / `overwrite=true` from `lark_minutes_detail` and
+  `lark_note_transcript` examples, and drop "目标文件已存在时会失败".
+- Keep the truncation caveat: past the limit the rest is not reachable through the tool.
+
+Other file-writing tools (`lark_minutes_download`, `lark_drive_download`, …) are unchanged.
 
 ### 7. Preserve everything else
 

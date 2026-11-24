@@ -72,15 +72,15 @@ lark_note_detail(note_id="note_id")
 > **妙记备选路径（无 `note_id`、有 `minute_token` 时）**：智能纪要与妙记是两条独立产物链路，缺少智能纪要不代表这场会没有内容。
 >
 > ```
-> # minute_tokens 是复数形式（lark_minutes_download 同）；output_dir 只接受相对路径
-> lark_minutes_detail(minute_tokens="<minute_token>", transcript=true, output_dir="./transcripts")
+> # minute_tokens 是复数形式（lark_minutes_download 同）
+> lark_minutes_detail(minute_tokens="<minute_token>", transcript=true)
 > ```
 >
-> 逐字稿会落盘，供 Step 4 基于原始发言独立提炼（不要照搬 AI 总结）。若返回 `No read permission`（`2091005`），先把无权限事实告知用户，用户明确同意后再用单数参数申请：`lark_minutes_apply_permission(minute_token="<minute_token>", perm="view")`；申请需 owner 在客户端批准后才可重试。详见 `lark_get_skill(domain="meeting", section="scenes/query-minutes-and-artifacts")`（基于 minute_token 查询妙记及关联产物）。
+> 逐字稿正文在 `artifacts.transcript_content` 里直接返回，供 Step 4 基于原始发言独立提炼（不要照搬 AI 总结）；`transcript_truncated=true` 时只基于已返回部分提炼，并在报告中注明逐字稿不完整。若返回 `No read permission`（`2091005`），先把无权限事实告知用户，用户明确同意后再用单数参数申请：`lark_minutes_apply_permission(minute_token="<minute_token>", perm="view")`；申请需 owner 在客户端批准后才可重试。详见 `lark_get_skill(domain="meeting", section="scenes/query-minutes-and-artifacts")`（基于 minute_token 查询妙记及关联产物）。
 
 > **逐字稿路由按 `note_display_type` 决定**（详见 `lark_get_skill(domain="meeting", section="scenes/query-note-and-artifacts")`，基于 note_id 查询智能纪要及关联产物）：
 > - `normal`：逐字稿是独立文档，链接/正文走 `verbatim_doc_token`。
-> - `unified`：逐字稿**不是独立文档**，没有可分享的逐字稿文档链接；需要逐字稿内容时用 `lark_note_transcript(note_id="<note_id>")`（参见 `lark_get_skill(domain="meeting")`）拉取到本地，报告中标注"unified 纪要"即可。
+> - `unified`：逐字稿**不是独立文档**，没有可分享的逐字稿文档链接；需要逐字稿内容时用 `lark_note_transcript(note_id="<note_id>")`（参见 `lark_get_skill(domain="meeting")`）拉取，正文在返回结果的 `transcript_content` 里，报告中标注"unified 纪要"即可。
 
 2. 获取纪要文档和逐字稿文档链接
 ```

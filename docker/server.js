@@ -31,6 +31,9 @@ const {
   stripCliNotice,
   resolveSkillDomain,
   runBaseCreateTransaction,
+  TRANSCRIPT_DEFAULT_MAX_BYTES,
+  needsTranscriptInline,
+  runTranscriptInline,
 } = require('./server-lib');
 
 process.on('uncaughtException', (err) => {
@@ -56,7 +59,11 @@ const withSemaphore = createSemaphore(MAX_CONCURRENT, MAX_QUEUE_DEPTH);
 // and hold a concurrency slot for the gap.
 const LARK_CLI_TIMEOUT_MS = parseInt(process.env.LARK_CLI_TIMEOUT_MS || '24000', 10);
 
-function runLarkCli(cliArgs, env, timeoutMs, abortSignal) {
+// Upper bound on transcript text inlined into one tool result (see
+// runTranscriptInline in server-lib.js).
+const TRANSCRIPT_MAX_BYTES = parseInt(process.env.TRANSCRIPT_INLINE_MAX_BYTES || String(TRANSCRIPT_DEFAULT_MAX_BYTES), 10);
+
+function runLarkCli(cliArgs, env, timeoutMs, abortSignal, cwd = '/tmp') {
   return new Promise((resolve, reject) => {
     const child = execFile('lark-cli', cliArgs, {
       // cwd MUST be a writable dir. Several lark-cli flags write files relative
@@ -66,8 +73,9 @@ function runLarkCli(cliArgs, env, timeoutMs, abortSignal) {
       // server's cwd (Dockerfile WORKDIR /app, root-owned 755 while the process
       // runs as USER node) makes every one of those fail with EACCES
       // ("cannot create file: ... permission denied"). /tmp is the tmpfs the
-      // lark_exec_script child already uses.
-      cwd: '/tmp',
+      // lark_exec_script child already uses. Transcript calls pass a fresh
+      // per-call directory under /tmp instead.
+      cwd,
       timeout: timeoutMs, maxBuffer: 10 * 1024 * 1024, env, signal: abortSignal,
     }, (err, stdout, stderr) => {
       activeChildren.delete(child);
@@ -455,14 +463,17 @@ async function executeTool(def, args, userToken, toolName, incrAuthToken, abortS
     // runBaseCreateTransaction: upstream performs it as create-Base-then-
     // customize-table and leaves the new Base behind when a later step fails
     // (e.g. the app lacks base:table:create), so this server drives the steps
-    // itself and deletes the Base it just created on failure. Every other
-    // command passes straight through. The semaphore is held for the whole
-    // transaction so a rollback can never be starved by a full queue.
+    // itself and deletes the Base it just created on failure. Transcript
+    // fetches (`minutes +detail --transcript`, `note +transcript`) go through
+    // runTranscriptInline, which returns the transcript text instead of a
+    // container file path. Every other command passes straight through. The
+    // semaphore is held for the whole transaction so a rollback can never be
+    // starved by a full queue.
+    const run = (args, cwd) => runLarkCli(args, env, LARK_CLI_TIMEOUT_MS, abortSignal, cwd);
     const { stdout } = await withSemaphore(
-      () => runBaseCreateTransaction(
-        (args) => runLarkCli(args, env, LARK_CLI_TIMEOUT_MS, abortSignal),
-        cliArgs,
-      ),
+      () => (needsTranscriptInline(cliArgs)
+        ? runTranscriptInline(run, cliArgs, { tmpRoot: '/tmp', maxBytes: TRANSCRIPT_MAX_BYTES })
+        : runBaseCreateTransaction(run, cliArgs)),
       abortSignal,
     );
     // Strip lark-cli's `_notice.update` ("run: lark-cli update") — operator
